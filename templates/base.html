@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-icon-180x180.png') }}">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Deloitte Special Icons -->
+    <link href="{{ url_for('static', filename='Deloitte Special Case Web Icons/Web font/css/deloitte-special-use-icon-font.css') }}" rel="stylesheet">
+    
+    <!-- Deloitte Colors & Custom Styles - Official Palette 2024 -->
+    <style>
+        /* =========================
+           Deloitte Palette Variables
+           ========================= */
+        :root {
+            /* Primary palette */
+            --dtt-green: #86BC25;
+            --dtt-black: #000000;
+            --dtt-gray-900: #222222;
+            --dtt-gray-100: #E6E6E6;
+            --dtt-white: #FFFFFF;
+
+            --dtt-green-bright: #0DF200;
+            --dtt-green-mid: #26890D;
+            --dtt-green-deep: #046A38;
+            --dtt-green-dark: #1C3D26;
+            --dtt-green-pale: #F1F6E4;
+
+            /* Secondary palette - Greens */
+            --dtt-sec-green-1: #E3E48D;
+            --dtt-sec-green-2: #C4D600;
+            --dtt-sec-green-4: #43B02A;
+            --dtt-sec-green-5: #009A44;
+
+            /* Secondary palette - Blues */
+            --dtt-sec-blue-1: #A0DCFF;
+            --dtt-sec-blue-2: #62B5E5;
+            --dtt-sec-blue-3: #00A3E0;
+            --dtt-sec-blue-4: #0076A8;
+            --dtt-sec-blue-5: #005587;
+            --dtt-sec-blue-6: #012169;
+            --dtt-sec-blue-7: #041E42;
+            --dtt-sec-blue-8-former-accessible: #007CB0;
+
+            /* Secondary palette - Teals */
+            --dtt-sec-teal-1: #DDEFE8;
+            --dtt-sec-teal-2: #9DD4CF;
+            --dtt-sec-teal-3: #6FC2B4;
+            --dtt-sec-teal-4: #00ABAB;
+            --dtt-sec-teal-5: #0097A9;
+            --dtt-sec-teal-6: #007680;
+            --dtt-sec-teal-7: #004F59;
+            --dtt-sec-teal-8-former-accessible: #0D8390;
+
+            /* Secondary palette - Cool Grays */
+            --dtt-cool-gray-2: #D0D0CE;
+            --dtt-cool-gray-4: #BBBCBC;
+            --dtt-cool-gray-6: #A7A8AA;
+            --dtt-cool-gray-7: #97999B;
+            --dtt-cool-gray-9: #75787B;
+            --dtt-cool-gray-10: #63666A;
+            --dtt-cool-gray-11: #53565A;
+
+            /* Limited use bright colors (digital highlight only) */
+            --dtt-bright-teal: #3EFAC5;
+            --dtt-bright-blue: #33F0FF;
+
+            /* Limited use functional colors (charts/alerts only) */
+            --dtt-danger-red: #DA291C;
+            --dtt-warning-orange: #ED8B00;
+            --dtt-warning-yellow: #FFCD00;
+            
+            /* Legacy aliases for backward compatibility */
+            --del-green: var(--dtt-green);
+            --del-black: var(--dtt-black);
+            --del-white: var(--dtt-white);
+            --del-teal-light: var(--dtt-sec-teal-5);
+            --del-teal-dark: var(--dtt-sec-teal-6);
+            --del-blue-light: var(--dtt-sec-blue-3);
+            --del-blue-dark: var(--dtt-sec-blue-6);
+            --del-red: var(--dtt-danger-red);
+            --del-orange: var(--dtt-warning-orange);
+            --del-yellow: var(--dtt-warning-yellow);
+        }
+
+        /* ==================================
+           Bootstrap 5 Theme Mapping (Light)
+           ================================== */
+        :root, [data-bs-theme="light"] {
+            --bs-primary: var(--dtt-green);
+            --bs-secondary: var(--dtt-gray-900);
+            --bs-success: var(--dtt-sec-green-5);
+            --bs-info: var(--dtt-sec-blue-3);
+            --bs-warning: var(--dtt-warning-yellow);
+            --bs-danger: var(--dtt-danger-red);
+            --bs-light: var(--dtt-gray-100);
+            --bs-dark: var(--dtt-black);
+            --bs-link-color: var(--dtt-sec-blue-4);
+            --bs-link-hover-color: var(--dtt-sec-blue-5);
+        }
+
+        /* Helper classes for status/calendar pills */
+        .bg-dtt-green { background-color: var(--dtt-green) !important; }
+        .text-dtt-green { color: var(--dtt-green) !important; }
+        .bg-dtt-due-soon { background-color: var(--dtt-warning-yellow) !important; }
+        .bg-dtt-overdue { background-color: var(--dtt-danger-red) !important; }
+        .bg-dtt-done { background-color: var(--dtt-sec-green-5) !important; }
+        
+        body {
+            font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background-color: var(--del-black) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand img {
+            height: 28px;
+        }
+        
+        .navbar-dark .navbar-nav .nav-link {
+            color: rgba(255,255,255,0.85);
+        }
+        
+        .navbar-dark .navbar-nav .nav-link:hover {
+            color: var(--del-green);
+        }
+        
+        .navbar-dark .navbar-nav .nav-link.active {
+            color: var(--del-green);
+        }
+        
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 2rem 0;
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .card-header {
+            background-color: var(--del-black);
+            color: white;
+            border-radius: 8px 8px 0 0 !important;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background-color: var(--del-green);
+            border-color: var(--del-green);
+            color: var(--del-black);
+        }
+        
+        .btn-primary:hover {
+            background-color: #75a520;
+            border-color: #75a520;
+            color: var(--del-black);
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--del-green);
+            color: var(--del-green);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--del-green);
+            color: var(--del-black);
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--del-black);
+            color: rgba(255,255,255,0.7);
+            padding: 1rem 0;
+            font-size: 0.875rem;
+        }
+        
+        footer a {
+            color: var(--del-green);
+        }
+        
+        /* Utilities */
+        .bg-del-green { background-color: var(--del-green) !important; }
+        .bg-del-black { background-color: var(--del-black) !important; }
+        .text-del-green { color: var(--del-green) !important; }
+        
+        /* Page Header */
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--del-green);
+        }
+        
+        .page-header h1 {
+            margin: 0;
+            font-weight: 600;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='Deloitte-Master-Logo/DIGITAL/Deloitte-Master-Logo-White-RBG.svg') }}" alt="Deloitte">
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+                            <i class="bi bi-house-door"></i> {{ t('nav_home') }}
+                        </a>
+                    </li>
+                    
+                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-gear"></i> {{ t('nav_admin') }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="bi bi-people me-2"></i>{{ t('nav_users') }}</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <!-- Language Switcher -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-globe"></i> {{ lang|upper }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item {% if lang == 'de' %}active{% endif %}" href="{{ url_for('set_language', lang='de') }}">🇩🇪 Deutsch</a></li>
+                            <li><a class="dropdown-item {% if lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang='en') }}">🇬🇧 English</a></li>
+                        </ul>
+                    </li>
+                    
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ current_user.name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>{{ t('nav_logout') }}</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">
+                            <i class="bi bi-box-arrow-in-right"></i> {{ t('nav_login') }}
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+    
+    <!-- Main Content -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <span>© {{ current_year }} {{ app_name }} v{{ app_version }}</span>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <span class="text-muted">Deloitte Flask App Template</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
