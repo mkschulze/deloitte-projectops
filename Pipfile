@@ -10,6 +10,9 @@ flask-login = "*"
 flask-wtf = "*"
 werkzeug = "*"
 python-dotenv = "*"
+flask-migrate = "*"
+openpyxl = "*"
+python-dateutil = "*"
 
 [dev-packages]
 

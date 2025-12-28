@@ -20,6 +20,11 @@ class Config:
     # Language settings
     DEFAULT_LANGUAGE = 'de'
     SUPPORTED_LANGUAGES = ['de', 'en']
+    
+    # File Upload settings
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max file size
+    ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'png', 'jpg', 'jpeg', 'gif', 'zip'}
 
 
 class DevelopmentConfig(Config):

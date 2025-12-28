@@ -132,7 +132,7 @@
         }
         
         .navbar-brand img {
-            height: 28px;
+            height: 68px;
         }
         
         .navbar-dark .navbar-nav .nav-link {
@@ -217,6 +217,60 @@
             margin: 0;
             font-weight: 600;
         }
+        
+        /* Workflow Steps */
+        .workflow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            background: #f8f9fa;
+            transition: all 0.2s ease;
+        }
+        
+        .workflow-step.active {
+            background: var(--dtt-green-pale);
+            border-left: 3px solid var(--dtt-green);
+        }
+        
+        .workflow-step.completed {
+            opacity: 0.7;
+        }
+        
+        .workflow-step.completed .step-icon {
+            background: var(--dtt-sec-green-5);
+            color: white;
+        }
+        
+        .workflow-step .step-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--dtt-cool-gray-4);
+            color: white;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+        
+        .workflow-step.active .step-icon {
+            background: var(--dtt-green);
+            color: var(--dtt-black);
+        }
+        
+        .workflow-step .step-label {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -225,8 +279,12 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
                 <img src="{{ url_for('static', filename='Deloitte-Master-Logo/DIGITAL/Deloitte-Master-Logo-White-RBG.svg') }}" alt="Deloitte">
+                <span class="d-none d-md-flex align-items-center ms-3">
+                    <span class="text-deloitte-green fw-bold" style="font-size: 1.5rem;">|</span>
+                    <span class="ms-3 fw-light fs-5" style="letter-spacing: 0.5px;">TaxOps Calendar</span>
+                </span>
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -241,14 +299,34 @@
                         </a>
                     </li>
                     
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> {{ t('nav_dashboard') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'task' in request.endpoint %}active{% endif %}" href="{{ url_for('task_list') }}">
+                            <i class="bi bi-list-task"></i> {{ t('nav_tasks') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" href="{{ url_for('calendar_view') }}">
+                            <i class="bi bi-calendar3"></i> {{ t('nav_calendar') }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    
                     {% if current_user.is_authenticated and current_user.is_admin() %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-gear"></i> {{ t('nav_admin') }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>{{ t('admin_dashboard') }}</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_entities') }}"><i class="bi bi-building me-2"></i>{{ t('entities') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_tax_types') }}"><i class="bi bi-file-earmark-text me-2"></i>{{ t('tax_types') }}</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="bi bi-people me-2"></i>{{ t('nav_users') }}</a></li>
                         </ul>
                     </li>

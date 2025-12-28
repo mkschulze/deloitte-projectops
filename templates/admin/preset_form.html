@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('edit') if preset else t('create') }} - {{ 'Task Preset' if lang == 'en' else 'Aufgabenvorlage' }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-{% if preset %}pencil{% else %}plus-circle{% endif %} me-2"></i>
+                        {{ t('edit') if preset else t('create') }} {{ 'Task Preset' if lang == 'en' else 'Aufgabenvorlage' }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'Category' if lang == 'en' else 'Kategorie' }} <span class="text-danger">*</span></label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="category" id="cat_aufgabe" 
+                                       value="aufgabe" {{ 'checked' if not preset or preset.category == 'aufgabe' }}>
+                                <label class="btn btn-outline-primary" for="cat_aufgabe">
+                                    <i class="bi bi-check2-square me-1"></i> {{ 'Task' if lang == 'en' else 'Aufgabe' }}
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="category" id="cat_antrag" 
+                                       value="antrag" {{ 'checked' if preset and preset.category == 'antrag' }}>
+                                <label class="btn btn-outline-info" for="cat_antrag">
+                                    <i class="bi bi-file-earmark-text me-1"></i> {{ 'Application' if lang == 'en' else 'Antrag' }}
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                {{ 'Tasks are recurring compliance duties. Applications are one-time filings with legal references.' if lang == 'en' else 'Aufgaben sind wiederkehrende Pflichten. Anträge sind einmalige Einreichungen mit Gesetzesreferenzen.' }}
+                            </div>
+                        </div>
+                        
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">{{ 'Title' if lang == 'en' else 'Titel' }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ preset.title if preset else '' }}" required
+                                   placeholder="{{ 'e.g. Monthly VAT return' if lang == 'en' else 'z.B. USt-Voranmeldung einreichen' }}">
+                        </div>
+                        
+                        <!-- Tax Type -->
+                        <div class="mb-3">
+                            <label for="tax_type" class="form-label">{{ 'Tax Type' if lang == 'en' else 'Steuerart' }}</label>
+                            <input type="text" class="form-control" id="tax_type" name="tax_type" 
+                                   value="{{ preset.tax_type if preset else '' }}"
+                                   placeholder="{{ 'e.g. VAT, Corporate Tax' if lang == 'en' else 'z.B. Umsatzsteuer, Körperschaftsteuer' }}"
+                                   list="tax_type_suggestions">
+                            <datalist id="tax_type_suggestions">
+                                <option value="Umsatzsteuer">
+                                <option value="Körperschaftsteuer">
+                                <option value="Gewerbesteuer">
+                                <option value="Lohnsteuer">
+                                <option value="Jahresabschluss">
+                                <option value="EStG">
+                                <option value="KStG">
+                                <option value="AO">
+                                <option value="UmwStG">
+                            </datalist>
+                        </div>
+                        
+                        <!-- Law Reference (mainly for Anträge) -->
+                        <div class="mb-3" id="law_reference_group">
+                            <label for="law_reference" class="form-label">{{ '§ Law Reference' if lang == 'en' else '§ Gesetzesreferenz' }}</label>
+                            <input type="text" class="form-control" id="law_reference" name="law_reference" 
+                                   value="{{ preset.law_reference if preset else '' }}"
+                                   placeholder="{{ 'e.g. §1 (3) EStG' if lang == 'en' else 'z.B. §1 (3) EStG' }}">
+                            <div class="form-text">
+                                {{ 'Relevant for applications (Anträge) - the legal basis.' if lang == 'en' else 'Relevant für Anträge - die rechtliche Grundlage.' }}
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">{{ t('description') }}</label>
+                            <textarea class="form-control" id="description" name="description" rows="4"
+                                      placeholder="{{ t('description_placeholder') }}">{{ preset.description if preset else '' }}</textarea>
+                        </div>
+                        
+                        {% if preset %}
+                        <!-- Status (only for edit) -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
+                                       {{ 'checked' if preset.is_active }}>
+                                <label class="form-check-label" for="is_active">{{ t('active') }}</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Metadata -->
+                        <div class="alert alert-light">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                {{ 'Created' if lang == 'en' else 'Erstellt' }}: {{ preset.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                {% if preset.source %}
+                                | {{ 'Source' if lang == 'en' else 'Quelle' }}: {{ preset.source }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('admin_presets') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i> {{ t('cancel') }}
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg me-1"></i> {{ t('save') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show/hide law reference based on category
+    function updateLawRefVisibility() {
+        const isAntrag = document.getElementById('cat_antrag').checked;
+        const lawRefGroup = document.getElementById('law_reference_group');
+        if (isAntrag) {
+            lawRefGroup.classList.remove('opacity-50');
+        } else {
+            lawRefGroup.classList.add('opacity-50');
+        }
+    }
+    
+    document.getElementById('cat_aufgabe').addEventListener('change', updateLawRefVisibility);
+    document.getElementById('cat_antrag').addEventListener('change', updateLawRefVisibility);
+    updateLawRefVisibility();
+</script>
+{% endblock %}
