@@ -8,9 +8,9 @@
 
 ## Session Information
 
-**Date:** 2025-12-28 (Session 3)  
-**Last Action:** Implemented Multi-Reviewer Approval System, Updated Memory Bank  
-**Status:** MVP Complete — All core features implemented and working
+**Date:** 2025-12-28 (Session 4)  
+**Last Action:** Implemented Team Management System  
+**Status:** MVP Complete with Teams — All core features + team-based user management
 
 ---
 
@@ -18,25 +18,35 @@
 
 ### ✅ What Was Accomplished
 
-1. **Evidence Upload System** (Complete)
+1. **Team Management System** (Session 4 - Complete)
+   - `Team` model with name, description, color, manager
+   - `team_members` many-to-many association table
+   - Task fields: `owner_team_id`, `reviewer_team_id`
+   - Admin CRUD for teams with multi-select member assignment
+   - Team selection in task create/edit forms
+   - Team display in task detail view
+   - `is_reviewer()` checks team membership for access control
+   - Navigation link in admin menu
+
+2. **Evidence Upload System** (Complete)
    - File upload with secure unique filenames
    - Link addition for external references
    - Preview modal for PDF, images, and text files
    - Download with proper MIME types
    - Delete functionality
 
-2. **Comments System** (Complete)
+3. **Comments System** (Complete)
    - Add/delete comments
    - User avatars and timestamps
    - Owner/admin-only deletion
 
-3. **Task Presets** (Complete)
+4. **Task Presets** (Complete)
    - TaskPreset model with categories (aufgabe/antrag)
    - Admin CRUD interface
    - JSON import via `flask loadpresets`
    - Preset selection in task creation
 
-4. **Multi-Reviewer Approval** (Complete)
+5. **Multi-Reviewer Approval** (Complete)
    - `TaskReviewer` model with approval tracking
    - Multi-select field for reviewer assignment
    - Individual reviewer approve/reject actions
@@ -44,13 +54,13 @@
    - Auto-transition: all approve → approved status
    - Auto-transition: any reject → rejected status
 
-5. **UI Enhancements** (Complete)
+6. **UI Enhancements** (Complete)
    - Navbar with "TaxOps Calendar" app name
    - Calendar preview popovers on month/year views
    - Task list preview column with hover details
    - Color-coded audit log badges
 
-6. **Documentation** (Complete)
+7. **Documentation** (Complete)
    - Comprehensive README.md for GitHub
    - Updated Memory Bank documentation
 
@@ -66,13 +76,15 @@ audit_log             ✅ With action types
 entity                ✅ With group hierarchy
 tax_type              ✅ Tax categories
 task_template         ✅ Reusable templates
-task                  ✅ Core tasks with status
-task_reviewer         ✅ NEW - Multi-reviewer tracking
+task                  ✅ Core tasks with status + team fields
+task_reviewer         ✅ Multi-reviewer tracking
 task_evidence         ✅ Files and links
 comment               ✅ Discussion threads
 task_preset           ✅ Predefined task templates
 reference_application ✅ Anträge library
 entity_user_access    ✅ Association table
+team                  ✅ NEW - User grouping
+team_members          ✅ NEW - Team-User many-to-many
 ```
 
 ### Key Models
@@ -80,13 +92,14 @@ entity_user_access    ✅ Association table
 | Model | Lines | Purpose |
 |-------|-------|---------|
 | `User` | ~50 | User accounts with roles |
-| `Task` | ~250 | Core task with workflow methods |
+| `Task` | ~280 | Core task with workflow + team methods |
+| `Team` | ~50 | User grouping with members |
 | `TaskReviewer` | ~60 | Multi-reviewer approval tracking |
 | `TaskEvidence` | ~30 | File/link attachments |
 | `Comment` | ~20 | Discussion threads |
 | `TaskPreset` | ~30 | Predefined task templates |
 
-### Routes (app.py ~1735 lines)
+### Routes (app.py ~1850 lines)
 
 | Category | Routes | Description |
 |----------|--------|-------------|
@@ -94,7 +107,7 @@ entity_user_access    ✅ Association table
 | Dashboard | 1 | Main dashboard |
 | Tasks | 12 | CRUD, status, evidence, comments |
 | Calendar | 3 | Month, year, week views |
-| Admin | 15 | Users, entities, tax types, presets |
+| Admin | 19 | Users, entities, tax types, teams, presets |
 | CLI | 4 | initdb, createadmin, seed, loadpresets |
 
 ---
@@ -121,6 +134,40 @@ task.reject_by_reviewer(user, note)  # Mark user as rejected
 task.all_reviewers_approved()        # Check if all approved
 task.any_reviewer_rejected()         # Check if any rejected
 task.get_approval_count()            # Returns (approved, total) tuple
+```
+
+---
+
+## Team Management
+
+### How It Works
+
+1. **Create Teams:** Admins can create teams with name, description, color, and optional manager
+2. **Assign Members:** Multi-select users to add as team members
+3. **Task Assignment:** Tasks can be assigned to:
+   - Individual owner (owner_id) OR owner team (owner_team_id)
+   - Individual reviewers (TaskReviewer) AND/OR reviewer team (reviewer_team_id)
+4. **Access Control:** `is_reviewer()` checks both direct assignment AND team membership
+
+### Key Methods (Task model)
+
+```python
+task.owner_team              # Get owner Team object
+task.reviewer_team           # Get reviewer Team object
+task.is_reviewer(user)       # Check direct OR team membership
+task.is_reviewer_via_team(user)  # Check team membership only
+task.get_owner_display()     # Returns user or team name
+task.is_assigned_to_user(user)   # Check any assignment
+task.get_all_assigned_users()    # All users via direct + teams
+```
+
+### Key Methods (Team model)
+
+```python
+team.add_member(user)        # Add user to team
+team.remove_member(user)     # Remove user from team
+team.is_member(user)         # Check membership
+team.get_member_count()      # Count members
 ```
 
 ---
@@ -194,6 +241,9 @@ deloitte-taxops-calendar/
 | `/admin` | Admin dashboard |
 | `/admin/entities` | Entity management |
 | `/admin/tax-types` | Tax type management |
+| `/admin/teams` | Team management (NEW) |
+| `/admin/teams/new` | Create team (NEW) |
+| `/admin/teams/<id>` | Edit team (NEW) |
 | `/admin/users` | User management |
 | `/admin/presets` | Task preset management |
 
@@ -229,4 +279,4 @@ None currently. MVP is complete and functional.
 
 ---
 
-*Last updated: 2025-12-28 Session 3*
+*Last updated: 2025-12-28 Session 4*

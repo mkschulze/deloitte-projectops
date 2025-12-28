@@ -14,6 +14,15 @@ db = SQLAlchemy()
 # ASSOCIATION TABLES
 # ============================================================================
 
+# Team membership association table
+team_members = db.Table('team_members',
+    db.Column('team_id', db.Integer, db.ForeignKey('team.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('joined_at', db.DateTime, default=datetime.utcnow),
+    db.Column('is_team_lead', db.Boolean, default=False)
+)
+
+
 class TaskReviewer(db.Model):
     """Association table for Task-Reviewer many-to-many with approval tracking"""
     __tablename__ = 'task_reviewer'
@@ -152,6 +161,55 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.email}>'
+    
+    def get_teams(self):
+        """Get all teams this user belongs to"""
+        return Team.query.filter(Team.members.contains(self)).all()
+
+
+class Team(db.Model):
+    """Team model for grouping users"""
+    __tablename__ = 'team'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    color = db.Column(db.String(7), default='#86BC25')  # Deloitte Green as default
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    
+    # Manager of the team
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    manager = db.relationship('User', foreign_keys=[manager_id], backref='managed_teams')
+    
+    # Many-to-many relationship with users
+    members = db.relationship('User', secondary=team_members, lazy='dynamic',
+                             backref=db.backref('teams', lazy='dynamic'))
+    
+    # Tasks assigned to this team
+    owned_tasks = db.relationship('Task', foreign_keys='Task.owner_team_id', backref='owner_team', lazy='dynamic')
+    
+    def add_member(self, user):
+        """Add a user to this team"""
+        if not self.is_member(user):
+            self.members.append(user)
+    
+    def remove_member(self, user):
+        """Remove a user from this team"""
+        if self.is_member(user):
+            self.members.remove(user)
+    
+    def is_member(self, user):
+        """Check if user is a member of this team"""
+        return self.members.filter_by(id=user.id).count() > 0
+    
+    def get_member_count(self):
+        """Get number of team members"""
+        return self.members.count()
+    
+    def __repr__(self):
+        return f'<Team {self.name}>'
 
 
 class AuditLog(db.Model):
@@ -314,7 +372,9 @@ class Task(db.Model):
     
     status = db.Column(db.String(20), default='draft', index=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    owner_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True, index=True)  # Team assignment
     reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Legacy single reviewer (optional)
+    reviewer_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)  # Reviewer team
     approver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Manager who approves
     
     # Workflow timestamps
@@ -350,6 +410,45 @@ class Task(db.Model):
     completed_by = db.relationship('User', foreign_keys=[completed_by_id], backref='tasks_completed')
     rejected_by = db.relationship('User', foreign_keys=[rejected_by_id], backref='tasks_rejected')
     approver = db.relationship('User', foreign_keys=[approver_id], backref='tasks_to_approve')
+    
+    # Team relationships
+    reviewer_team = db.relationship('Team', foreign_keys=[reviewer_team_id], backref='tasks_to_review')
+    
+    # =========================================================================
+    # TEAM METHODS
+    # =========================================================================
+    
+    def get_owner_display(self):
+        """Get display name for owner (user or team)"""
+        if self.owner:
+            return self.owner.name
+        elif self.owner_team:
+            return f"Team: {self.owner_team.name}"
+        return None
+    
+    def get_all_assigned_users(self):
+        """Get all users assigned to this task (owner + team members)"""
+        users = set()
+        if self.owner:
+            users.add(self.owner)
+        if self.owner_team:
+            for member in self.owner_team.members.all():
+                users.add(member)
+        return list(users)
+    
+    def is_assigned_to_user(self, user):
+        """Check if task is assigned to user (directly or via team)"""
+        if self.owner_id == user.id:
+            return True
+        if self.owner_team and self.owner_team.is_member(user):
+            return True
+        return False
+    
+    def is_reviewer_via_team(self, user):
+        """Check if user is a reviewer via team assignment"""
+        if self.reviewer_team and self.reviewer_team.is_member(user):
+            return True
+        return False
     
     # =========================================================================
     # MULTI-REVIEWER METHODS
@@ -439,8 +538,14 @@ class Task(db.Model):
         return self.reviewers.filter_by(has_rejected=True).count() > 0
     
     def is_reviewer(self, user):
-        """Check if user is a reviewer for this task"""
-        return TaskReviewer.query.filter_by(task_id=self.id, user_id=user.id).count() > 0
+        """Check if user is a reviewer for this task (directly or via team)"""
+        # Check direct reviewer assignment
+        if TaskReviewer.query.filter_by(task_id=self.id, user_id=user.id).count() > 0:
+            return True
+        # Check reviewer team membership
+        if self.reviewer_team and self.reviewer_team.is_member(user):
+            return True
+        return False
     
     def get_pending_reviewers(self):
         """Get reviewers who haven't approved or rejected yet"""

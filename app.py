@@ -13,7 +13,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_migrate import Migrate
 
 from config import config
-from models import db, User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer
+from models import db, User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team
 from translations import get_translation as t
 
 # Flask-Migrate instance
@@ -326,7 +326,9 @@ def task_create():
         year = request.form.get('year', type=int, default=date.today().year)
         period = request.form.get('period', '').strip()
         owner_id = request.form.get('owner_id', type=int) or None
+        owner_team_id = request.form.get('owner_team_id', type=int) or None
         reviewer_ids = request.form.getlist('reviewer_ids', type=int)
+        reviewer_team_id = request.form.get('reviewer_team_id', type=int) or None
         
         # Validate required fields
         errors = []
@@ -353,6 +355,8 @@ def task_create():
                     year=year,
                     period=period,
                     owner_id=owner_id,
+                    owner_team_id=owner_team_id,
+                    reviewer_team_id=reviewer_team_id,
                     status='draft'
                 )
                 db.session.add(task)
@@ -375,6 +379,7 @@ def task_create():
     entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
     templates = TaskTemplate.query.filter_by(is_active=True).order_by(TaskTemplate.keyword).all()
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    teams = Team.query.filter_by(is_active=True).order_by(Team.name).all()
     presets = TaskPreset.query.filter_by(is_active=True).order_by(TaskPreset.category, TaskPreset.title).all()
     
     return render_template('tasks/form.html',
@@ -382,6 +387,7 @@ def task_create():
                          entities=entities,
                          templates=templates,
                          users=users,
+                         teams=teams,
                          presets=presets,
                          current_year=date.today().year)
 
@@ -409,6 +415,8 @@ def task_edit(task_id):
         task.year = request.form.get('year', type=int, default=date.today().year)
         task.period = request.form.get('period', '').strip()
         task.owner_id = request.form.get('owner_id', type=int) or None
+        task.owner_team_id = request.form.get('owner_team_id', type=int) or None
+        task.reviewer_team_id = request.form.get('reviewer_team_id', type=int) or None
         
         # Handle multiple reviewers
         reviewer_ids = request.form.getlist('reviewer_ids', type=int)
@@ -434,12 +442,14 @@ def task_edit(task_id):
     entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
     templates = TaskTemplate.query.filter_by(is_active=True).order_by(TaskTemplate.keyword).all()
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    teams = Team.query.filter_by(is_active=True).order_by(Team.name).all()
     
     return render_template('tasks/form.html',
                          task=task,
                          entities=entities,
                          templates=templates,
                          users=users,
+                         teams=teams,
                          current_year=date.today().year)
 
 
@@ -1184,6 +1194,118 @@ def admin_tax_type_edit(tax_type_id):
         return redirect(url_for('admin_tax_types'))
     
     return render_template('admin/tax_type_form.html', tax_type=tax_type)
+
+
+# ============================================================================
+# TEAM MANAGEMENT
+# ============================================================================
+
+@app.route('/admin/teams')
+@admin_required
+def admin_teams():
+    """Team management - list all teams"""
+    teams = Team.query.order_by(Team.name).all()
+    return render_template('admin/teams.html', teams=teams)
+
+
+@app.route('/admin/teams/new', methods=['GET', 'POST'])
+@admin_required
+def admin_team_new():
+    """Create new team"""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        color = request.form.get('color', '#86BC25').strip()
+        manager_id = request.form.get('manager_id', type=int)
+        member_ids = request.form.getlist('members', type=int)
+        
+        if Team.query.filter_by(name=name).first():
+            flash('Teamname bereits vorhanden.', 'danger')
+        elif not name:
+            flash('Teamname ist erforderlich.', 'warning')
+        else:
+            team = Team(
+                name=name,
+                description=description or None,
+                color=color,
+                manager_id=manager_id if manager_id else None,
+                is_active=True
+            )
+            db.session.add(team)
+            db.session.flush()  # Get team.id
+            
+            # Add members
+            for user_id in member_ids:
+                user = User.query.get(user_id)
+                if user:
+                    team.add_member(user)
+            
+            db.session.commit()
+            log_action('CREATE', 'Team', team.id, team.name)
+            flash(f'Team "{name}" wurde erstellt.', 'success')
+            return redirect(url_for('admin_teams'))
+    
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    return render_template('admin/team_form.html', team=None, users=users)
+
+
+@app.route('/admin/teams/<int:team_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_team_edit(team_id):
+    """Edit team"""
+    team = Team.query.get_or_404(team_id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        
+        # Check for duplicate name (excluding current team)
+        existing = Team.query.filter(Team.name == name, Team.id != team_id).first()
+        if existing:
+            flash('Teamname bereits vorhanden.', 'danger')
+        elif not name:
+            flash('Teamname ist erforderlich.', 'warning')
+        else:
+            team.name = name
+            team.description = request.form.get('description', '').strip() or None
+            team.color = request.form.get('color', '#86BC25').strip()
+            team.manager_id = request.form.get('manager_id', type=int) or None
+            team.is_active = request.form.get('is_active') == 'on'
+            
+            # Update members - get current and new member lists
+            new_member_ids = set(request.form.getlist('members', type=int))
+            current_member_ids = set(m.id for m in team.members.all())
+            
+            # Remove members no longer selected
+            for user_id in current_member_ids - new_member_ids:
+                user = User.query.get(user_id)
+                if user:
+                    team.remove_member(user)
+            
+            # Add new members
+            for user_id in new_member_ids - current_member_ids:
+                user = User.query.get(user_id)
+                if user:
+                    team.add_member(user)
+            
+            db.session.commit()
+            log_action('UPDATE', 'Team', team.id, team.name)
+            flash(f'Team "{team.name}" wurde aktualisiert.', 'success')
+            return redirect(url_for('admin_teams'))
+    
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    return render_template('admin/team_form.html', team=team, users=users)
+
+
+@app.route('/admin/teams/<int:team_id>/delete', methods=['POST'])
+@admin_required
+def admin_team_delete(team_id):
+    """Delete team (soft delete)"""
+    team = Team.query.get_or_404(team_id)
+    team.is_active = False
+    db.session.commit()
+    log_action('DELETE', 'Team', team.id, team.name)
+    flash(f'Team "{team.name}" wurde deaktiviert.', 'success')
+    return redirect(url_for('admin_teams'))
 
 
 # ============================================================================

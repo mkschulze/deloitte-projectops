@@ -147,6 +147,20 @@
                                         {% endif %}
                                     </td>
                                 </tr>
+                                {% if task.owner_team %}
+                                <tr>
+                                    <td class="text-muted">{{ t('owner_team') }}</td>
+                                    <td>
+                                        <span class="d-inline-flex align-items-center gap-2">
+                                            <span class="d-inline-block rounded-circle" 
+                                                  style="width: 12px; height: 12px; background-color: {{ task.owner_team.color or '#86BC25' }};">
+                                            </span>
+                                            <strong>{{ task.owner_team.name }}</strong>
+                                            <span class="badge bg-light text-dark">{{ task.owner_team.get_member_count() }} {{ t('members') }}</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
                                 <tr>
                                     <td class="text-muted">{{ t('reviewer') }}</td>
                                     <td>
@@ -193,6 +207,21 @@
                                         {% endif %}
                                     </td>
                                 </tr>
+                                {% if task.reviewer_team %}
+                                <tr>
+                                    <td class="text-muted">{{ t('reviewer_team') }}</td>
+                                    <td>
+                                        <span class="d-inline-flex align-items-center gap-2">
+                                            <span class="d-inline-block rounded-circle" 
+                                                  style="width: 12px; height: 12px; background-color: {{ task.reviewer_team.color or '#86BC25' }};">
+                                            </span>
+                                            <strong>{{ task.reviewer_team.name }}</strong>
+                                            <span class="badge bg-light text-dark">{{ task.reviewer_team.get_member_count() }} {{ t('members') }}</span>
+                                        </span>
+                                        <div class="form-text mt-1">{{ 'Any team member can review' if lang == 'en' else 'Jedes Teammitglied kann prüfen' }}</div>
+                                    </td>
+                                </tr>
+                                {% endif %}
                                 {% if task.submitted_at %}
                                 <tr>
                                     <td class="text-muted">{{ t('submitted_at') if lang == 'en' else 'Eingereicht am' }}</td>

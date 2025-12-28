@@ -153,6 +153,30 @@ TRANSLATIONS = {
     'comments': {'de': 'Kommentare', 'en': 'Comments'},
     'add_comment': {'de': 'Kommentar hinzufügen', 'en': 'Add Comment'},
     
+    # Teams
+    'teams': {'de': 'Teams', 'en': 'Teams'},
+    'team': {'de': 'Team', 'en': 'Team'},
+    'new_team': {'de': 'Neues Team', 'en': 'New Team'},
+    'edit_team': {'de': 'Team bearbeiten', 'en': 'Edit Team'},
+    'team_name': {'de': 'Teamname', 'en': 'Team Name'},
+    'team_manager': {'de': 'Team-Manager', 'en': 'Team Manager'},
+    'team_manager_hint': {'de': 'Optional: Der verantwortliche Leiter des Teams', 'en': 'Optional: The responsible team leader'},
+    'team_members': {'de': 'Team-Mitglieder', 'en': 'Team Members'},
+    'team_members_hint': {'de': 'Wählen Sie die Mitglieder dieses Teams aus', 'en': 'Select the members of this team'},
+    'members': {'de': 'Mitglieder', 'en': 'Members'},
+    'manager': {'de': 'Manager', 'en': 'Manager'},
+    'no_manager': {'de': 'Kein Manager', 'en': 'No Manager'},
+    'no_teams': {'de': 'Keine Teams vorhanden', 'en': 'No teams found'},
+    'color': {'de': 'Farbe', 'en': 'Color'},
+    'choose_color': {'de': 'Farbe wählen', 'en': 'Choose color'},
+    'deactivate': {'de': 'Deaktivieren', 'en': 'Deactivate'},
+    'confirm_deactivate_team': {'de': 'Team wirklich deaktivieren?', 'en': 'Really deactivate team?'},
+    'current_members': {'de': 'Aktuelle Mitglieder', 'en': 'Current Members'},
+    'owner_team': {'de': 'Verantwortliches Team', 'en': 'Owner Team'},
+    'reviewer_team': {'de': 'Prüfer-Team', 'en': 'Reviewer Team'},
+    'no_team': {'de': 'Kein Team', 'en': 'No Team'},
+    'nav_teams': {'de': 'Teams', 'en': 'Teams'},
+    
     # Audit Log
     'audit_log': {'de': 'Änderungsprotokoll', 'en': 'Audit Log'},
     

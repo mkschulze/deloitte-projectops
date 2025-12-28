@@ -50,9 +50,9 @@
 
 ```
 deloitte-taxops-calendar/
-├── app.py                  # Application factory & routes (~1735 lines)
+├── app.py                  # Application factory & routes (~1850 lines)
 ├── config.py               # Configuration classes
-├── models.py               # SQLAlchemy models (~650 lines)
+├── models.py               # SQLAlchemy models (~750 lines)
 ├── translations.py         # i18n dictionary (DE/EN)
 ├── init_db.py              # Database initialization
 ├── Pipfile                 # Dependencies (Pipenv)
@@ -70,7 +70,8 @@ deloitte-taxops-calendar/
 │       ├── ff00c7cfda61_add_taxops_calendar_models.py
 │       ├── ebe34cad8512_add_multi_stage_approval_workflow_fields.py
 │       ├── 76fd77636f22_add_taskpreset_model_for_predefined_.py
-│       └── f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py
+│       ├── f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py
+│       └── 76a36e71cb1c_add_team_model_and_task_team_assignments.py
 │
 ├── docs/                   # Memory Bank documentation
 │   ├── technicalConcept.md
@@ -362,6 +363,7 @@ The base template includes the complete Deloitte 2024 color palette:
 | `Comment` | Discussion threads | task_id, text, created_by_id |
 | `TaskPreset` | Predefined templates | title, category, tax_type, description |
 | `AuditLog` | Activity logging | action, entity_type, entity_id, user_id |
+| `Team` | User grouping | name, description, color, manager_id, is_active |
 
 ### TaskReviewer Model (Multi-Reviewer Support)
 
@@ -385,6 +387,63 @@ class TaskReviewer(db.Model):
     
     # Unique constraint: one reviewer per task
     __table_args__ = (db.UniqueConstraint('task_id', 'user_id', name='unique_task_reviewer'),)
+```
+
+### Team Model (User Grouping)
+
+```python
+# Association table for team members
+team_members = db.Table('team_members',
+    db.Column('team_id', db.Integer, db.ForeignKey('team.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('joined_at', db.DateTime, default=datetime.utcnow),
+    db.Column('is_team_lead', db.Boolean, default=False)
+)
+
+class Team(db.Model):
+    __tablename__ = 'team'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    color = db.Column(db.String(7), default='#86BC25')  # Deloitte Green
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    manager = db.relationship('User', foreign_keys=[manager_id])
+    members = db.relationship('User', secondary=team_members, lazy='dynamic',
+                             backref=db.backref('teams', lazy='dynamic'))
+    owned_tasks = db.relationship('Task', back_populates='owner_team', 
+                                  foreign_keys='Task.owner_team_id')
+    
+    # Methods
+    def add_member(self, user, is_lead=False): ...
+    def remove_member(self, user): ...
+    def is_member(self, user): ...
+    def get_member_count(self): ...
+```
+
+### Task Team Fields
+
+```python
+# Added to Task model
+owner_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True, index=True)
+reviewer_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)
+
+owner_team = db.relationship('Team', back_populates='owned_tasks', foreign_keys=[owner_team_id])
+reviewer_team = db.relationship('Team', foreign_keys=[reviewer_team_id])
+
+# Methods
+def is_reviewer(self, user):
+    """Check if user is a direct reviewer OR member of reviewer_team"""
+def is_reviewer_via_team(self, user):
+    """Check if user can review via team membership"""
+def get_owner_display(self):
+    """Return owner user name or team name"""
+def is_assigned_to_user(self, user):
+    """Check if user is assigned directly or via team"""
 ```
 
 ---

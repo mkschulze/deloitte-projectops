@@ -162,6 +162,24 @@
                                 <small class="text-muted">{{ t('owner_help') if lang == 'en' else 'Wer ist für diese Aufgabe verantwortlich?' }}</small>
                             </div>
                             
+                            <!-- Owner Team -->
+                            <div class="col-md-6 mb-3">
+                                <label for="owner_team_id" class="form-label">{{ t('owner_team') }}</label>
+                                <select class="form-select" id="owner_team_id" name="owner_team_id">
+                                    <option value="">-- {{ t('no_team') }} --</option>
+                                    {% for team in teams %}
+                                    <option value="{{ team.id }}" 
+                                            {{ 'selected' if task and task.owner_team_id == team.id }}
+                                            style="border-left: 4px solid {{ team.color }}">
+                                        {{ team.name }} ({{ team.get_member_count() }} {{ t('members') }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">{{ 'Alternative: Assign to a team' if lang == 'en' else 'Alternativ: Einem Team zuweisen' }}</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
                             <!-- Reviewer (Multi-Select) -->
                             <div class="col-md-6 mb-3">
                                 <label for="reviewer_ids" class="form-label">{{ t('reviewer') }}</label>
@@ -174,6 +192,22 @@
                                     {% endfor %}
                                 </select>
                                 <small class="text-muted">{{ 'Hold Ctrl/Cmd to select multiple reviewers. All must approve.' if lang == 'en' else 'Strg/Cmd gedrückt halten für Mehrfachauswahl. Alle müssen genehmigen.' }}</small>
+                            </div>
+                            
+                            <!-- Reviewer Team -->
+                            <div class="col-md-6 mb-3">
+                                <label for="reviewer_team_id" class="form-label">{{ t('reviewer_team') }}</label>
+                                <select class="form-select" id="reviewer_team_id" name="reviewer_team_id">
+                                    <option value="">-- {{ t('no_team') }} --</option>
+                                    {% for team in teams %}
+                                    <option value="{{ team.id }}" 
+                                            {{ 'selected' if task and task.reviewer_team_id == team.id }}
+                                            style="border-left: 4px solid {{ team.color }}">
+                                        {{ team.name }} ({{ team.get_member_count() }} {{ t('members') }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">{{ 'Any team member can review' if lang == 'en' else 'Jedes Teammitglied kann prüfen' }}</small>
                             </div>
                         </div>
                         

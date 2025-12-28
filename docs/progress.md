@@ -2,9 +2,9 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete with Multi-Reviewer
+## Current Status: ✅ MVP Complete with Multi-Reviewer + Teams
 
-**Last Updated:** 2025-12-28 (Session 3)
+**Last Updated:** 2025-12-28 (Session 4)
 
 ---
 
@@ -53,9 +53,11 @@
 - [x] ReferenceApplication model (Anträge)
 - [x] TaskPreset model (predefined task templates)
 - [x] **TaskReviewer model (multi-reviewer support)**
+- [x] **Team model (user grouping)**
 - [x] UserRole enum (admin, manager, reviewer, preparer, readonly)
 - [x] TaskStatus enum (draft, submitted, in_review, approved, completed, rejected)
 - [x] Entity-User access association table
+- [x] team_members association table
 - [x] Create migration for all models
 - [x] Apply migration (`flask db upgrade`)
 
@@ -65,6 +67,7 @@
 - [x] Extended user roles (manager, reviewer, preparer, readonly)
 - [x] Entity CRUD (admin) - full CRUD with parent selection
 - [x] TaxType CRUD (admin) - full CRUD
+- [x] **Team Management (admin) - full CRUD with member assignment**
 - [ ] User-Entity permission scoping (deferred)
 
 ### Phase 4: Task Presets ✅
@@ -99,6 +102,19 @@
 - [x] Auto-transition to rejected if any rejects
 - [x] Reviewer-specific action buttons
 - [x] Per-reviewer approval timestamps and notes
+
+### Phase 6b: Team Management ✅
+
+- [x] Team model with name, description, color, manager
+- [x] team_members many-to-many association table
+- [x] Task.owner_team_id for team-based ownership
+- [x] Task.reviewer_team_id for team-based review
+- [x] Team admin CRUD (list, create, edit, delete)
+- [x] Multi-select member assignment
+- [x] Team selection in task create/edit forms
+- [x] Team display in task detail view
+- [x] is_reviewer() checks team membership
+- [x] Navigation link in admin menu
 
 ### Phase 7: Calendar & Dashboard ✅
 
@@ -217,6 +233,26 @@
   - Updated Memory Bank docs
   - Comprehensive README.md for GitHub
 
+### 2025-12-28 — Session 4: Team Management
+
+**Completed:**
+- **Team Model & Database:**
+  - Created Team model with name, description, color, manager
+  - Created team_members association table (many-to-many)
+  - Added owner_team_id and reviewer_team_id to Task model
+  - Generated and applied migration
+
+- **Admin Team Management:**
+  - Team list view with color indicators
+  - Team create/edit form with multi-select members
+  - Team soft-delete (deactivation)
+  - Added Teams link to admin navigation menu
+
+- **Task-Team Integration:**
+  - Task form with owner team and reviewer team selection
+  - Task detail shows team assignments
+  - is_reviewer() checks team membership for access control
+
 ---
 
 ## Known Issues
@@ -227,10 +263,10 @@
 
 ---
 
-## Files Modified (Session 3)
+## Files Modified (Session 3 & 4)
 
 ### Models
-- `models.py` — Added TaskReviewer model, Task multi-reviewer methods
+- `models.py` — Added TaskReviewer model, Task multi-reviewer methods, Team model, team_members table, Task team fields
 
 ### Routes (app.py)
 - `task_upload_evidence` — File upload handler
@@ -241,20 +277,30 @@
 - `task_add_comment` — Comment creation
 - `task_delete_comment` — Comment deletion
 - `task_reviewer_action` — Individual reviewer approve/reject
-- Updated `task_create` / `task_edit` for multi-reviewer
+- `admin_teams` — Team list view
+- `admin_team_new` — Team creation
+- `admin_team_edit` — Team editing with member management
+- `admin_team_delete` — Team soft-delete
+- Updated `task_create` / `task_edit` for multi-reviewer and teams
 
 ### Templates
-- `templates/tasks/form.html` — Multi-select reviewers
-- `templates/tasks/detail.html` — Evidence upload, comments, multi-reviewer display
+- `templates/tasks/form.html` — Multi-select reviewers, team selection
+- `templates/tasks/detail.html` — Evidence upload, comments, multi-reviewer display, team display
 - `templates/tasks/list.html` — Preview column with popovers
 - `templates/calendar.html` — Task preview popovers
 - `templates/calendar_year.html` — Task preview popovers
-- `templates/base.html` — App name in navbar
+- `templates/base.html` — App name in navbar, Teams link in admin menu
 - `templates/admin/presets.html` — Task preset management
 - `templates/admin/preset_form.html` — Preset create/edit
+- `templates/admin/teams.html` — Team list view (NEW)
+- `templates/admin/team_form.html` — Team create/edit form (NEW)
 
 ### Migrations
 - `f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py`
+- `76a36e71cb1c_add_team_model_and_task_team_assignments.py` (NEW)
+
+### Translations
+- `translations.py` — Added team-related translations
 
 ---
 
