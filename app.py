@@ -3559,9 +3559,11 @@ def api_monthly_chart():
     for task in tasks:
         if task.due_date:
             month = task.due_date.month - 1  # 0-indexed
+            # Handle both date and datetime objects
+            task_date = task.due_date if isinstance(task.due_date, date) else task.due_date.date()
             if task.status == 'completed':
                 monthly_data[month]['completed'] += 1
-            elif task.due_date.date() < today and task.status != 'completed':
+            elif task_date < today and task.status != 'completed':
                 monthly_data[month]['overdue'] += 1
             else:
                 monthly_data[month]['pending'] += 1
