@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.2] - 2025-12-31
+
+### 📁 PM-1: Sample Data
+
+#### Added
+- **Sample Projects Script**: `scripts/create_sample_projects.py` for reproducible demo data
+- **Demo Projects**: TAX (Tax Compliance), AUD (Annual Audit), INT (Internal Projects)
+
+---
+
 ## [1.3.1] - 2025-12-31
 
 ### 📁 Phase PM-1: Project Basis

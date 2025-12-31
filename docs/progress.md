@@ -5,7 +5,7 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0/PM-1 (Project Management)
 
 **Last Updated:** 2025-12-31 (Session 8)  
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 ---
 
@@ -256,6 +256,8 @@
 - [x] Projekt-CRUD Routes & Templates
 - [x] Mitglieder-Verwaltung
 - [x] Projekt-Archivierung
+- [x] Sample Projects Script (scripts/create_sample_projects.py)
+- [x] 3 Demo-Projekte: TAX, AUD, INT
 
 #### Phase PM-2: Issue-Management
 - [ ] Issue Model mit Auto-Key (TAX-1, TAX-2)
