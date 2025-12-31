@@ -25,15 +25,9 @@ class ProjectsModule(BaseModule):
     def get_blueprint(cls):
         """Get or create the projects blueprint"""
         if cls._blueprint is None:
-            cls._blueprint = Blueprint(
-                'projects',
-                __name__,
-                template_folder='templates',
-                url_prefix='/projects'
-            )
-            # Routes will be registered in PM-1
-            # from .routes import register_routes
-            # register_routes(cls._blueprint)
+            # Import blueprint from routes
+            from .routes import bp
+            cls._blueprint = bp
         return cls._blueprint
     
     @classmethod

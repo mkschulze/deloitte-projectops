@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2025-12-31
+
+### 📁 Phase PM-1: Project Basis
+
+#### Added
+- **Project Model**: Full project management with unique keys (TAX, AUD, HR)
+- **ProjectMember Model**: Project membership with roles
+- **ProjectRole Enum**: admin, lead, member, viewer permission levels
+- **Project List Page**: Card-based view with project icons and colors
+- **Project Detail Page**: Dashboard with team overview and quick actions
+- **Project Form**: Create/edit projects with bilingual names, icons, colors
+- **Member Management**: Add/remove members, change roles
+- **Project Archival**: Soft-delete projects with archive function
+- **Module Access Control**: `projects_module_required` decorator
+- **Project Access Control**: `project_access_required` decorator
+
+#### Templates
+- `modules/projects/templates/projects/list.html`: Project overview with cards
+- `modules/projects/templates/projects/detail.html`: Project dashboard
+- `modules/projects/templates/projects/form.html`: Create/edit form with preview
+- `modules/projects/templates/projects/members.html`: Member management
+
+---
+
 ## [1.3.0] - 2025-12-31
 
 ### 🏗️ Phase PM-0: Module Infrastructure

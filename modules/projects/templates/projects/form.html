@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}{{ (project.get_name(lang) if project else ('Neues Projekt' if lang == 'de' else 'New Project')) }} - TaxOps{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+            {% if project %}
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+            <li class="breadcrumb-item active">{{ 'Bearbeiten' if lang == 'de' else 'Edit' }}</li>
+            {% else %}
+            <li class="breadcrumb-item active">{{ 'Neues Projekt' if lang == 'de' else 'New Project' }}</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h4 class="mb-0">
+                        <i class="bi bi-{{ 'pencil' if project else 'plus-circle' }} me-2"></i>
+                        {% if project %}
+                            {{ 'Projekt bearbeiten' if lang == 'de' else 'Edit Project' }}
+                        {% else %}
+                            {{ 'Neues Projekt erstellen' if lang == 'de' else 'Create New Project' }}
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Key (only for new projects) -->
+                        {% if not project %}
+                        <div class="mb-3">
+                            <label for="key" class="form-label">
+                                {{ 'Projektschlüssel' if lang == 'de' else 'Project Key' }} <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control text-uppercase" id="key" name="key" 
+                                   maxlength="10" pattern="[A-Z0-9]+" required
+                                   placeholder="z.B. TAX, PROJ, FIN">
+                            <div class="form-text">
+                                {{ 'Eindeutiger Schlüssel für Issues (z.B. TAX-123). Max. 10 Zeichen, nur Großbuchstaben und Zahlen.' if lang == 'de' else 'Unique key for issues (e.g. TAX-123). Max 10 characters, uppercase letters and numbers only.' }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted">{{ 'Projektschlüssel' if lang == 'de' else 'Project Key' }}</label>
+                            <div class="form-control bg-light">{{ project.key }}</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Name -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label">
+                                    {{ 'Name (Deutsch)' if lang == 'de' else 'Name (German)' }} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ project.name if project else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="name_en" class="form-label">
+                                    {{ 'Name (Englisch)' if lang == 'de' else 'Name (English)' }}
+                                </label>
+                                <input type="text" class="form-control" id="name_en" name="name_en" 
+                                       value="{{ project.name_en if project else '' }}">
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="description" class="form-label">
+                                    {{ 'Beschreibung (Deutsch)' if lang == 'de' else 'Description (German)' }}
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="3">{{ project.description if project else '' }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="description_en" class="form-label">
+                                    {{ 'Beschreibung (Englisch)' if lang == 'de' else 'Description (English)' }}
+                                </label>
+                                <textarea class="form-control" id="description_en" name="description_en" rows="3">{{ project.description_en if project else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Lead -->
+                        <div class="mb-3">
+                            <label for="lead_id" class="form-label">
+                                {{ 'Projektleiter' if lang == 'de' else 'Project Lead' }}
+                            </label>
+                            <select class="form-select" id="lead_id" name="lead_id">
+                                <option value="">{{ '-- Auswählen --' if lang == 'de' else '-- Select --' }}</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if project and project.lead_id == user.id %}selected{% endif %}>
+                                    {{ user.name }}{% if user.email %} ({{ user.email }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="category" class="form-label">
+                                {{ 'Kategorie' if lang == 'de' else 'Category' }}
+                            </label>
+                            <input type="text" class="form-control" id="category" name="category" 
+                                   value="{{ project.category if project else '' }}"
+                                   list="category-list">
+                            <datalist id="category-list">
+                                <option value="Tax">
+                                <option value="Compliance">
+                                <option value="Advisory">
+                                <option value="Audit">
+                                <option value="Internal">
+                            </datalist>
+                        </div>
+
+                        <!-- Icon & Color -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="icon" class="form-label">{{ 'Icon' if lang == 'de' else 'Icon' }}</label>
+                                <select class="form-select" id="icon" name="icon">
+                                    <option value="bi-folder" {% if not project or project.icon == 'bi-folder' %}selected{% endif %}>📁 Folder</option>
+                                    <option value="bi-briefcase" {% if project and project.icon == 'bi-briefcase' %}selected{% endif %}>💼 Briefcase</option>
+                                    <option value="bi-calculator" {% if project and project.icon == 'bi-calculator' %}selected{% endif %}>🧮 Calculator</option>
+                                    <option value="bi-bank" {% if project and project.icon == 'bi-bank' %}selected{% endif %}>🏦 Bank</option>
+                                    <option value="bi-graph-up" {% if project and project.icon == 'bi-graph-up' %}selected{% endif %}>📈 Graph</option>
+                                    <option value="bi-clipboard-check" {% if project and project.icon == 'bi-clipboard-check' %}selected{% endif %}>📋 Clipboard</option>
+                                    <option value="bi-gear" {% if project and project.icon == 'bi-gear' %}selected{% endif %}>⚙️ Gear</option>
+                                    <option value="bi-people" {% if project and project.icon == 'bi-people' %}selected{% endif %}>👥 People</option>
+                                    <option value="bi-file-earmark-text" {% if project and project.icon == 'bi-file-earmark-text' %}selected{% endif %}>📄 Document</option>
+                                    <option value="bi-star" {% if project and project.icon == 'bi-star' %}selected{% endif %}>⭐ Star</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="color" class="form-label">{{ 'Farbe' if lang == 'de' else 'Color' }}</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="color" name="color" 
+                                           value="{{ project.color if project else '#86BC25' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="color-text" 
+                                           value="{{ project.color if project else '#86BC25' }}" pattern="#[0-9A-Fa-f]{6}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="mb-4">
+                            <label class="form-label">{{ 'Vorschau' if lang == 'de' else 'Preview' }}</label>
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <div class="project-icon me-3" id="preview-icon" style="background-color: {{ project.color if project else '#86BC25' }};">
+                                    <i class="{{ project.icon if project else 'bi-folder' }}"></i>
+                                </div>
+                                <div>
+                                    <strong id="preview-name">{{ project.name if project else 'Projektname' }}</strong>
+                                    <br><small class="text-muted" id="preview-key">{{ project.key if project else 'KEY' }}</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('projects.project_detail', project_id=project.id) if project else url_for('projects.project_list') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>
+                                {{ 'Abbrechen' if lang == 'de' else 'Cancel' }}
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {{ 'Speichern' if lang == 'de' else 'Save' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.project-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const colorInput = document.getElementById('color');
+    const colorText = document.getElementById('color-text');
+    const iconSelect = document.getElementById('icon');
+    const nameInput = document.getElementById('name');
+    const keyInput = document.getElementById('key');
+    const previewIcon = document.getElementById('preview-icon');
+    const previewName = document.getElementById('preview-name');
+    const previewKey = document.getElementById('preview-key');
+
+    // Sync color inputs
+    colorInput.addEventListener('input', function() {
+        colorText.value = this.value;
+        previewIcon.style.backgroundColor = this.value;
+    });
+    colorText.addEventListener('input', function() {
+        if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+            colorInput.value = this.value;
+            previewIcon.style.backgroundColor = this.value;
+        }
+    });
+
+    // Update preview
+    iconSelect.addEventListener('change', function() {
+        previewIcon.innerHTML = '<i class="' + this.value + '"></i>';
+    });
+    nameInput.addEventListener('input', function() {
+        previewName.textContent = this.value || 'Projektname';
+    });
+    if (keyInput) {
+        keyInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            previewKey.textContent = this.value || 'KEY';
+        });
+    }
+});
+</script>
+{% endblock %}

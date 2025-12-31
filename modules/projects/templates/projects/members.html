@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Mitglieder' if lang == 'de' else 'Members' }} - {{ project.key }} - TaxOps{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+            <li class="breadcrumb-item active">{{ 'Mitglieder' if lang == 'de' else 'Members' }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">
+            <i class="bi bi-people me-2"></i>
+            {{ 'Projektmitglieder' if lang == 'de' else 'Project Members' }}: {{ project.key }}
+        </h1>
+        <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            {{ 'Zurück' if lang == 'de' else 'Back' }}
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Member List -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">{{ 'Aktuelle Mitglieder' if lang == 'de' else 'Current Members' }} ({{ members|length }})</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{{ 'Name' if lang == 'de' else 'Name' }}</th>
+                                <th>{{ 'E-Mail' if lang == 'de' else 'Email' }}</th>
+                                <th>{{ 'Rolle' if lang == 'de' else 'Role' }}</th>
+                                <th>{{ 'Beigetreten' if lang == 'de' else 'Joined' }}</th>
+                                {% if can_edit %}
+                                <th class="text-end">{{ 'Aktionen' if lang == 'de' else 'Actions' }}</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-person-circle me-2 text-muted"></i>
+                                    {{ member.user.name }}
+                                    {% if member.user.id == project.lead_id %}
+                                    <span class="badge bg-info ms-1" title="{{ 'Projektleiter' if lang == 'de' else 'Project Lead' }}">
+                                        <i class="bi bi-star-fill"></i>
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ member.user.email or '-' }}</td>
+                                <td>
+                                    {% if can_edit %}
+                                    <form action="{{ url_for('projects.project_member_role', project_id=project.id, member_id=member.id) }}" method="POST" class="d-inline">
+                                        <select name="role" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                                            <option value="admin" {% if member.role == 'admin' %}selected{% endif %}>Admin</option>
+                                            <option value="lead" {% if member.role == 'lead' %}selected{% endif %}>Lead</option>
+                                            <option value="member" {% if member.role == 'member' %}selected{% endif %}>Member</option>
+                                            <option value="viewer" {% if member.role == 'viewer' %}selected{% endif %}>Viewer</option>
+                                        </select>
+                                    </form>
+                                    {% else %}
+                                    <span class="badge bg-{{ 'success' if member.role == 'admin' else 'primary' if member.role == 'lead' else 'secondary' }}">
+                                        {{ member.role }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ member.joined_at.strftime('%d.%m.%Y') if member.joined_at else '-' }}</td>
+                                {% if can_edit %}
+                                <td class="text-end">
+                                    <form action="{{ url_for('projects.project_member_remove', project_id=project.id, member_id=member.id) }}" 
+                                          method="POST" class="d-inline"
+                                          onsubmit="return confirm('{{ 'Mitglied wirklich entfernen?' if lang == 'de' else 'Really remove member?' }}')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="{{ 'Entfernen' if lang == 'de' else 'Remove' }}">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                            {% if not members %}
+                            <tr>
+                                <td colspan="{% if can_edit %}5{% else %}4{% endif %}" class="text-center text-muted py-4">
+                                    {{ 'Keine Mitglieder' if lang == 'de' else 'No members' }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Member -->
+        {% if can_edit %}
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-plus me-2"></i>
+                        {{ 'Mitglied hinzufügen' if lang == 'de' else 'Add Member' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if available_users %}
+                    <form action="{{ url_for('projects.project_member_add', project_id=project.id) }}" method="POST">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">{{ 'Benutzer' if lang == 'de' else 'User' }}</label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">{{ '-- Auswählen --' if lang == 'de' else '-- Select --' }}</option>
+                                {% for user in available_users %}
+                                <option value="{{ user.id }}">{{ user.name }}{% if user.email %} ({{ user.email }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="role" class="form-label">{{ 'Rolle' if lang == 'de' else 'Role' }}</label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="member">Member</option>
+                                <option value="lead">Lead</option>
+                                <option value="admin">Admin</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                            <div class="form-text">
+                                <ul class="small mb-0 ps-3">
+                                    <li><strong>Admin</strong>: {{ 'Vollzugriff' if lang == 'de' else 'Full access' }}</li>
+                                    <li><strong>Lead</strong>: {{ 'Bearbeitung' if lang == 'de' else 'Edit access' }}</li>
+                                    <li><strong>Member</strong>: {{ 'Mitarbeit' if lang == 'de' else 'Work on issues' }}</li>
+                                    <li><strong>Viewer</strong>: {{ 'Nur Lesen' if lang == 'de' else 'Read only' }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-plus-lg me-1"></i>
+                            {{ 'Hinzufügen' if lang == 'de' else 'Add' }}
+                        </button>
+                    </form>
+                    {% else %}
+                    <p class="text-muted mb-0 text-center py-3">
+                        <i class="bi bi-check-circle me-1"></i>
+                        {{ 'Alle Benutzer sind bereits Mitglied' if lang == 'de' else 'All users are already members' }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Role Legend -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-shield me-2"></i>
+                        {{ 'Rollen-Erklärung' if lang == 'de' else 'Role Explanation' }}
+                    </h6>
+                </div>
+                <div class="card-body small">
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <td><span class="badge bg-success">Admin</span></td>
+                            <td>{{ 'Projekt verwalten, Mitglieder bearbeiten, archivieren' if lang == 'de' else 'Manage project, edit members, archive' }}</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-primary">Lead</span></td>
+                            <td>{{ 'Issues verwalten, Sprints planen' if lang == 'de' else 'Manage issues, plan sprints' }}</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-secondary">Member</span></td>
+                            <td>{{ 'An Issues arbeiten, kommentieren' if lang == 'de' else 'Work on issues, comment' }}</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge bg-secondary">Viewer</span></td>
+                            <td>{{ 'Issues und Board ansehen' if lang == 'de' else 'View issues and board' }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

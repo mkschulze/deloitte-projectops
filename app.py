@@ -25,6 +25,9 @@ import modules.core
 import modules.taxops
 import modules.projects
 
+# Import project models for migrations
+from modules.projects.models import Project, ProjectMember, ProjectRole
+
 
 # ============================================================================
 # APP INITIALIZATION

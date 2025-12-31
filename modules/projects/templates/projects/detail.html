@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.key }} - {{ project.get_name(lang) }} - TaxOps{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb & Header -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+            <li class="breadcrumb-item active">{{ project.key }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex align-items-center">
+                <div class="project-icon me-3" style="background-color: {{ project.color or '#86BC25' }};">
+                    <i class="{{ project.icon or 'bi-folder' }}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h1 class="h3 mb-0">{{ project.get_name(lang) }}</h1>
+                    <span class="text-muted">{{ project.key }}</span>
+                    {% if project.category %}
+                    <span class="badge bg-secondary ms-2">{{ project.category }}</span>
+                    {% endif %}
+                </div>
+                {% if project.can_user_edit(current_user) %}
+                <div class="btn-group">
+                    <a href="{{ url_for('projects.project_edit', project_id=project.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>
+                        {{ 'Bearbeiten' if lang == 'de' else 'Edit' }}
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('projects.project_members', project_id=project.id) }}">
+                            <i class="bi bi-people me-2"></i>{{ 'Mitglieder verwalten' if lang == 'de' else 'Manage Members' }}
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="{{ url_for('projects.project_archive', project_id=project.id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ 'Projekt wirklich archivieren?' if lang == 'de' else 'Really archive project?' }}')">
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="bi bi-archive me-2"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Description -->
+    {% if project.description %}
+    <div class="alert alert-light mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        {{ (project.description_en if lang == 'en' and project.description_en else project.description) }}
+    </div>
+    {% endif %}
+
+    <!-- Project Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="h2 mb-0 text-primary">{{ project.members|length }}</div>
+                    <small class="text-muted">{{ 'Mitglieder' if lang == 'de' else 'Members' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="h2 mb-0 text-success">{{ project.issue_counter }}</div>
+                    <small class="text-muted">{{ 'Issues erstellt' if lang == 'de' else 'Issues Created' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="h2 mb-0 text-info">-</div>
+                    <small class="text-muted">{{ 'Offen' if lang == 'de' else 'Open' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="h2 mb-0 text-warning">-</div>
+                    <small class="text-muted">{{ 'In Bearbeitung' if lang == 'de' else 'In Progress' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning me-2"></i>
+                        {{ 'Schnellzugriff' if lang == 'de' else 'Quick Actions' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <a href="#" class="btn btn-outline-primary w-100 disabled">
+                                <i class="bi bi-plus-circle d-block fs-3 mb-2"></i>
+                                {{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="#" class="btn btn-outline-primary w-100 disabled">
+                                <i class="bi bi-kanban d-block fs-3 mb-2"></i>
+                                {{ 'Kanban Board' if lang == 'de' else 'Kanban Board' }}
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="#" class="btn btn-outline-primary w-100 disabled">
+                                <i class="bi bi-list-task d-block fs-3 mb-2"></i>
+                                {{ 'Backlog' if lang == 'de' else 'Backlog' }}
+                            </a>
+                        </div>
+                    </div>
+                    <p class="text-center text-muted mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        {{ 'Issue-Management kommt in PM-2' if lang == 'de' else 'Issue management coming in PM-2' }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Recent Activity (placeholder) -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-activity me-2"></i>
+                        {{ 'Letzte Aktivität' if lang == 'de' else 'Recent Activity' }}
+                    </h5>
+                </div>
+                <div class="card-body text-center text-muted py-5">
+                    <i class="bi bi-clock-history display-4"></i>
+                    <p class="mt-2">{{ 'Noch keine Aktivitäten' if lang == 'de' else 'No activities yet' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Project Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        {{ 'Projektinfo' if lang == 'de' else 'Project Info' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5 text-muted">{{ 'Projektleiter' if lang == 'de' else 'Lead' }}</dt>
+                        <dd class="col-7">{{ project.lead.name if project.lead else '-' }}</dd>
+                        
+                        <dt class="col-5 text-muted">{{ 'Erstellt am' if lang == 'de' else 'Created' }}</dt>
+                        <dd class="col-7">{{ project.created_at.strftime('%d.%m.%Y') if project.created_at else '-' }}</dd>
+                        
+                        <dt class="col-5 text-muted">{{ 'Erstellt von' if lang == 'de' else 'Created by' }}</dt>
+                        <dd class="col-7">{{ project.created_by.name if project.created_by else '-' }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Team -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        {{ 'Team' if lang == 'de' else 'Team' }}
+                    </h5>
+                    {% if project.can_user_edit(current_user) %}
+                    <a href="{{ url_for('projects.project_members', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-gear"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for member in members[:5] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-person-circle me-2 text-muted"></i>
+                            {{ member.user.name }}
+                        </div>
+                        <span class="badge bg-{{ 'success' if member.role == 'admin' else 'primary' if member.role == 'lead' else 'secondary' }}">
+                            {{ member.role }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                    {% if members|length > 5 %}
+                    <li class="list-group-item text-center">
+                        <a href="{{ url_for('projects.project_members', project_id=project.id) }}">
+                            {{ '+' ~ (members|length - 5) ~ ' weitere' if lang == 'de' else '+' ~ (members|length - 5) ~ ' more' }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if not members %}
+                    <li class="list-group-item text-muted text-center">
+                        {{ 'Keine Mitglieder' if lang == 'de' else 'No members' }}
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.project-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+</style>
+{% endblock %}

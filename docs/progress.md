@@ -2,10 +2,10 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 (Module Infrastructure)
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0/PM-1 (Project Management)
 
 **Last Updated:** 2025-12-31 (Session 8)  
-**Version:** 1.3.0
+**Version:** 1.3.1
 
 ---
 
@@ -249,10 +249,13 @@
 - [x] flask sync-modules CLI command
 - [ ] Dynamische Navigation (deferred)
 
-#### Phase PM-1: Projekt-Basis
-- [ ] Project Model mit Key (TAX, AUD)
-- [ ] ProjectMember für Mitgliedschaft
-- [ ] Projekt-CRUD Routes & Templates
+#### Phase PM-1: Projekt-Basis ✅
+- [x] Project Model mit Key (TAX, AUD)
+- [x] ProjectMember für Mitgliedschaft
+- [x] ProjectRole enum (admin, lead, member, viewer)
+- [x] Projekt-CRUD Routes & Templates
+- [x] Mitglieder-Verwaltung
+- [x] Projekt-Archivierung
 
 #### Phase PM-2: Issue-Management
 - [ ] Issue Model mit Auto-Key (TAX-1, TAX-2)
