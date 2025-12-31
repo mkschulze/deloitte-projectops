@@ -38,11 +38,11 @@
                                 {% elif user.role == 'manager' %}
                                 <span class="badge bg-primary">Manager</span>
                                 {% elif user.role == 'reviewer' %}
-                                <span class="badge bg-info">Reviewer</span>
+                                <span class="badge bg-info">{{ 'Prüfer' if lang == 'de' else 'Reviewer' }}</span>
                                 {% elif user.role == 'preparer' %}
-                                <span class="badge bg-secondary">Preparer</span>
+                                <span class="badge bg-secondary">{{ 'Bearbeiter' if lang == 'de' else 'Preparer' }}</span>
                                 {% else %}
-                                <span class="badge bg-light text-dark">Readonly</span>
+                                <span class="badge bg-light text-dark">{{ 'Nur Lesen' if lang == 'de' else 'Readonly' }}</span>
                                 {% endif %}
                             </td>
                             <td>

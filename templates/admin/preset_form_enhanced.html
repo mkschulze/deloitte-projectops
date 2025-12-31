@@ -708,7 +708,7 @@
                                             <h6 class="mb-0">
                                                 <i class="bi bi-calendar-check me-2"></i>
                                                 {{ 'Preview: Due Dates in' if lang == 'en' else 'Vorschau: Fälligkeiten in' }} 
-                                                <span id="wizardPreviewYear">{{ "now"|datetime("Y") }}</span>
+                                                <span id="wizardPreviewYear"></span>
                                             </h6>
                                         </div>
                                         <div class="card-body">
@@ -1239,6 +1239,9 @@
         const offset = parseInt(document.getElementById('wizardDayOffset').value) || 10;
         const container = document.getElementById('wizardRecurrenceDates');
         const year = new Date().getFullYear();
+        
+        // Update year display
+        document.getElementById('wizardPreviewYear').textContent = year;
         
         let dates = [];
         

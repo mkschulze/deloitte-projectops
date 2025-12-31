@@ -90,6 +90,42 @@
         </div>
     </div>
 
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center py-2">
+                    <h4 class="mb-0">{{ tasks|length }}</h4>
+                    <small class="text-muted">{{ 'Total' if lang == 'en' else 'Gesamt' }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light border-start border-danger border-3">
+                <div class="card-body text-center py-2">
+                    <h4 class="mb-0 text-danger">{{ tasks|selectattr('is_overdue')|list|length }}</h4>
+                    <small class="text-muted">{{ t('status_overdue') }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light border-start border-warning border-3">
+                <div class="card-body text-center py-2">
+                    <h4 class="mb-0 text-warning">{{ tasks|selectattr('is_due_soon')|list|length }}</h4>
+                    <small class="text-muted">{{ t('status_due_soon') }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light border-start border-success border-3">
+                <div class="card-body text-center py-2">
+                    <h4 class="mb-0 text-success">{{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}</h4>
+                    <small class="text-muted">{{ t('status_completed') }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bulk Actions Toolbar (hidden by default) -->
     <div id="bulkActionsBar" class="card shadow-sm mb-3 d-none" style="background-color: var(--dtt-green-1); border-color: var(--dtt-green-3);">
         <div class="card-body py-2 d-flex align-items-center justify-content-between">
@@ -124,7 +160,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0" id="taskTable">
-                    <thead class="table-light">
+                    <thead class="table-dark">
                         <tr>
                             <th style="width: 40px;">
                                 <input type="checkbox" class="form-check-input" id="selectAllCheckbox" title="{{ 'Alle auswählen' if lang == 'de' else 'Select all' }}">

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2025-12-31
+
+### 🎨 UI/UX Improvements
+
+#### Changed
+- **Task List**: Added stats cards (Total, Overdue, Due Soon, Completed) with color-coded borders
+- **Task List**: Dark table header for better visual hierarchy
+- **Dashboard**: Dark card headers for all charts with Deloitte green icons
+- **Dashboard**: "My Tasks" section with dark header styling
+- **Task Detail**: Fixed button wrapping issue with `flex-nowrap` and `text-nowrap`
+- **Task Detail**: Changed "Wiederherstellen" to "Aktivieren" (shorter, fits inline)
+- **User Management**: Added German translations for roles (Prüfer, Bearbeiter, Nur Lesen)
+
+#### Fixed
+- Button layout issue on task detail page where long text caused vertical stacking
+
+---
+
 ## [1.2.0] - 2025-12-31
 
 ### 🛠️ Phase J: Template Builder UI (Full Form Builder)
