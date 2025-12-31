@@ -663,6 +663,12 @@ class Task(db.Model):
     
     completion_note = db.Column(db.Text)  # What was filed, where, by whom
     
+    # Archiving fields (soft-delete)
+    is_archived = db.Column(db.Boolean, default=False, index=True)
+    archived_at = db.Column(db.DateTime)
+    archived_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    archive_reason = db.Column(db.Text)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -687,6 +693,27 @@ class Task(db.Model):
     
     # Preset relationship (for recurring tasks)
     preset = db.relationship('TaskPreset', backref='generated_tasks')
+    
+    # Archive relationship
+    archived_by = db.relationship('User', foreign_keys=[archived_by_id], backref='tasks_archived')
+    
+    # =========================================================================
+    # ARCHIVE METHODS
+    # =========================================================================
+    
+    def archive(self, user, reason=None):
+        """Archive this task (soft-delete)"""
+        self.is_archived = True
+        self.archived_at = datetime.utcnow()
+        self.archived_by_id = user.id if user else None
+        self.archive_reason = reason
+    
+    def restore(self):
+        """Restore this task from archive"""
+        self.is_archived = False
+        self.archived_at = None
+        self.archived_by_id = None
+        self.archive_reason = None
     
     # =========================================================================
     # TEAM METHODS

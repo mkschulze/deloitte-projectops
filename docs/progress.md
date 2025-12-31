@@ -2,9 +2,9 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phase A/B/C/D/E/F/G/H (Notifications, Bulk Ops, Exports, iCal, Email, Charts, Entity Scoping, Recurring Tasks)
+## Current Status: ✅ MVP Complete + Phase A/B/C/D/E/F/G/H/I (Notifications, Bulk Ops, Exports, iCal, Email, Charts, Entity Scoping, Recurring Tasks, Archival)
 
-**Last Updated:** 2025-12-31 (Session 6)
+**Last Updated:** 2025-12-31 (Session 7)
 
 ---
 
@@ -220,12 +220,65 @@
 - [x] Task detail shows recurring badge with preset reference
 - [x] Database migration for recurrence fields
 
-### Phase I: Archival & Soft-Delete
-- [ ] Soft-delete for tasks (is_archived flag)
-- [ ] Archive view for completed tasks
-- [ ] Retention policy settings
-- [ ] Bulk archive by date range
-- [ ] Restore from archive
+### Phase I: Archival & Soft-Delete ✅
+- [x] Soft-delete for tasks (is_archived, archived_at, archived_by_id, archive_reason)
+- [x] Task model extended with archive() and restore() methods
+- [x] Archive/Restore routes (single and bulk)
+- [x] Archived tasks hidden from dashboard, task list, calendar views
+- [x] Archive view page with filters and pagination (/tasks/archive)
+- [x] Archive button in task detail with reason modal
+- [x] Restore button for archived tasks (admin/manager only)
+- [x] Bulk archive functionality in task list
+- [x] Bulk restore functionality in archive view
+- [x] Navigation dropdown for tasks with archive link
+- [x] Archived banner on task detail page
+- [x] Translations for archive features (DE/EN)
+- [x] Database migration for archive fields
+
+### 🆕 Projektmanagement-Modul (Jira-ähnlich)
+
+> **Detaillierter Plan:** [docs/projectManagementModule.md](projectManagementModule.md)
+
+#### Phase PM-0: Infrastruktur
+- [ ] Blueprint-Refactoring (extensions.py, modules/)
+- [ ] ModuleRegistry Pattern
+- [ ] Module & UserModule Models
+- [ ] Dynamische Navigation
+- [ ] Admin Modul-Verwaltung
+
+#### Phase PM-1: Projekt-Basis
+- [ ] Project Model mit Key (TAX, AUD)
+- [ ] ProjectMember für Mitgliedschaft
+- [ ] Projekt-CRUD Routes & Templates
+
+#### Phase PM-2: Issue-Management
+- [ ] Issue Model mit Auto-Key (TAX-1, TAX-2)
+- [ ] IssueType: Epic, Story, Task, Bug, Sub-Task
+- [ ] IssueStatus: Open, In Progress, In Test, Done
+- [ ] Issue-CRUD mit Markdown-Editor
+
+#### Phase PM-3: Kanban Board
+- [ ] Board & BoardColumn Models
+- [ ] SortableJS Drag & Drop
+- [ ] Move-API für Status-Änderungen
+- [ ] WebSocket Real-time Updates
+
+#### Phase PM-4: Backlog
+- [ ] Priorisierte Issue-Liste
+- [ ] Drag & Drop Ranking
+- [ ] Bulk-Aktionen
+
+#### Phase PM-5: Sprint-Management
+- [ ] Sprint Model (name, goal, dates)
+- [ ] Sprint starten/beenden
+- [ ] Sprint-Board
+
+#### Phase PM-6 bis PM-10: Erweitert
+- [ ] Kommentare, Attachments, Links
+- [ ] Epics & Progress-Tracking
+- [ ] Suche & Filter
+- [ ] Charts (Burndown, Velocity)
+- [ ] Konfigurierbare Workflows
 
 ### Future Considerations
 - [ ] OIDC/Entra ID integration

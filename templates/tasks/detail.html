@@ -3,6 +3,23 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    {% if task.is_archived %}
+    <!-- Archived Banner -->
+    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-archive-fill fs-4 me-3"></i>
+        <div>
+            <strong>{{ 'Diese Aufgabe ist archiviert' if lang == 'de' else 'This task is archived' }}</strong>
+            {% if task.archived_at %}
+            <br><small class="text-muted">
+                {{ 'Archiviert am' if lang == 'de' else 'Archived on' }} {{ task.archived_at.strftime('%d.%m.%Y %H:%M') }}
+                {% if task.archived_by %} {{ 'von' if lang == 'de' else 'by' }} {{ task.archived_by.name }}{% endif %}
+                {% if task.archive_reason %} — {{ task.archive_reason }}{% endif %}
+            </small>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
@@ -64,6 +81,23 @@
             <a href="{{ url_for('task_edit', task_id=task.id) }}" class="btn btn-outline-primary">
                 <i class="bi bi-pencil me-1"></i>{{ t('edit') }}
             </a>
+            {% if task.is_archived %}
+            <!-- Restore button for archived tasks -->
+            {% if current_user.is_admin() or current_user.is_manager() %}
+            <form method="POST" action="{{ url_for('task_restore', task_id=task.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-success" onclick="return confirm('{{ 'Aufgabe wirklich wiederherstellen?' if lang == 'de' else 'Really restore this task?' }}')">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>{{ 'Wiederherstellen' if lang == 'de' else 'Restore' }}
+                </button>
+            </form>
+            {% endif %}
+            {% else %}
+            <!-- Archive button for active tasks -->
+            {% if current_user.is_admin() or current_user.is_manager() or current_user.id == task.owner_id %}
+            <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#archiveModal">
+                <i class="bi bi-archive me-1"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
+            </button>
+            {% endif %}
+            {% endif %}
             <a href="{{ url_for('task_list') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>{{ t('back') }}
             </a>
@@ -821,4 +855,33 @@ function openPreview(url, filename, mimeType) {
     }
 }
 </script>
+
+<!-- Archive Modal -->
+<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('task_archive', task_id=task.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="archiveModalLabel">
+                        <i class="bi bi-archive me-2"></i>{{ 'Aufgabe archivieren' if lang == 'de' else 'Archive Task' }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ 'Möchten Sie diese Aufgabe wirklich archivieren? Archivierte Aufgaben werden aus den normalen Ansichten ausgeblendet.' if lang == 'de' else 'Do you really want to archive this task? Archived tasks will be hidden from normal views.' }}</p>
+                    <div class="mb-3">
+                        <label class="form-label">{{ 'Grund (optional)' if lang == 'de' else 'Reason (optional)' }}</label>
+                        <textarea name="reason" class="form-control" rows="2" placeholder="{{ 'z.B. Aufgabe nicht mehr relevant' if lang == 'de' else 'e.g. Task no longer relevant' }}"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-archive me-1"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

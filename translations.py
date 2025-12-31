@@ -94,6 +94,17 @@ TRANSLATIONS = {
     'status_overdue': {'de': 'Überfällig', 'en': 'Overdue'},
     'status_due_soon': {'de': 'Bald fällig', 'en': 'Due Soon'},
     
+    # Archive
+    'archive': {'de': 'Archiv', 'en': 'Archive'},
+    'archive_task': {'de': 'Aufgabe archivieren', 'en': 'Archive Task'},
+    'restore_task': {'de': 'Aufgabe wiederherstellen', 'en': 'Restore Task'},
+    'archived': {'de': 'Archiviert', 'en': 'Archived'},
+    'archived_on': {'de': 'Archiviert am', 'en': 'Archived on'},
+    'archived_by': {'de': 'Archiviert von', 'en': 'Archived by'},
+    'archive_reason': {'de': 'Archivierungsgrund', 'en': 'Archive Reason'},
+    'restore': {'de': 'Wiederherstellen', 'en': 'Restore'},
+    'no_archived_tasks': {'de': 'Keine archivierten Aufgaben', 'en': 'No archived tasks'},
+    
     # Workflow
     'workflow': {'de': 'Freigabe-Workflow', 'en': 'Approval Workflow'},
     'approve': {'de': 'Genehmigen', 'en': 'Approve'},

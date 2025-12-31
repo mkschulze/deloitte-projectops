@@ -105,6 +105,9 @@
                     <i class="bi bi-person me-1"></i>{{ 'Bearbeiter zuweisen' if lang == 'de' else 'Assign Owner' }}
                 </button>
                 {% if current_user.is_admin() or current_user.is_manager() %}
+                <button type="button" class="btn btn-sm btn-outline-warning" id="bulkArchiveBtn" data-bs-toggle="modal" data-bs-target="#bulkArchiveModal">
+                    <i class="bi bi-archive me-1"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
+                </button>
                 <button type="button" class="btn btn-sm btn-outline-danger" id="bulkDeleteBtn" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
                     <i class="bi bi-trash me-1"></i>{{ 'Löschen' if lang == 'de' else 'Delete' }}
                 </button>
@@ -158,7 +161,7 @@
                                                 <table class='table table-sm table-borderless mb-2' style='font-size: 0.8rem;'>
                                                     <tr><td class='text-muted pe-2' style='width:40%;'>{{ 'Mandant' if lang == 'de' else 'Entity' }}:</td><td><strong>{{ task.entity.get_name(lang) }}</strong></td></tr>
                                                     <tr><td class='text-muted'>{{ 'Fällig' if lang == 'de' else 'Due' }}:</td><td class='{{ 'text-danger fw-bold' if task.is_overdue else '' }}'>{{ task.due_date.strftime('%d.%m.%Y') }}</td></tr>
-                                                    <tr><td class='text-muted'>Status:</td><td><span class='badge {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_review' %}bg-info{% elif task.status == 'submitted' %}bg-primary{% elif task.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}'>{{ task.status }}</span></td></tr>
+                                                    <tr><td class='text-muted'>Status:</td><td><span class='badge {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_review' %}bg-info{% elif task.status == 'submitted' %}bg-primary{% elif task.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}'>{{ t('status_' + task.status) }}</span></td></tr>
                                                     {% if task.period %}<tr><td class='text-muted'>{{ 'Zeitraum' if lang == 'de' else 'Period' }}:</td><td>{{ task.period }}</td></tr>{% endif %}
                                                     {% if task.template and task.template.tax_type %}<tr><td class='text-muted'>{{ 'Steuerart' if lang == 'de' else 'Tax type' }}:</td><td>{{ task.template.tax_type.code }} - {{ task.template.tax_type.name[:20] }}{% if task.template.tax_type.name|length > 20 %}…{% endif %}</td></tr>{% endif %}
                                                 </table>
@@ -339,6 +342,39 @@
 </div>
 
 <!-- Bulk Delete Modal -->
+<!-- Bulk Archive Modal -->
+<div class="modal fade" id="bulkArchiveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-archive me-2"></i>{{ 'Aufgaben archivieren' if lang == 'de' else 'Archive Tasks' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    {{ 'Möchten Sie wirklich' if lang == 'de' else 'Are you sure you want to archive' }} 
+                    <strong id="bulkArchiveCount">0</strong> 
+                    {{ 'Aufgaben archivieren?' if lang == 'de' else 'tasks?' }}
+                </p>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ 'Archivierte Aufgaben werden aus den normalen Ansichten ausgeblendet, können aber jederzeit wiederhergestellt werden.' if lang == 'de' else 'Archived tasks will be hidden from normal views but can be restored at any time.' }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ 'Grund (optional)' if lang == 'de' else 'Reason (optional)' }}</label>
+                    <textarea id="bulkArchiveReason" class="form-control" rows="2" placeholder="{{ 'z.B. Aufgaben nicht mehr relevant' if lang == 'de' else 'e.g. Tasks no longer relevant' }}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}</button>
+                <button type="button" class="btn btn-warning" id="confirmBulkArchive">
+                    <i class="bi bi-archive me-1"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -448,6 +484,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('bulkStatusCount').textContent = count;
         document.getElementById('bulkOwnerCount').textContent = count;
         document.getElementById('bulkDeleteCount').textContent = count;
+        const archiveCountEl = document.getElementById('bulkArchiveCount');
+        if (archiveCountEl) archiveCountEl.textContent = count;
         
         if (count > 0) {
             bulkActionsBar.classList.remove('d-none');
@@ -592,6 +630,37 @@ document.addEventListener('DOMContentLoaded', function() {
         } finally {
             this.disabled = false;
             this.innerHTML = '<i class="bi bi-trash me-1"></i>{{ "Endgültig löschen" if lang == "de" else "Delete Permanently" }}';
+        }
+    });
+    
+    // Bulk Archive
+    document.getElementById('confirmBulkArchive')?.addEventListener('click', async function() {
+        const taskIds = getSelectedTaskIds();
+        const reason = document.getElementById('bulkArchiveReason').value;
+        
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>{{ "Wird archiviert..." if lang == "de" else "Archiving..." }}';
+        
+        try {
+            const response = await fetch('/api/tasks/bulk-archive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task_ids: taskIds, reason: reason })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('bulkArchiveModal')).hide();
+                location.reload();
+            } else {
+                alert(result.error || '{{ "Fehler beim Archivieren" if lang == "de" else "Error archiving" }}');
+            }
+        } catch (error) {
+            alert('{{ "Netzwerkfehler" if lang == "de" else "Network error" }}');
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-archive me-1"></i>{{ "Archivieren" if lang == "de" else "Archive" }}';
         }
     });
     

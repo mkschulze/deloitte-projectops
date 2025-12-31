@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2025-12-31
+
+### 🗄️ Phase I: Archival & Soft-Delete
+
+This release adds comprehensive archival functionality for task lifecycle management.
+
+#### Added
+- **Soft-delete for tasks** - Tasks can now be archived instead of permanently deleted
+  - `is_archived`, `archived_at`, `archived_by_id`, `archive_reason` fields
+  - `Task.archive(user, reason)` and `Task.restore()` methods
+- **Archive routes** - Single and bulk archive/restore operations
+  - `POST /tasks/<id>/archive` - Archive single task with optional reason
+  - `POST /tasks/<id>/restore` - Restore archived task
+  - `POST /api/tasks/bulk-archive` - Bulk archive selected tasks
+  - `POST /api/tasks/bulk-restore` - Bulk restore selected tasks
+- **Archive view page** (`/tasks/archive`) with filters and pagination
+- **Archive UI components**
+  - Archive button with reason modal in task detail
+  - Restore button for archived tasks (admin/manager only)
+  - Bulk archive functionality in task list
+  - Bulk restore functionality in archive view
+  - Navigation dropdown for tasks with archive link
+  - Archived banner on task detail page
+- **Translations** for archive features (German and English)
+- **Database migration** for archive fields
+
+#### Changed
+- Dashboard, task list, and calendar views now exclude archived tasks
+- Tasks navigation changed from single link to dropdown menu
+
+#### Fixed
+- Status badge translations in popovers now show localized labels instead of raw status keys
+
+---
+
 ## [1.0.0] - 2025-12-31
 
 ### 🎉 Initial Release
@@ -158,12 +193,12 @@ First production-ready release of the Deloitte TaxOps Calendar with complete MVP
 
 ### Planned for Future Releases
 
-#### Phase I: Archival & Soft-Delete
-- Soft-delete for tasks (is_archived flag)
-- Archive view for completed tasks
-- Retention policy settings
-- Bulk archive by date range
-- Restore from archive
+#### Projektmanagement-Modul (Jira-ähnlich)
+- Blueprint-Refactoring for modular architecture
+- Project model with issue keys (TAX-1, TAX-2)
+- Issue types: Epic, Story, Task, Bug, Sub-Task
+- Kanban board with drag & drop
+- Backlog and Sprint management
 
 #### Future Considerations
 - OIDC/Entra ID SSO integration
@@ -178,4 +213,5 @@ First production-ready release of the Deloitte TaxOps Calendar with complete MVP
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 1.1.0 | 2025-12-31 | Phase I: Archival & Soft-Delete |
 | 1.0.0 | 2025-12-31 | Initial production release with MVP + Phase A-H |

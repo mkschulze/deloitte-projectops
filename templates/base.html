@@ -304,10 +304,23 @@
                             <i class="bi bi-speedometer2"></i> {{ t('nav_dashboard') }}
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'task' in request.endpoint %}active{% endif %}" href="{{ url_for('task_list') }}">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'task' in request.endpoint %}active{% endif %}" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-list-task"></i> {{ t('nav_tasks') }}
                         </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item {% if request.endpoint == 'task_list' %}active{% endif %}" href="{{ url_for('task_list') }}">
+                                    <i class="bi bi-list-task me-2"></i>{{ 'Alle Aufgaben' if lang == 'de' else 'All Tasks' }}
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item {% if request.endpoint == 'task_archive_list' %}active{% endif %}" href="{{ url_for('task_archive_list') }}">
+                                    <i class="bi bi-archive me-2"></i>{{ 'Archiv' if lang == 'de' else 'Archive' }}
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" href="{{ url_for('calendar_view') }}">

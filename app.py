@@ -16,7 +16,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from config import config
 from models import db, User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team, Notification, NotificationType, UserEntity, EntityAccessLevel
-from translations import get_translation as t
+from translations import get_translation as t, TRANSLATIONS
 from services import ApprovalService, ApprovalResult, WorkflowService, NotificationService, ExportService, CalendarService, email_service, RecurrenceService
 
 # Flask extensions
@@ -240,10 +240,10 @@ def dashboard():
     """Main dashboard with task overview"""
     from datetime import date, timedelta
     
-    # Get user's tasks based on role and entity permissions
+    # Get user's tasks based on role and entity permissions (exclude archived)
     if current_user.is_admin() or current_user.is_manager():
         # Admins and managers see all tasks
-        base_query = Task.query
+        base_query = Task.query.filter((Task.is_archived == False) | (Task.is_archived == None))
     else:
         # Get accessible entity IDs for this user
         accessible_entity_ids = current_user.get_accessible_entity_ids('view')
@@ -251,12 +251,14 @@ def dashboard():
         # Others see their tasks + tasks for accessible entities
         if accessible_entity_ids:
             base_query = Task.query.filter(
+                ((Task.is_archived == False) | (Task.is_archived == None)),
                 (Task.owner_id == current_user.id) | 
                 (Task.reviewer_id == current_user.id) |
                 (Task.entity_id.in_(accessible_entity_ids))
             )
         else:
             base_query = Task.query.filter(
+                ((Task.is_archived == False) | (Task.is_archived == None)),
                 (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
             )
     
@@ -300,9 +302,12 @@ def task_list():
     entity_filter = request.args.get('entity', type=int)
     tax_type_filter = request.args.get('tax_type', type=int)
     year_filter = request.args.get('year', type=int, default=date.today().year)
+    show_archived = request.args.get('show_archived', 'false') == 'true'
     
-    # Base query
+    # Base query - exclude archived tasks by default
     query = Task.query
+    if not show_archived:
+        query = query.filter((Task.is_archived == False) | (Task.is_archived == None))
     
     # Apply role-based and entity scoping filtering
     if not (current_user.is_admin() or current_user.is_manager()):
@@ -722,6 +727,174 @@ def task_reviewer_action(task_id):
 
 
 # ============================================================================
+# TASK ARCHIVE & RESTORE
+# ============================================================================
+
+@app.route('/tasks/<int:task_id>/archive', methods=['POST'])
+@login_required
+def task_archive(task_id):
+    """Archive a task (soft-delete)"""
+    task = Task.query.get_or_404(task_id)
+    
+    # Only admin, manager, or owner can archive
+    if not (current_user.is_admin() or current_user.is_manager() or current_user.id == task.owner_id):
+        flash('Keine Berechtigung zum Archivieren.' if session.get('lang', 'de') == 'de' else 'No permission to archive.', 'danger')
+        return redirect(url_for('task_detail', task_id=task_id))
+    
+    if task.is_archived:
+        flash('Aufgabe ist bereits archiviert.' if session.get('lang', 'de') == 'de' else 'Task is already archived.', 'warning')
+        return redirect(url_for('task_detail', task_id=task_id))
+    
+    reason = request.form.get('reason', '')
+    task.archive(current_user, reason)
+    db.session.commit()
+    
+    log_action('ARCHIVE', 'Task', task.id, task.title, 'active', 'archived')
+    
+    flash('Aufgabe wurde archiviert.' if session.get('lang', 'de') == 'de' else 'Task has been archived.', 'success')
+    return redirect(url_for('task_list'))
+
+
+@app.route('/tasks/<int:task_id>/restore', methods=['POST'])
+@login_required
+def task_restore(task_id):
+    """Restore a task from archive"""
+    task = Task.query.get_or_404(task_id)
+    
+    # Only admin or manager can restore
+    if not (current_user.is_admin() or current_user.is_manager()):
+        flash('Keine Berechtigung zum Wiederherstellen.' if session.get('lang', 'de') == 'de' else 'No permission to restore.', 'danger')
+        return redirect(url_for('task_archive_list'))
+    
+    if not task.is_archived:
+        flash('Aufgabe ist nicht archiviert.' if session.get('lang', 'de') == 'de' else 'Task is not archived.', 'warning')
+        return redirect(url_for('task_detail', task_id=task_id))
+    
+    task.restore()
+    db.session.commit()
+    
+    log_action('RESTORE', 'Task', task.id, task.title, 'archived', 'active')
+    
+    flash('Aufgabe wurde wiederhergestellt.' if session.get('lang', 'de') == 'de' else 'Task has been restored.', 'success')
+    return redirect(url_for('task_detail', task_id=task_id))
+
+
+@app.route('/tasks/archive')
+@login_required
+def task_archive_list():
+    """View archived tasks"""
+    lang = session.get('lang', 'de')
+    
+    # Build query for archived tasks
+    query = Task.query.filter_by(is_archived=True)
+    
+    # Non-admin/manager users only see their own archived tasks
+    if not (current_user.is_admin() or current_user.is_manager()):
+        accessible_entity_ids = current_user.get_accessible_entity_ids()
+        query = query.filter(Task.entity_id.in_(accessible_entity_ids))
+    
+    # Filters
+    entity_id = request.args.get('entity_id', type=int)
+    year = request.args.get('year', type=int)
+    status = request.args.get('status')
+    
+    if entity_id:
+        query = query.filter_by(entity_id=entity_id)
+    if year:
+        query = query.filter_by(year=year)
+    if status:
+        query = query.filter_by(status=status)
+    
+    # Order by archived date, most recent first
+    query = query.order_by(Task.archived_at.desc())
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    tasks = pagination.items
+    
+    # Get filter options
+    entities = Entity.query.order_by(Entity.name).all()
+    years = db.session.query(Task.year).filter_by(is_archived=True).distinct().order_by(Task.year.desc()).all()
+    years = [y[0] for y in years]
+    
+    return render_template('tasks/archive.html',
+                           tasks=tasks,
+                           pagination=pagination,
+                           entities=entities,
+                           years=years,
+                           current_filters={
+                               'entity_id': entity_id,
+                               'year': year,
+                               'status': status
+                           },
+                           t=lambda key: TRANSLATIONS.get(key, {}).get(lang, key),
+                           lang=lang)
+
+
+@app.route('/api/tasks/bulk-archive', methods=['POST'])
+@login_required
+def api_bulk_archive():
+    """Bulk archive multiple tasks"""
+    if not (current_user.is_admin() or current_user.is_manager()):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    
+    data = request.get_json()
+    task_ids = data.get('task_ids', [])
+    reason = data.get('reason', '')
+    
+    if not task_ids:
+        return jsonify({'success': False, 'error': 'No tasks selected'}), 400
+    
+    archived_count = 0
+    for task_id in task_ids:
+        task = Task.query.get(task_id)
+        if task and not task.is_archived:
+            task.archive(current_user, reason)
+            log_action('ARCHIVE', 'Task', task.id, task.title, 'active', 'archived')
+            archived_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'archived_count': archived_count,
+        'message': f'{archived_count} Aufgabe(n) archiviert.' if session.get('lang', 'de') == 'de' else f'{archived_count} task(s) archived.'
+    })
+
+
+@app.route('/api/tasks/bulk-restore', methods=['POST'])
+@login_required
+def api_bulk_restore():
+    """Bulk restore multiple tasks from archive"""
+    if not (current_user.is_admin() or current_user.is_manager()):
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+    
+    data = request.get_json()
+    task_ids = data.get('task_ids', [])
+    
+    if not task_ids:
+        return jsonify({'success': False, 'error': 'No tasks selected'}), 400
+    
+    restored_count = 0
+    for task_id in task_ids:
+        task = Task.query.get(task_id)
+        if task and task.is_archived:
+            task.restore()
+            log_action('RESTORE', 'Task', task.id, task.title, 'archived', 'active')
+            restored_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'restored_count': restored_count,
+        'message': f'{restored_count} Aufgabe(n) wiederhergestellt.' if session.get('lang', 'de') == 'de' else f'{restored_count} task(s) restored.'
+    })
+
+
+# ============================================================================
 # TASK EVIDENCE (File Upload & Links)
 # ============================================================================
 
@@ -1021,10 +1194,11 @@ def calendar_view():
     cal = calendar.Calendar(firstweekday=0)  # Monday first
     month_days = cal.monthdayscalendar(year, month)
     
-    # Get tasks for this month
+    # Get tasks for this month (exclude archived)
     query = Task.query.filter(
         Task.due_date >= first_day,
-        Task.due_date <= last_day
+        Task.due_date <= last_day,
+        (Task.is_archived == False) | (Task.is_archived == None)
     )
     
     # Apply role-based filtering
@@ -1071,13 +1245,14 @@ def calendar_year_view():
     
     year = request.args.get('year', type=int, default=date.today().year)
     
-    # Get all tasks for the year
+    # Get all tasks for the year (exclude archived)
     first_day = date(year, 1, 1)
     last_day = date(year, 12, 31)
     
     query = Task.query.filter(
         Task.due_date >= first_day,
-        Task.due_date <= last_day
+        Task.due_date <= last_day,
+        (Task.is_archived == False) | (Task.is_archived == None)
     )
     
     if not (current_user.is_admin() or current_user.is_manager()):
@@ -1140,10 +1315,11 @@ def calendar_week_view():
     week_start = jan4 - timedelta(days=jan4.weekday()) + timedelta(weeks=week - 1)
     week_end = week_start + timedelta(days=6)
     
-    # Get tasks for this week
+    # Get tasks for this week (exclude archived)
     query = Task.query.filter(
         Task.due_date >= week_start,
-        Task.due_date <= week_end
+        Task.due_date <= week_end,
+        (Task.is_archived == False) | (Task.is_archived == None)
     )
     
     if not (current_user.is_admin() or current_user.is_manager()):

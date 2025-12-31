@@ -99,7 +99,7 @@
                                         <table class='table table-sm table-borderless mb-2' style='font-size: 0.8rem;'>
                                             <tr><td class='text-muted pe-2' style='width:40%;'>{{ 'Mandant' if lang == 'de' else 'Entity' }}:</td><td><strong>{{ task.entity.get_name(lang) }}</strong></td></tr>
                                             <tr><td class='text-muted'>{{ 'Fällig' if lang == 'de' else 'Due' }}:</td><td class='{{ 'text-danger fw-bold' if task.is_overdue else '' }}'>{{ task.due_date.strftime('%d.%m.%Y') }}</td></tr>
-                                            <tr><td class='text-muted'>Status:</td><td><span class='badge {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_review' %}bg-info{% elif task.status == 'submitted' %}bg-primary{% elif task.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}'>{{ task.status }}</span></td></tr>
+                                            <tr><td class='text-muted'>Status:</td><td><span class='badge {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_review' %}bg-info{% elif task.status == 'submitted' %}bg-primary{% elif task.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}'>{{ t('status_' + task.status) }}</span></td></tr>
                                             {% if task.period %}<tr><td class='text-muted'>{{ 'Zeitraum' if lang == 'de' else 'Period' }}:</td><td>{{ task.period }}</td></tr>{% endif %}
                                             {% if task.template and task.template.tax_type %}<tr><td class='text-muted'>{{ 'Steuerart' if lang == 'de' else 'Tax type' }}:</td><td>{{ task.template.tax_type.code }}</td></tr>{% endif %}
                                         </table>

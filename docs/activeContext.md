@@ -8,46 +8,60 @@
 
 ## Session Information
 
-**Date:** 2025-12-31 (Session 6)  
-**Last Action:** Implemented Phase H — Recurring Tasks (RRULE)  
-**Status:** MVP Complete + Phase A-H — All core features + notifications, bulk ops, exports, calendar sync, email, charts, entity scoping, recurring tasks
+**Date:** 2025-12-31 (Session 7)  
+**Last Action:** Implemented Phase I — Archival & Soft-Delete  
+**Status:** MVP Complete + Phase A-I — All core features + notifications, bulk ops, exports, calendar sync, email, charts, entity scoping, recurring tasks, archival
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 6)
+### ✅ What Was Accomplished (Session 7)
 
-1. **Phase H: Recurring Tasks (RRULE)** (Complete)
-   - **TaskPreset Model Extended:**
-     - `is_recurring` — Boolean to enable recurring generation
-     - `recurrence_frequency` — monthly, quarterly, semi_annual, annual, custom
-     - `recurrence_rrule` — Custom iCalendar RRULE pattern
-     - `recurrence_day_offset` — Day of period when task is due (1-28)
-     - `recurrence_end_date` — Optional end date for generation
-     - `last_generated_date` — Tracking field
-     - `default_owner_id`, `default_entity_id` — Default assignments with relationships
-   
+1. **Phase I: Archival & Soft-Delete** (Complete)
    - **Task Model Extended:**
-     - `preset_id` — Foreign key linking to source TaskPreset
-     - `is_recurring_instance` — Boolean marking auto-generated tasks
-     - `preset` relationship with backref 'generated_tasks'
+     - `is_archived` — Boolean flag for soft-delete (indexed)
+     - `archived_at` — DateTime when task was archived
+     - `archived_by_id` — Foreign key to user who archived
+     - `archive_reason` — Optional text explaining why archived
+     - `archive(user, reason)` — Method to archive a task
+     - `restore()` — Method to restore from archive
+     - `archived_by` — Relationship to User
    
-   - **RecurrenceService (services.py):**
-     - `get_period_dates(frequency, year, day_offset)` — Generates period labels and due dates
-     - `generate_tasks_from_preset(preset, year, entities, owner_id, force)` — Creates task instances
-     - `generate_all_recurring_tasks(year, dry_run)` — Batch generation from all presets
-     - `parse_rrule(rrule_string, start_date, count)` — RRULE parsing via python-dateutil
+   - **Routes Added (app.py):**
+     - `POST /tasks/<id>/archive` — Archive single task with reason modal
+     - `POST /tasks/<id>/restore` — Restore single task from archive
+     - `GET /tasks/archive` — View archived tasks with filters & pagination
+     - `POST /api/tasks/bulk-archive` — Bulk archive multiple tasks
+     - `POST /api/tasks/bulk-restore` — Bulk restore multiple tasks
    
-   - **CLI Command:**
-     - `flask generate-recurring-tasks --year --preset-id --entity-id --dry-run --force`
-     - Supports single preset or all recurring presets
-     - Dry-run mode shows what would be created
+   - **Views Updated:**
+     - Dashboard, task list, calendar views exclude archived tasks
+     - Task detail shows archived banner with info
+     - Archive button in task detail (for admin/manager/owner)
+     - Restore button for archived tasks (admin/manager only)
    
-   - **Admin UI (preset_form.html):**
-     - Recurrence settings card with toggle
-     - Frequency dropdown with German/English labels
-     - Day offset input (1-28)
+   - **UI Components:**
+     - Archive modal with reason input
+     - Archive view page (templates/tasks/archive.html)
+     - Bulk archive button in task list
+     - Bulk restore in archive view
+     - Navigation dropdown with archive link
+   
+   - **Database Migration:**
+     - `b4301e4eea63_add_archive_fields_to_task_model.py` applied
+
+### ✅ Previously Completed (Sessions 1-6)
+
+- **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
+- **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)
+- **Phase C:** Excel/PDF Export (task list, detail, status summary)
+- **Phase D:** Calendar Sync (iCal feed with secure tokens)
+- **Phase E:** Email Notifications (SMTP/SendGrid, templates, preferences)
+- **Phase F:** Dashboard Charts (Chart.js — status pie, monthly bar, team workload)
+- **Phase G:** Entity Scoping (access levels, hierarchy inheritance)
+- **Phase H:** Recurring Tasks (RRULE)
+- **MVP:** Full task lifecycle, evidence, comments, multi-reviewer, teams
      - RRULE input field for custom patterns
      - Default entity and owner selection
      - End date picker
