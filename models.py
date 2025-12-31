@@ -3,11 +3,10 @@ Deloitte TaxOps Calendar - Database Models
 """
 from datetime import datetime, date
 from enum import Enum
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-db = SQLAlchemy()
+from extensions import db
 
 
 # ============================================================================
@@ -1296,3 +1295,63 @@ entity_user_access = db.Table('entity_user_access',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('created_at', db.DateTime, default=datetime.utcnow)
 )
+
+
+# ============================================================================
+# MODULE SYSTEM
+# ============================================================================
+
+class Module(db.Model):
+    """Application module definition"""
+    __tablename__ = 'module'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50), unique=True, nullable=False, index=True)  # 'taxops', 'projects'
+    name_de = db.Column(db.String(100), nullable=False)
+    name_en = db.Column(db.String(100), nullable=False)
+    description_de = db.Column(db.Text)
+    description_en = db.Column(db.Text)
+    icon = db.Column(db.String(50), default='bi-puzzle')  # Bootstrap icon class
+    nav_order = db.Column(db.Integer, default=100)  # Lower = earlier in nav
+    is_core = db.Column(db.Boolean, default=False)  # Core modules can't be disabled
+    is_active = db.Column(db.Boolean, default=True)  # Global on/off switch
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user_modules = db.relationship('UserModule', back_populates='module', cascade='all, delete-orphan')
+    
+    def get_name(self, lang='de'):
+        """Get localized name"""
+        return self.name_de if lang == 'de' else self.name_en
+    
+    def get_description(self, lang='de'):
+        """Get localized description"""
+        return self.description_de if lang == 'de' else self.description_en
+    
+    def __repr__(self):
+        return f'<Module {self.code}>'
+
+
+class UserModule(db.Model):
+    """User-Module access assignment"""
+    __tablename__ = 'user_module'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    module_id = db.Column(db.Integer, db.ForeignKey('module.id'), nullable=False)
+    granted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    granted_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='user_modules')
+    module = db.relationship('Module', back_populates='user_modules')
+    granted_by = db.relationship('User', foreign_keys=[granted_by_id])
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'module_id', name='unique_user_module'),
+    )
+    
+    def __repr__(self):
+        return f'<UserModule {self.user_id}:{self.module_id}>'
+

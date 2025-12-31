@@ -10,18 +10,20 @@ from io import BytesIO
 
 import click
 from flask import Flask, render_template, redirect, url_for, flash, request, session, send_file, jsonify, make_response
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_migrate import Migrate
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_login import login_user, logout_user, login_required, current_user
+from flask_socketio import emit, join_room, leave_room
 
 from config import config
-from models import db, User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team, Notification, NotificationType, UserEntity, EntityAccessLevel
+from extensions import db, migrate, socketio, login_manager
+from models import User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team, Notification, NotificationType, UserEntity, EntityAccessLevel, Module, UserModule
 from translations import get_translation as t, TRANSLATIONS
 from services import ApprovalService, ApprovalResult, WorkflowService, NotificationService, ExportService, CalendarService, email_service, RecurrenceService
+from modules import ModuleRegistry
 
-# Flask extensions
-migrate = Migrate()
-socketio = SocketIO()
+# Import modules to register them
+import modules.core
+import modules.taxops
+import modules.projects
 
 
 # ============================================================================
@@ -41,16 +43,15 @@ def create_app(config_name='default'):
     # For production with high concurrency, consider using gevent or an ASGI server
     socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
     
-    # Login manager
-    login_manager = LoginManager()
+    # Initialize Login Manager
     login_manager.init_app(app)
-    login_manager.login_view = 'login'
-    login_manager.login_message = 'Bitte melden Sie sich an.'
-    login_manager.login_message_category = 'warning'
     
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
+    
+    # Initialize module system
+    ModuleRegistry.init_app(app)
     
     return app
 
@@ -69,6 +70,12 @@ email_service.init_app(app)
 def inject_globals():
     """Inject global variables into all templates"""
     lang = session.get('lang', app.config.get('DEFAULT_LANGUAGE', 'de'))
+    
+    # Get user's accessible modules for navigation
+    user_modules = []
+    if current_user.is_authenticated:
+        user_modules = ModuleRegistry.get_user_modules(current_user)
+    
     return {
         'app_name': app.config.get('APP_NAME', 'MyApp'),
         'app_version': app.config.get('APP_VERSION', '1.0.0'),
@@ -77,7 +84,9 @@ def inject_globals():
         't': lambda key: t(key, lang),
         'get_file_icon': get_file_icon,
         'ApprovalService': ApprovalService,
-        'WorkflowService': WorkflowService
+        'WorkflowService': WorkflowService,
+        'user_modules': user_modules,
+        'ModuleRegistry': ModuleRegistry
     }
 
 
@@ -1453,8 +1462,96 @@ def admin_dashboard():
         'tasks_overdue': Task.query.filter(Task.due_date < date.today(), Task.status != 'completed').count(),
         'tasks_completed': Task.query.filter_by(status='completed').count(),
         'presets': TaskPreset.query.filter_by(is_active=True).count(),
+        'modules': Module.query.filter_by(is_active=True).count(),
     }
     return render_template('admin/dashboard.html', stats=stats)
+
+
+# ============================================================================
+# ADMIN: MODULE MANAGEMENT
+# ============================================================================
+
+@app.route('/admin/modules')
+@admin_required
+def admin_modules():
+    """Module management"""
+    modules = Module.query.order_by(Module.nav_order, Module.code).all()
+    lang = session.get('lang', 'de')
+    return render_template('admin/modules.html', modules=modules, lang=lang)
+
+
+@app.route('/admin/modules/<int:module_id>/toggle', methods=['POST'])
+@admin_required
+def admin_module_toggle(module_id):
+    """Toggle module active status"""
+    module = Module.query.get_or_404(module_id)
+    lang = session.get('lang', 'de')
+    
+    if module.is_core:
+        flash('Kernmodule können nicht deaktiviert werden.' if lang == 'de' else 'Core modules cannot be disabled.', 'warning')
+        return redirect(url_for('admin_modules'))
+    
+    module.is_active = not module.is_active
+    db.session.commit()
+    
+    status = 'aktiviert' if module.is_active else 'deaktiviert'
+    status_en = 'enabled' if module.is_active else 'disabled'
+    flash(f'Modul {module.get_name(lang)} {status if lang == "de" else status_en}.', 'success')
+    return redirect(url_for('admin_modules'))
+
+
+@app.route('/admin/users/<int:user_id>/modules')
+@admin_required
+def admin_user_modules(user_id):
+    """Manage user module assignments"""
+    user = User.query.get_or_404(user_id)
+    modules = Module.query.filter_by(is_active=True).order_by(Module.nav_order).all()
+    lang = session.get('lang', 'de')
+    
+    # Get user's assigned module IDs
+    assigned_module_ids = {um.module_id for um in user.user_modules}
+    
+    return render_template('admin/user_modules.html', 
+                          user=user, 
+                          modules=modules, 
+                          assigned_module_ids=assigned_module_ids,
+                          lang=lang)
+
+
+@app.route('/admin/users/<int:user_id>/modules', methods=['POST'])
+@admin_required
+def admin_user_modules_save(user_id):
+    """Save user module assignments"""
+    user = User.query.get_or_404(user_id)
+    lang = session.get('lang', 'de')
+    
+    # Get selected module IDs from form
+    selected_module_ids = set(map(int, request.form.getlist('modules')))
+    
+    # Get current assignments
+    current_module_ids = {um.module_id for um in user.user_modules}
+    
+    # Remove unselected modules
+    for um in list(user.user_modules):
+        if um.module_id not in selected_module_ids and not um.module.is_core:
+            db.session.delete(um)
+    
+    # Add new modules
+    for module_id in selected_module_ids:
+        if module_id not in current_module_ids:
+            module = Module.query.get(module_id)
+            if module and module.is_active:
+                um = UserModule(
+                    user_id=user_id,
+                    module_id=module_id,
+                    granted_by_id=current_user.id
+                )
+                db.session.add(um)
+    
+    db.session.commit()
+    
+    flash('Modulzuweisungen gespeichert.' if lang == 'de' else 'Module assignments saved.', 'success')
+    return redirect(url_for('admin_user_modules', user_id=user_id))
 
 
 @app.route('/admin/users')
@@ -2744,6 +2841,20 @@ def initdb():
     """Initialize the database"""
     db.create_all()
     print('Database initialized.')
+
+
+@app.cli.command('sync-modules')
+def sync_modules():
+    """Sync module definitions to database"""
+    from modules import ModuleRegistry
+    
+    count = 0
+    for module_class in ModuleRegistry.all():
+        module_class.sync_to_db()
+        print(f'✓ Module synced: {module_class.code}')
+        count += 1
+    
+    print(f'\n{count} modules synchronized to database.')
 
 
 @app.cli.command()

@@ -2,7 +2,8 @@
 Deloitte Flask App Template - Database Initialization
 Run: python init_db.py
 """
-from app import app, db
+from app import app
+from extensions import db
 from models import User, TaxType, Entity, Team
 
 

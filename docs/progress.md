@@ -2,10 +2,10 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J (Notifications, Bulk Ops, Exports, iCal, Email, Charts, Entity Scoping, Recurring Tasks, Archival, Template Builder UI)
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 (Module Infrastructure)
 
-**Last Updated:** 2025-12-31 (Session 7)  
-**Version:** 1.2.0
+**Last Updated:** 2025-12-31 (Session 8)  
+**Version:** 1.3.0
 
 ---
 
@@ -240,12 +240,14 @@
 
 > **Detaillierter Plan:** [docs/projectManagementModule.md](projectManagementModule.md)
 
-#### Phase PM-0: Infrastruktur
-- [ ] Blueprint-Refactoring (extensions.py, modules/)
-- [ ] ModuleRegistry Pattern
-- [ ] Module & UserModule Models
-- [ ] Dynamische Navigation
-- [ ] Admin Modul-Verwaltung
+#### Phase PM-0: Infrastruktur ✅
+- [x] Blueprint-Refactoring (extensions.py, modules/)
+- [x] ModuleRegistry Pattern
+- [x] Module & UserModule Models
+- [x] Admin Modul-Verwaltung (/admin/modules)
+- [x] User Module-Zuweisungen (/admin/users/<id>/modules)
+- [x] flask sync-modules CLI command
+- [ ] Dynamische Navigation (deferred)
 
 #### Phase PM-1: Projekt-Basis
 - [ ] Project Model mit Key (TAX, AUD)

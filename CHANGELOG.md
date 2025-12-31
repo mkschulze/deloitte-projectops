@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2025-12-31
+
+### 🏗️ Phase PM-0: Module Infrastructure
+
+#### Added
+- **Module System**: Modular architecture with `extensions.py` for Flask extension management
+- **ModuleRegistry**: Central registry pattern for dynamic module loading
+- **Module & UserModule Models**: Database models for module definitions and user assignments
+- **Admin Module Management**: New `/admin/modules` page to enable/disable optional modules
+- **User Module Assignments**: New `/admin/users/<id>/modules` page for per-user module access
+- **CLI Command**: `flask sync-modules` to synchronize module definitions to database
+- **Core Module**: Essential functionality (authentication, admin)
+- **TaxOps Module**: Tax calendar and task management (core, always active)
+- **Projects Module**: Placeholder for Jira-like project management (optional)
+
+#### Changed
+- Refactored `models.py` to import `db` from `extensions.py`
+- Refactored `services.py` to import `db` from `extensions.py`
+- Refactored `init_db.py` to import `db` from `extensions.py`
+- Updated `app.py` to use centralized extensions and module registry
+- Admin dashboard now shows module count in stats
+
+#### Technical
+- New `modules/` directory structure for modular organization
+- BaseModule class with localization support (name_de, name_en)
+- Module-aware context processor for templates
+- Database migration for `module` and `user_module` tables
+
+---
+
 ## [1.2.1] - 2025-12-31
 
 ### 🎨 UI/UX Improvements

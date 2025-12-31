@@ -143,6 +143,11 @@
                             <span>{{ 'Task Presets' if lang == 'en' else 'Aufgabenvorlagen' }}</span>
                             <span class="badge bg-secondary ms-auto">{{ stats.presets if stats.presets is defined else '' }}</span>
                         </a>
+                        <a href="{{ url_for('admin_modules') }}" class="list-group-item list-group-item-action d-flex align-items-center">
+                            <i class="bi bi-puzzle me-3 fs-5" style="color: var(--dtt-sec-purple-5);"></i>
+                            <span>{{ 'Modules' if lang == 'en' else 'Module' }}</span>
+                            <span class="badge bg-secondary ms-auto">{{ stats.modules if stats.modules is defined else '' }}</span>
+                        </a>
                     </div>
                 </div>
             </div>

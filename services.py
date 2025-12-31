@@ -14,7 +14,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from models import db, Task, TaskReviewer, User
+from extensions import db
+from models import Task, TaskReviewer, User
 
 # Logger for email operations
 email_logger = logging.getLogger('email_service')

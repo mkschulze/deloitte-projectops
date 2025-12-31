@@ -60,6 +60,11 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
+                                <a href="{{ url_for('admin_user_modules', user_id=user.id) }}" 
+                                   class="btn btn-sm btn-outline-info me-1"
+                                   title="{{ 'Module' if lang == 'de' else 'Modules' }}">
+                                    <i class="bi bi-puzzle"></i>
+                                </a>
                                 <a href="{{ url_for('admin_user_entities', user_id=user.id) }}" 
                                    class="btn btn-sm btn-outline-secondary me-1"
                                    title="{{ 'Berechtigungen' if lang == 'de' else 'Permissions' }}">
