@@ -45,14 +45,22 @@
                     <i class="bi bi-calendar me-1"></i>{{ task.due_date.strftime('%d.%m.%Y') }}
                 </span>
                 <span class="text-muted">
-                    <i class="bi bi-building me-1"></i>{{ task.entity.name }}
+                    <i class="bi bi-building me-1"></i>{{ task.entity.get_name(lang) }}
                 </span>
+                {% if task.is_recurring_instance and task.preset %}
+                <span class="badge bg-info text-white" title="{{ 'Generated from preset' if lang == 'en' else 'Aus Vorlage generiert' }}: {{ task.preset.get_title(lang) }}">
+                    <i class="bi bi-arrow-repeat me-1"></i>{{ 'Recurring' if lang == 'en' else 'Wiederkehrend' }}
+                </span>
+                {% endif %}
                 {% if task.template %}
                 <span class="badge bg-light text-dark">{{ task.template.tax_type.code }}</span>
                 {% endif %}
             </div>
         </div>
         <div class="d-flex gap-2">
+            <a href="{{ url_for('export_task_pdf', task_id=task.id) }}" class="btn btn-outline-secondary px-3" title="{{ 'Export as PDF' if lang == 'en' else 'Als PDF exportieren' }}">
+                <i class="bi bi-file-earmark-pdf text-danger"></i>
+            </a>
             <a href="{{ url_for('task_edit', task_id=task.id) }}" class="btn btn-outline-primary">
                 <i class="bi bi-pencil me-1"></i>{{ t('edit') }}
             </a>
@@ -105,11 +113,11 @@
                     {% endif %}
                     
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-lg-5 col-md-12 mb-4">
                             <h6>{{ t('details') if lang == 'en' else 'Details' }}</h6>
                             <table class="table table-sm">
                                 <tr>
-                                    <td class="text-muted">{{ t('year') if lang == 'en' else 'Jahr' }}</td>
+                                    <td class="text-muted" style="width: 40%;">{{ t('year') if lang == 'en' else 'Jahr' }}</td>
                                     <td><strong>{{ task.year }}</strong></td>
                                 </tr>
                                 {% if task.period %}
@@ -124,21 +132,21 @@
                                 </tr>
                                 <tr>
                                     <td class="text-muted">{{ t('entity') }}</td>
-                                    <td><strong>{{ task.entity.name }}</strong></td>
+                                    <td><strong>{{ task.entity.get_name(lang) }}</strong></td>
                                 </tr>
                                 {% if task.template %}
                                 <tr>
                                     <td class="text-muted">{{ t('tax_type') }}</td>
-                                    <td><strong>{{ task.template.tax_type.name }}</strong></td>
+                                    <td><strong>{{ task.template.tax_type.get_name(lang) }}</strong></td>
                                 </tr>
                                 {% endif %}
-                            </table>
+                        </table>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-7 col-md-12">
                             <h6>{{ t('assignment') if lang == 'en' else 'Zuweisung' }}</h6>
                             <table class="table table-sm">
                                 <tr>
-                                    <td class="text-muted">{{ t('owner') }}</td>
+                                    <td class="text-muted" style="width: 35%; white-space: nowrap;">{{ t('owner') }}</td>
                                     <td>
                                         {% if task.owner %}
                                         <strong>{{ task.owner.name }}</strong>
@@ -149,57 +157,50 @@
                                 </tr>
                                 {% if task.owner_team %}
                                 <tr>
-                                    <td class="text-muted">{{ t('owner_team') }}</td>
+                                    <td class="text-muted align-top" style="white-space: nowrap;">{{ t('owner_team') }}</td>
                                     <td>
-                                        <span class="d-inline-flex align-items-center gap-2">
-                                            <span class="d-inline-block rounded-circle" 
-                                                  style="width: 12px; height: 12px; background-color: {{ task.owner_team.color or '#86BC25' }};">
+                                        <div class="d-flex flex-wrap align-items-center gap-1">
+                                            <span class="d-inline-block rounded-circle flex-shrink-0" 
+                                                  style="width: 10px; height: 10px; background-color: {{ task.owner_team.color or '#86BC25' }};">
                                             </span>
-                                            <strong>{{ task.owner_team.name }}</strong>
-                                            <span class="badge bg-light text-dark">{{ task.owner_team.get_member_count() }} {{ t('members') }}</span>
-                                        </span>
+                                            <strong>{{ task.owner_team.get_name(lang) }}</strong>
+                                        </div>
+                                        <small class="text-muted">{{ task.owner_team.get_member_count() }} {{ t('members') }}</small>
                                     </td>
                                 </tr>
                                 {% endif %}
                                 <tr>
-                                    <td class="text-muted">{{ t('reviewer') }}</td>
+                                    <td class="text-muted align-top" style="white-space: nowrap;">{{ t('reviewer') }}</td>
                                     <td>
                                         {% set reviewers = task.reviewers.all() %}
                                         {% if reviewers %}
-                                        <div class="d-flex flex-column gap-2">
+                                        <div class="d-flex flex-column gap-1">
                                             {% for tr in reviewers %}
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="avatar-sm d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:28px;height:28px;font-size:0.75rem;">
-                                                    {{ tr.user.name[:2]|upper }}
+                                            <div>
+                                                <span class="d-inline-flex align-items-center gap-1">
+                                                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:22px;height:22px;font-size:0.65rem;">
+                                                        {{ tr.user.name[:2]|upper }}
+                                                    </span>
+                                                    <strong>{{ tr.user.name }}</strong>
                                                 </span>
-                                                <strong>{{ tr.user.name }}</strong>
                                                 {% if tr.has_approved %}
-                                                <span class="badge" style="background-color: var(--dtt-sec-green-5);">
-                                                    <i class="bi bi-check-circle me-1"></i>{{ 'Approved' if lang == 'en' else 'Genehmigt' }}
+                                                <span class="badge" style="background-color: var(--dtt-sec-green-5); font-size: 0.7rem;">
+                                                    <i class="bi bi-check"></i> {{ 'Genehmigt' if lang == 'de' else 'Approved' }}
                                                 </span>
-                                                <small class="text-muted">{{ tr.approved_at.strftime('%d.%m.%Y %H:%M') if tr.approved_at }}</small>
                                                 {% elif tr.has_rejected %}
-                                                <span class="badge" style="background-color: var(--dtt-danger-red);">
-                                                    <i class="bi bi-x-circle me-1"></i>{{ 'Rejected' if lang == 'en' else 'Abgelehnt' }}
+                                                <span class="badge" style="background-color: var(--dtt-danger-red); font-size: 0.7rem;">
+                                                    <i class="bi bi-x"></i> {{ 'Abgelehnt' if lang == 'de' else 'Rejected' }}
                                                 </span>
-                                                <small class="text-muted">{{ tr.rejected_at.strftime('%d.%m.%Y %H:%M') if tr.rejected_at }}</small>
                                                 {% else %}
-                                                <span class="badge bg-secondary">
-                                                    <i class="bi bi-hourglass-split me-1"></i>{{ 'Pending' if lang == 'en' else 'Ausstehend' }}
+                                                <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                                                    <i class="bi bi-hourglass"></i> {{ 'Ausstehend' if lang == 'de' else 'Pending' }}
                                                 </span>
                                                 {% endif %}
                                             </div>
                                             {% endfor %}
                                             {% set approval_info = task.get_approval_count() %}
-                                            {% set approved_count = approval_info[0] %}
-                                            {% set total_reviewers = approval_info[1] %}
-                                            {% if total_reviewers > 0 %}
-                                            <div class="mt-2">
-                                                <div class="progress" style="height: 8px;">
-                                                    <div class="progress-bar" style="width: {{ (approved_count / total_reviewers * 100)|int }}%; background-color: var(--dtt-sec-green-5);"></div>
-                                                </div>
-                                                <small class="text-muted">{{ approved_count }}/{{ total_reviewers }} {{ 'approved' if lang == 'en' else 'genehmigt' }}</small>
-                                            </div>
+                                            {% if approval_info[1] > 0 %}
+                                            <small class="text-muted">{{ approval_info[0] }}/{{ approval_info[1] }} {{ 'genehmigt' if lang == 'de' else 'approved' }}</small>
                                             {% endif %}
                                         </div>
                                         {% else %}
@@ -209,16 +210,16 @@
                                 </tr>
                                 {% if task.reviewer_team %}
                                 <tr>
-                                    <td class="text-muted">{{ t('reviewer_team') }}</td>
+                                    <td class="text-muted align-top" style="white-space: nowrap;">{{ t('reviewer_team') }}</td>
                                     <td>
-                                        <span class="d-inline-flex align-items-center gap-2">
-                                            <span class="d-inline-block rounded-circle" 
-                                                  style="width: 12px; height: 12px; background-color: {{ task.reviewer_team.color or '#86BC25' }};">
+                                        <div class="d-flex flex-wrap align-items-center gap-1">
+                                            <span class="d-inline-block rounded-circle flex-shrink-0" 
+                                                  style="width: 10px; height: 10px; background-color: {{ task.reviewer_team.color or '#86BC25' }};">
                                             </span>
-                                            <strong>{{ task.reviewer_team.name }}</strong>
-                                            <span class="badge bg-light text-dark">{{ task.reviewer_team.get_member_count() }} {{ t('members') }}</span>
-                                        </span>
-                                        <div class="form-text mt-1">{{ 'Any team member can review' if lang == 'en' else 'Jedes Teammitglied kann prüfen' }}</div>
+                                            <strong>{{ task.reviewer_team.get_name(lang) }}</strong>
+                                        </div>
+                                        <small class="text-muted">{{ task.reviewer_team.get_member_count() }} {{ t('members') }}</small><br>
+                                        <small class="text-muted fst-italic">{{ 'Jedes Teammitglied kann prüfen' if lang == 'de' else 'Any team member can review' }}</small>
                                     </td>
                                 </tr>
                                 {% endif %}

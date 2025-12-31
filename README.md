@@ -2,7 +2,8 @@
 
 > **Tax Compliance Calendar & Deadline Tracking** — A centralized platform for managing tax compliance deadlines across entities and tax types.
 
-![Flask](https://img.shields.io/badge/Flask-2.x-green?logo=flask)
+![Version](https://img.shields.io/badge/Version-1.0.0-blue)
+![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?logo=bootstrap)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
@@ -27,16 +28,30 @@ The **Deloitte TaxOps Calendar** is a web application designed to centralize tax
 
 | Feature | Description |
 |---------|-------------|
-| 📊 **Dashboard** | KPI cards showing overdue, due soon, in review, and completed tasks |
-| 📋 **Task Management** | Full CRUD with status workflow, filters, and search |
-| 📅 **Calendar Views** | Month and year views with color-coded task indicators |
+| 📊 **Dashboard** | KPI cards, Chart.js visualizations (status pie, monthly bar, team workload) |
+| 📋 **Task Management** | Full CRUD with status workflow, bulk operations, filters, and search |
+| 📅 **Calendar Views** | Month and year views with color-coded task indicators and previews |
 | 👥 **Multi-Reviewer Approval** | Assign multiple reviewers who must all approve before completion |
+| 👨‍👩‍👧‍👦 **Team Management** | Create teams, assign tasks to teams, team-based access control |
 | 📎 **Evidence Management** | Upload files (PDF, Office, images) and add links as evidence |
 | 💬 **Comments** | Discussion threads on tasks with user avatars |
 | 📝 **Audit Logging** | Complete activity history for compliance |
-| 🏢 **Entity Management** | Manage legal entities/subsidiaries with hierarchies |
+| 🏢 **Entity Management** | Manage legal entities with hierarchies and user permissions |
 | 🔐 **Role-Based Access** | Admin, Manager, Reviewer, Preparer, Read-only roles |
 | 🌍 **Internationalization** | German (default) and English language support |
+
+### Advanced Features (Phase A-H)
+
+| Feature | Description |
+|---------|-------------|
+| 🔔 **Real-time Notifications** | WebSocket notifications via Flask-SocketIO |
+| ⚡ **Bulk Operations** | Select multiple tasks for status change, reassignment, deletion |
+| 📤 **Excel/PDF Export** | Task list Excel, individual task PDF, status summary reports |
+| 📆 **Calendar Sync (iCal)** | Subscribe to personal calendar feed in Outlook/Google/Apple |
+| 📧 **Email Notifications** | Task assignment, status change, comment, due reminder emails |
+| 📈 **Dashboard Charts** | Interactive Chart.js visualizations |
+| 🏛️ **Entity Scoping** | Fine-grained entity access permissions (view/edit/manage) |
+| 🔄 **Recurring Tasks** | RRULE-based task generation from presets |
 
 ### Multi-Stage Approval Workflow
 
@@ -84,19 +99,23 @@ Pre-defined task templates for common tax compliance tasks:
 ### Backend
 | Component | Technology |
 |-----------|------------|
-| Framework | Flask 2.x |
+| Framework | Flask 3.x |
 | ORM | SQLAlchemy + Flask-SQLAlchemy |
 | Migrations | Alembic (Flask-Migrate) |
 | Authentication | Flask-Login |
+| Real-time | Flask-SocketIO + eventlet |
 | Excel Processing | openpyxl |
+| PDF Export | WeasyPrint |
+| Calendar | icalendar + python-dateutil |
 
 ### Frontend
 | Component | Technology |
 |-----------|------------|
 | CSS Framework | Bootstrap 5.3 |
 | Icons | Bootstrap Icons + Deloitte Icons |
+| Charts | Chart.js 4.x |
 | Templating | Jinja2 |
-| JavaScript | Vanilla JS |
+| JavaScript | Vanilla JS + Socket.IO Client |
 
 ### Database
 | Environment | Database |
@@ -166,12 +185,14 @@ Open http://127.0.0.1:5000 in your browser.
 
 ```
 deloitte-taxops-calendar/
-├── app.py                  # Main application (~1700 lines)
-├── models.py               # SQLAlchemy models (7 models + enums)
+├── app.py                  # Main application (~3100 lines)
+├── models.py               # SQLAlchemy models (~850 lines)
+├── services.py             # Business logic services (~650 lines)
 ├── config.py               # Configuration classes
 ├── translations.py         # i18n dictionary (DE/EN)
 ├── init_db.py              # Database initialization
 ├── Pipfile                 # Dependencies
+├── requirements.txt        # Pip requirements (generated)
 │
 ├── instance/               # Instance-specific files
 │   └── app.db              # SQLite database
@@ -186,7 +207,7 @@ deloitte-taxops-calendar/
 │
 ├── templates/              # Jinja2 templates
 │   ├── base.html           # Master layout
-│   ├── dashboard.html      # Main dashboard
+│   ├── dashboard.html      # Main dashboard with charts
 │   ├── calendar.html       # Month calendar
 │   ├── calendar_year.html  # Year calendar
 │   ├── tasks/              # Task templates
@@ -198,6 +219,12 @@ deloitte-taxops-calendar/
 │
 └── docs/                   # Memory Bank documentation
     ├── technicalConcept.md
+    ├── techContext.md
+    ├── systemPatterns.md
+    ├── productContext.md
+    ├── progress.md
+    └── activeContext.md
+```
     ├── techContext.md
     ├── systemPatterns.md
     ├── productContext.md
@@ -296,36 +323,46 @@ flask db downgrade
 ### CLI Commands
 
 ```bash
-flask initdb      # Initialize database tables
-flask createadmin # Create admin user interactively
-flask seed        # Load sample data
-flask loadpresets # Load task presets from JSON
+flask initdb                # Initialize database tables
+flask createadmin           # Create admin user interactively
+flask seed                  # Load sample data
+flask loadpresets           # Load task presets from JSON
+flask send_due_reminders    # Send due reminder emails (--days=7)
+flask generate-recurring-tasks  # Generate tasks from presets (--year, --dry-run)
 ```
 
 ---
 
 ## 📋 Roadmap
 
-### ✅ Completed (MVP)
+### ✅ Completed (v1.0.0)
 
 - [x] User authentication with Flask-Login
 - [x] Entity and Tax Type management
 - [x] Task CRUD with multi-stage workflow
 - [x] Multi-reviewer approval system
+- [x] Team management and assignment
 - [x] Calendar views (month/year)
 - [x] Evidence upload and preview
 - [x] Comments and audit logging
 - [x] Task presets from JSON
 - [x] Internationalization (DE/EN)
+- [x] Real-time WebSocket notifications
+- [x] Bulk operations (status, reassign, delete)
+- [x] Excel/PDF export
+- [x] iCal calendar sync
+- [x] Email notifications with preferences
+- [x] Dashboard charts (Chart.js)
+- [x] Entity access permissions
+- [x] Recurring task generation (RRULE)
 
-### 🔜 Planned (Phase 2)
+### 🔜 Planned (Future Releases)
 
 - [ ] OIDC/Entra ID SSO integration
-- [ ] Email/Teams notifications
-- [ ] Excel import/export
-- [ ] Advanced reports and dashboards
-- [ ] RRULE-based recurring tasks
-- [ ] API for external integrations
+- [ ] MS Teams notifications
+- [ ] Archival & soft-delete
+- [ ] Advanced compliance reports
+- [ ] Template builder UI
 
 ---
 

@@ -17,10 +17,21 @@
                     <form method="POST">
                         <div class="row">
                             <div class="col-md-8">
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">{{ t('team_name') }} <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="name" name="name" 
-                                           value="{{ team.name if team else '' }}" required>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="name_de" class="form-label">
+                                            🇩🇪 {{ t('team_name') }} ({{ t('german') }}) <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="name_de" name="name_de" 
+                                               value="{{ team.name_de if team else '' }}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="name_en" class="form-label">
+                                            🇬🇧 {{ t('team_name') }} ({{ t('english') }}) <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="name_en" name="name_en" 
+                                               value="{{ team.name_en if team else '' }}" required>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -37,9 +48,19 @@
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="description" class="form-label">{{ t('description') }}</label>
-                            <textarea class="form-control" id="description" name="description" rows="3">{{ team.description if team else '' }}</textarea>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="description_de" class="form-label">
+                                    🇩🇪 {{ t('description') }} ({{ t('german') }})
+                                </label>
+                                <textarea class="form-control" id="description_de" name="description_de" rows="3">{{ team.description_de if team else '' }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="description_en" class="form-label">
+                                    🇬🇧 {{ t('description') }} ({{ t('english') }})
+                                </label>
+                                <textarea class="form-control" id="description_en" name="description_en" rows="3">{{ team.description_en if team else '' }}</textarea>
+                            </div>
                         </div>
                         
                         <div class="mb-3">

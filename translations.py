@@ -180,6 +180,28 @@ TRANSLATIONS = {
     # Audit Log
     'audit_log': {'de': 'Änderungsprotokoll', 'en': 'Audit Log'},
     
+    # Languages
+    'german': {'de': 'Deutsch', 'en': 'German'},
+    'english': {'de': 'Englisch', 'en': 'English'},
+    
+    # Notifications
+    'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications'},
+    'no_notifications': {'de': 'Keine Benachrichtigungen', 'en': 'No notifications'},
+    'mark_all_read': {'de': 'Alle als gelesen markieren', 'en': 'Mark all as read'},
+    'view_all_notifications': {'de': 'Alle anzeigen', 'en': 'View all'},
+    'notification_task_assigned': {'de': 'Aufgabe zugewiesen', 'en': 'Task assigned'},
+    'notification_reviewer_added': {'de': 'Als Prüfer hinzugefügt', 'en': 'Added as reviewer'},
+    'notification_status_changed': {'de': 'Status geändert', 'en': 'Status changed'},
+    'notification_task_approved': {'de': 'Aufgabe genehmigt', 'en': 'Task approved'},
+    'notification_task_rejected': {'de': 'Aufgabe abgelehnt', 'en': 'Task rejected'},
+    'notification_comment': {'de': 'Neuer Kommentar', 'en': 'New comment'},
+    'notification_review_requested': {'de': 'Review angefordert', 'en': 'Review requested'},
+    'notification_due_soon': {'de': 'Bald fällig', 'en': 'Due soon'},
+    'notification_overdue': {'de': 'Überfällig', 'en': 'Overdue'},
+    'all_notifications': {'de': 'Alle Benachrichtigungen', 'en': 'All Notifications'},
+    'unread_notifications': {'de': 'Ungelesen', 'en': 'Unread'},
+    'read_notifications': {'de': 'Gelesen', 'en': 'Read'},
+    
     # Errors
     'error_404_title': {'de': 'Seite nicht gefunden', 'en': 'Page not found'},
     'error_404_message': {'de': 'Die angeforderte Seite existiert nicht.', 'en': 'The requested page does not exist.'},

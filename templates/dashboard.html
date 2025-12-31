@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block title %}{{ t('dashboard') }} - {{ app_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 280px;
+    }
+    .chart-legend {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -77,6 +89,65 @@
         </div>
     </div>
 
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Status Pie Chart -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-pie-chart me-2" style="color: var(--dtt-green-3);"></i>
+                        {{ 'Aufgaben nach Status' if lang == 'de' else 'Tasks by Status' }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monthly Bar Chart -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="bi bi-bar-chart me-2" style="color: var(--dtt-green-3);"></i>
+                        {{ 'Aufgaben nach Monat' if lang == 'de' else 'Tasks by Month' }}
+                    </h6>
+                    <select id="yearSelect" class="form-select form-select-sm" style="width: auto;">
+                        {% for y in range(today.year - 1, today.year + 3) %}
+                        <option value="{{ y }}" {% if y == today.year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Team Workload Chart -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people me-2" style="color: var(--dtt-green-3);"></i>
+                        {{ 'Workload nach Team' if lang == 'de' else 'Workload by Team' }}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="teamChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Overdue Tasks -->
         {% if overdue_tasks %}
@@ -97,7 +168,7 @@
                                     <strong>{{ task.title }}</strong>
                                     <br>
                                     <small class="text-muted">
-                                        {{ task.entity.name }} • {{ task.template.tax_type.code if task.template else '-' }}
+                                        {{ task.entity.get_name(lang) }} • {{ task.template.tax_type.code if task.template else '-' }}
                                     </small>
                                 </div>
                                 <div class="text-end">
@@ -139,7 +210,7 @@
                                     <strong>{{ task.title }}</strong>
                                     <br>
                                     <small class="text-muted">
-                                        {{ task.entity.name }}
+                                        {{ task.entity.get_name(lang) }}
                                     </small>
                                 </div>
                                 <div class="text-end">
@@ -180,4 +251,161 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart instances
+    let statusChart = null;
+    let monthlyChart = null;
+    let teamChart = null;
+    
+    // ============= Status Pie Chart =============
+    fetch('/api/dashboard/status-chart')
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.data,
+                        backgroundColor: data.colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        })
+        .catch(err => console.error('Status chart error:', err));
+    
+    // ============= Monthly Bar Chart =============
+    function loadMonthlyChart(year) {
+        fetch('/api/dashboard/monthly-chart?year=' + year)
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                
+                if (monthlyChart) {
+                    monthlyChart.destroy();
+                }
+                
+                monthlyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: data.datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 10,
+                                    usePointStyle: true,
+                                    boxWidth: 8
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(err => console.error('Monthly chart error:', err));
+    }
+    
+    // Load initial monthly chart
+    loadMonthlyChart(document.getElementById('yearSelect').value);
+    
+    // Year selector change handler
+    document.getElementById('yearSelect').addEventListener('change', function() {
+        loadMonthlyChart(this.value);
+    });
+    
+    // ============= Team Workload Chart =============
+    fetch('/api/dashboard/team-chart')
+        .then(response => response.json())
+        .then(data => {
+            if (data.labels.length === 0) {
+                // No data or not authorized
+                document.getElementById('teamChart').parentElement.innerHTML = 
+                    '<div class="text-center text-muted py-5"><i class="bi bi-bar-chart fs-1 d-block mb-2"></i>{{ "Keine Daten verfügbar" if lang == "de" else "No data available" }}</div>';
+                return;
+            }
+            
+            const ctx = document.getElementById('teamChart').getContext('2d');
+            teamChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: '{{ "Offene Aufgaben" if lang == "de" else "Open Tasks" }}',
+                        data: data.data,
+                        backgroundColor: data.colors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(err => console.error('Team chart error:', err));
+});
+</script>
 {% endblock %}

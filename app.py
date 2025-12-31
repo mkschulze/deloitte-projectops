@@ -8,16 +8,20 @@ from datetime import datetime
 from functools import wraps
 from io import BytesIO
 
+import click
 from flask import Flask, render_template, redirect, url_for, flash, request, session, send_file, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from config import config
-from models import db, User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team
+from models import db, User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team, Notification, NotificationType, UserEntity, EntityAccessLevel
 from translations import get_translation as t
+from services import ApprovalService, ApprovalResult, WorkflowService, NotificationService, ExportService, CalendarService, email_service, RecurrenceService
 
-# Flask-Migrate instance
+# Flask extensions
 migrate = Migrate()
+socketio = SocketIO()
 
 
 # ============================================================================
@@ -32,6 +36,7 @@ def create_app(config_name='default'):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
     
     # Login manager
     login_manager = LoginManager()
@@ -49,6 +54,9 @@ def create_app(config_name='default'):
 
 app = create_app()
 
+# Initialize email service
+email_service.init_app(app)
+
 
 # ============================================================================
 # CONTEXT PROCESSORS
@@ -64,7 +72,9 @@ def inject_globals():
         'current_year': datetime.now().year,
         'lang': lang,
         't': lambda key: t(key, lang),
-        'get_file_icon': get_file_icon
+        'get_file_icon': get_file_icon,
+        'ApprovalService': ApprovalService,
+        'WorkflowService': WorkflowService
     }
 
 
@@ -88,6 +98,49 @@ def get_file_icon(filename):
         'zip': 'bi-file-earmark-zip text-warning',
     }
     return icons.get(ext, 'bi-file-earmark')
+
+
+# ============================================================================
+# WEBSOCKET EVENTS
+# ============================================================================
+
+@socketio.on('connect')
+def handle_connect():
+    """Handle WebSocket connection - join user's personal room"""
+    if current_user.is_authenticated:
+        join_room(f'user_{current_user.id}')
+        emit('connected', {'user_id': current_user.id})
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle WebSocket disconnection"""
+    if current_user.is_authenticated:
+        leave_room(f'user_{current_user.id}')
+
+
+def emit_notification(user_id: int, notification, lang: str = 'de'):
+    """
+    Emit real-time notification to user via WebSocket.
+    
+    Args:
+        user_id: Target user ID
+        notification: Notification object
+        lang: Language for localized content
+    """
+    socketio.emit('notification', notification.to_dict(lang), room=f'user_{user_id}')
+
+
+def emit_notifications_to_users(notifications: list, lang: str = 'de'):
+    """
+    Emit notifications to multiple users.
+    
+    Args:
+        notifications: List of Notification objects
+        lang: Language for localized content
+    """
+    for notification in notifications:
+        emit_notification(notification.user_id, notification, lang)
 
 
 # ============================================================================
@@ -187,15 +240,25 @@ def dashboard():
     """Main dashboard with task overview"""
     from datetime import date, timedelta
     
-    # Get user's tasks
+    # Get user's tasks based on role and entity permissions
     if current_user.is_admin() or current_user.is_manager():
         # Admins and managers see all tasks
         base_query = Task.query
     else:
-        # Others see only their tasks
-        base_query = Task.query.filter(
-            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
-        )
+        # Get accessible entity IDs for this user
+        accessible_entity_ids = current_user.get_accessible_entity_ids('view')
+        
+        # Others see their tasks + tasks for accessible entities
+        if accessible_entity_ids:
+            base_query = Task.query.filter(
+                (Task.owner_id == current_user.id) | 
+                (Task.reviewer_id == current_user.id) |
+                (Task.entity_id.in_(accessible_entity_ids))
+            )
+        else:
+            base_query = Task.query.filter(
+                (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+            )
     
     today = date.today()
     soon = today + timedelta(days=7)
@@ -241,11 +304,22 @@ def task_list():
     # Base query
     query = Task.query
     
-    # Apply role-based filtering
+    # Apply role-based and entity scoping filtering
     if not (current_user.is_admin() or current_user.is_manager()):
-        query = query.filter(
-            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
-        )
+        # Get accessible entity IDs for this user
+        accessible_entity_ids = current_user.get_accessible_entity_ids('view')
+        
+        # Filter by owned/reviewed tasks OR tasks for accessible entities
+        if accessible_entity_ids:
+            query = query.filter(
+                (Task.owner_id == current_user.id) | 
+                (Task.reviewer_id == current_user.id) |
+                (Task.entity_id.in_(accessible_entity_ids))
+            )
+        else:
+            query = query.filter(
+                (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+            )
     
     # Apply filters
     if status_filter:
@@ -270,17 +344,25 @@ def task_list():
     # Order by due date
     tasks = query.order_by(Task.due_date).all()
     
-    # Get filter options
-    entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
+    # Get filter options - show only accessible entities for non-admins
+    if current_user.is_admin() or current_user.is_manager():
+        entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
+    else:
+        entities = current_user.get_accessible_entities('view')
+    
     tax_types = TaxType.query.filter_by(is_active=True).order_by(TaxType.code).all()
     years = db.session.query(Task.year).distinct().order_by(Task.year.desc()).all()
     years = [y[0] for y in years]
+    
+    # Get users for bulk assign modal
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
     
     return render_template('tasks/list.html', 
                          tasks=tasks, 
                          entities=entities,
                          tax_types=tax_types,
                          years=years,
+                         users=users,
                          current_filters={
                              'status': status_filter,
                              'entity': entity_filter,
@@ -369,6 +451,40 @@ def task_create():
                 db.session.commit()
                 
                 log_action('CREATE', 'Task', task.id, task.title)
+                
+                # Send notifications
+                lang = session.get('lang', 'de')
+                notifications = []
+                
+                # Notify owner if assigned
+                if owner_id and owner_id != current_user.id:
+                    notifications.append(
+                        NotificationService.notify_task_assigned(task, owner_id, current_user.id)
+                    )
+                
+                # Notify reviewers
+                for reviewer_id in reviewer_ids:
+                    if reviewer_id != current_user.id:
+                        notifications.append(
+                            NotificationService.notify_reviewer_added(task, reviewer_id, current_user.id)
+                        )
+                
+                if notifications:
+                    db.session.commit()
+                    emit_notifications_to_users(notifications, lang)
+                
+                # Send email notifications (async-safe, won't block if email disabled)
+                if owner_id and owner_id != current_user.id:
+                    owner = User.query.get(owner_id)
+                    if owner:
+                        email_service.send_task_assigned(task, owner, current_user, lang)
+                
+                for reviewer_id in reviewer_ids:
+                    if reviewer_id != current_user.id:
+                        reviewer = User.query.get(reviewer_id)
+                        if reviewer:
+                            email_service.send_task_assigned(task, reviewer, current_user, lang)
+                
                 flash('Aufgabe erfolgreich erstellt.', 'success')
                 return redirect(url_for('task_detail', task_id=task.id))
                 
@@ -419,7 +535,9 @@ def task_edit(task_id):
         task.reviewer_team_id = request.form.get('reviewer_team_id', type=int) or None
         
         # Handle multiple reviewers
+        old_reviewer_ids = set(tr.user_id for tr in task.reviewers)
         reviewer_ids = request.form.getlist('reviewer_ids', type=int)
+        new_reviewer_ids = set(reviewer_ids)
         task.set_reviewers(reviewer_ids)
         
         due_date_str = request.form.get('due_date', '')
@@ -434,6 +552,20 @@ def task_edit(task_id):
         
         new_values = f"title={task.title}, due_date={task.due_date}"
         log_action('UPDATE', 'Task', task.id, task.title, old_values, new_values)
+        
+        # Notify newly added reviewers
+        lang = session.get('lang', 'de')
+        notifications = []
+        added_reviewer_ids = new_reviewer_ids - old_reviewer_ids
+        for reviewer_id in added_reviewer_ids:
+            if reviewer_id != current_user.id:
+                notifications.append(
+                    NotificationService.notify_reviewer_added(task, reviewer_id, current_user.id)
+                )
+        
+        if notifications:
+            db.session.commit()
+            emit_notifications_to_users(notifications, lang)
         
         flash('Aufgabe erfolgreich aktualisiert.', 'success')
         return redirect(url_for('task_detail', task_id=task_id))
@@ -471,6 +603,50 @@ def task_change_status(task_id):
         db.session.commit()
         log_action('STATUS_CHANGE', 'Task', task.id, task.title, old_status, new_status)
         
+        # Send notifications for status change
+        lang = session.get('lang', 'de')
+        notifications = []
+        
+        # Notify owner about status changes (if not the one who made the change)
+        if task.owner_id and task.owner_id != current_user.id:
+            notifications.append(
+                NotificationService.notify_status_changed(task, task.owner_id, old_status, new_status, current_user.id)
+            )
+        
+        # Notify reviewers when task is submitted for review
+        if new_status == 'submitted':
+            for tr in task.reviewers:
+                if tr.user_id != current_user.id:
+                    notifications.append(
+                        NotificationService.create(
+                            user_id=tr.user_id,
+                            notification_type='review_requested',
+                            title_de=f'Review angefordert: {task.title}',
+                            title_en=f'Review requested: {task.title}',
+                            message_de='Die Aufgabe wurde zur Prüfung eingereicht.',
+                            message_en='The task has been submitted for review.',
+                            entity_type='task',
+                            entity_id=task.id,
+                            actor_id=current_user.id
+                        )
+                    )
+        
+        if notifications:
+            db.session.commit()
+            emit_notifications_to_users(notifications, lang)
+        
+        # Send email notifications for status change
+        if task.owner_id and task.owner_id != current_user.id:
+            owner = User.query.get(task.owner_id)
+            if owner:
+                email_service.send_status_changed(task, owner, old_status, new_status, lang)
+        
+        # Email reviewers when task is submitted for review
+        if new_status == 'submitted':
+            for tr in task.reviewers:
+                if tr.user_id != current_user.id:
+                    email_service.send_status_changed(task, tr.user, old_status, new_status, lang)
+        
         # Status-specific messages
         status_messages = {
             'submitted': 'Aufgabe eingereicht. Wartet auf Prüfung.',
@@ -491,56 +667,56 @@ def task_change_status(task_id):
 @app.route('/tasks/<int:task_id>/reviewer-action', methods=['POST'])
 @login_required
 def task_reviewer_action(task_id):
-    """Handle individual reviewer approval/rejection"""
+    """Handle individual reviewer approval/rejection using ApprovalService"""
     task = Task.query.get_or_404(task_id)
     action = request.form.get('action')
     note = request.form.get('note', '').strip()
     
-    # Check if user is a reviewer for this task
-    if not task.is_reviewer(current_user):
-        flash('Sie sind kein Prüfer für diese Aufgabe.', 'danger')
-        return redirect(url_for('task_detail', task_id=task_id))
-    
-    # Check if task is in review
-    if task.status != 'in_review':
-        flash('Die Aufgabe muss sich in Prüfung befinden.', 'danger')
-        return redirect(url_for('task_detail', task_id=task_id))
-    
     if action == 'approve':
-        task.approve_by_reviewer(current_user, note)
+        result, message = ApprovalService.approve(task, current_user, note)
         db.session.commit()
-        log_action('REVIEWER_APPROVE', 'Task', task.id, task.title, 
-                   f'Reviewer: {current_user.name}', note or 'No note')
         
-        # Check if all reviewers have approved
-        if task.all_reviewers_approved():
-            # Auto-transition to approved
-            old_status = task.status
-            task.status = 'approved'
-            task.approved_by_id = current_user.id
-            task.approved_at = datetime.utcnow()
-            db.session.commit()
-            log_action('STATUS_CHANGE', 'Task', task.id, task.title, old_status, 'approved')
+        lang = session.get('lang', 'de')
+        
+        if result == ApprovalResult.ALL_APPROVED:
+            log_action('REVIEWER_APPROVE', 'Task', task.id, task.title, 
+                       f'Reviewer: {current_user.name}', 'Final approval')
+            log_action('STATUS_CHANGE', 'Task', task.id, task.title, 'in_review', 'approved')
+            
+            # Notify owner that task is fully approved
+            if task.owner_id and task.owner_id != current_user.id:
+                notification = NotificationService.notify_task_approved(task, task.owner_id, current_user.id, note)
+                db.session.commit()
+                emit_notification(task.owner_id, notification, lang)
+            
             flash('Alle Prüfer haben genehmigt. Aufgabe ist nun genehmigt.', 'success')
+        elif result == ApprovalResult.SUCCESS:
+            log_action('REVIEWER_APPROVE', 'Task', task.id, task.title, 
+                       f'Reviewer: {current_user.name}', note or 'No note')
+            flash(message, 'success')
         else:
-            remaining = task.reviewers.count() - task.get_approval_count()
-            flash(f'Ihre Genehmigung wurde gespeichert. Noch {remaining} Prüfer ausstehend.', 'success')
+            flash(message, 'danger')
     
     elif action == 'reject':
-        task.reject_by_reviewer(current_user, note)
+        result, message = ApprovalService.reject(task, current_user, note)
         db.session.commit()
-        log_action('REVIEWER_REJECT', 'Task', task.id, task.title, 
-                   f'Reviewer: {current_user.name}', note or 'No note')
         
-        # Auto-transition to rejected if any reviewer rejects
-        old_status = task.status
-        task.status = 'rejected'
-        task.rejected_by_id = current_user.id
-        task.rejected_at = datetime.utcnow()
-        task.rejection_reason = note
-        db.session.commit()
-        log_action('STATUS_CHANGE', 'Task', task.id, task.title, old_status, 'rejected')
-        flash('Aufgabe wurde von Ihnen abgelehnt und zur Überarbeitung zurückgewiesen.', 'warning')
+        lang = session.get('lang', 'de')
+        
+        if result == ApprovalResult.TASK_REJECTED:
+            log_action('REVIEWER_REJECT', 'Task', task.id, task.title, 
+                       f'Reviewer: {current_user.name}', note or 'No note')
+            log_action('STATUS_CHANGE', 'Task', task.id, task.title, 'in_review', 'rejected')
+            
+            # Notify owner that task was rejected
+            if task.owner_id and task.owner_id != current_user.id:
+                notification = NotificationService.notify_task_rejected(task, task.owner_id, current_user.id, note)
+                db.session.commit()
+                emit_notification(task.owner_id, notification, lang)
+            
+            flash('Aufgabe wurde von Ihnen abgelehnt und zur Überarbeitung zurückgewiesen.', 'warning')
+        else:
+            flash(message, 'danger')
     
     return redirect(url_for('task_detail', task_id=task_id))
 
@@ -752,6 +928,31 @@ def task_add_comment(task_id):
     db.session.commit()
     
     log_action('COMMENT', 'Task', task_id, task.title, None, text[:100] + ('...' if len(text) > 100 else ''))
+    
+    # Notify relevant users about the comment
+    lang = session.get('lang', 'de')
+    notifications = []
+    notified_users = set()
+    
+    # Notify task owner
+    if task.owner_id and task.owner_id != current_user.id:
+        notifications.append(
+            NotificationService.notify_comment_added(task, comment, task.owner_id, current_user.id)
+        )
+        notified_users.add(task.owner_id)
+    
+    # Notify reviewers
+    for tr in task.reviewers:
+        if tr.user_id != current_user.id and tr.user_id not in notified_users:
+            notifications.append(
+                NotificationService.notify_comment_added(task, comment, tr.user_id, current_user.id)
+            )
+            notified_users.add(tr.user_id)
+    
+    if notifications:
+        db.session.commit()
+        emit_notifications_to_users(notifications, lang)
+    
     flash('Kommentar hinzugefügt.', 'success')
     
     return redirect(url_for('task_detail', task_id=task_id) + '#comments')
@@ -1081,16 +1282,19 @@ def admin_entities():
 def admin_entity_new():
     """Create new entity"""
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
+        name_de = request.form.get('name_de', '').strip()
+        name_en = request.form.get('name_en', '').strip()
         short_name = request.form.get('short_name', '').strip()
         country = request.form.get('country', 'DE').strip().upper()
         group_id = request.form.get('group_id', type=int)
         
-        if not name:
-            flash('Name ist erforderlich.', 'warning')
+        if not name_de or not name_en:
+            flash('Name (DE/EN) ist erforderlich.', 'warning')
         else:
             entity = Entity(
-                name=name, 
+                name=name_de,  # Legacy field gets German name
+                name_de=name_de,
+                name_en=name_en,
                 short_name=short_name or None,
                 country=country, 
                 group_id=group_id if group_id else None,
@@ -1099,7 +1303,7 @@ def admin_entity_new():
             db.session.add(entity)
             db.session.commit()
             log_action('CREATE', 'Entity', entity.id, entity.name)
-            flash(f'Gesellschaft {name} wurde erstellt.', 'success')
+            flash(f'Gesellschaft {name_de} wurde erstellt.', 'success')
             return redirect(url_for('admin_entities'))
     
     parent_entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
@@ -1113,7 +1317,9 @@ def admin_entity_edit(entity_id):
     entity = Entity.query.get_or_404(entity_id)
     
     if request.method == 'POST':
-        entity.name = request.form.get('name', '').strip()
+        entity.name_de = request.form.get('name_de', '').strip()
+        entity.name_en = request.form.get('name_en', '').strip()
+        entity.name = entity.name_de  # Keep legacy field in sync
         entity.short_name = request.form.get('short_name', '').strip() or None
         entity.country = request.form.get('country', 'DE').strip().upper()
         group_id = request.form.get('group_id', type=int)
@@ -1142,6 +1348,158 @@ def admin_entity_delete(entity_id):
 
 
 # ============================================================================
+# USER ENTITY PERMISSIONS
+# ============================================================================
+
+@app.route('/admin/users/<int:user_id>/entities')
+@admin_required
+def admin_user_entities(user_id):
+    """Manage entity access for a user"""
+    user = User.query.get_or_404(user_id)
+    entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
+    lang = session.get('lang', 'de')
+    
+    # Get current permissions as dict for easy lookup
+    current_perms = {p.entity_id: p for p in user.entity_permissions}
+    
+    return render_template('admin/user_entities.html', 
+                           user=user, 
+                           entities=entities,
+                           current_perms=current_perms,
+                           access_levels=EntityAccessLevel,
+                           lang=lang,
+                           t=t)
+
+
+@app.route('/admin/users/<int:user_id>/entities', methods=['POST'])
+@admin_required
+def admin_user_entities_save(user_id):
+    """Save entity permissions for a user"""
+    user = User.query.get_or_404(user_id)
+    
+    # Get all entity IDs that were submitted
+    entity_ids = request.form.getlist('entity_ids', type=int)
+    
+    # Get existing permissions
+    existing_perms = {p.entity_id: p for p in user.entity_permissions}
+    
+    # Track which entities we've processed
+    processed_ids = set()
+    
+    for entity_id in entity_ids:
+        access_level = request.form.get(f'access_level_{entity_id}', 'view')
+        inherit = request.form.get(f'inherit_{entity_id}') == 'on'
+        
+        if entity_id in existing_perms:
+            # Update existing permission
+            perm = existing_perms[entity_id]
+            perm.access_level = access_level
+            perm.inherit_to_children = inherit
+        else:
+            # Create new permission
+            perm = UserEntity(
+                user_id=user.id,
+                entity_id=entity_id,
+                access_level=access_level,
+                inherit_to_children=inherit,
+                granted_by_id=current_user.id
+            )
+            db.session.add(perm)
+        
+        processed_ids.add(entity_id)
+    
+    # Remove permissions that weren't in the form (unchecked)
+    for entity_id, perm in existing_perms.items():
+        if entity_id not in processed_ids:
+            db.session.delete(perm)
+    
+    db.session.commit()
+    log_action('UPDATE', 'UserEntity', user.id, f'Entity permissions for {user.email}')
+    
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash(f'Berechtigungen für {user.name} wurden gespeichert.', 'success')
+    else:
+        flash(f'Permissions for {user.name} saved.', 'success')
+    
+    return redirect(url_for('admin_user_entities', user_id=user_id))
+
+
+@app.route('/admin/entities/<int:entity_id>/users')
+@admin_required
+def admin_entity_users(entity_id):
+    """View users with access to an entity"""
+    entity = Entity.query.get_or_404(entity_id)
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    lang = session.get('lang', 'de')
+    
+    # Get current permissions as dict for easy lookup
+    current_perms = {p.user_id: p for p in entity.user_permissions}
+    
+    return render_template('admin/entity_users.html',
+                           entity=entity,
+                           users=users,
+                           current_perms=current_perms,
+                           access_levels=EntityAccessLevel,
+                           lang=lang,
+                           t=t)
+
+
+@app.route('/admin/entities/<int:entity_id>/users', methods=['POST'])
+@admin_required
+def admin_entity_users_save(entity_id):
+    """Save user permissions for an entity"""
+    entity = Entity.query.get_or_404(entity_id)
+    
+    # Get all user IDs that were submitted
+    user_ids = request.form.getlist('user_ids', type=int)
+    
+    # Get existing permissions
+    existing_perms = {p.user_id: p for p in entity.user_permissions}
+    
+    # Track which users we've processed
+    processed_ids = set()
+    
+    for user_id in user_ids:
+        access_level = request.form.get(f'access_level_{user_id}', 'view')
+        inherit = request.form.get(f'inherit_{user_id}') == 'on'
+        
+        if user_id in existing_perms:
+            # Update existing permission
+            perm = existing_perms[user_id]
+            perm.access_level = access_level
+            perm.inherit_to_children = inherit
+        else:
+            # Create new permission
+            perm = UserEntity(
+                user_id=user_id,
+                entity_id=entity.id,
+                access_level=access_level,
+                inherit_to_children=inherit,
+                granted_by_id=current_user.id
+            )
+            db.session.add(perm)
+        
+        processed_ids.add(user_id)
+    
+    # Remove permissions that weren't in the form (unchecked)
+    for user_id, perm in existing_perms.items():
+        if user_id not in processed_ids:
+            db.session.delete(perm)
+    
+    db.session.commit()
+    log_action('UPDATE', 'UserEntity', entity.id, f'User permissions for {entity.name}')
+    
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash(f'Berechtigungen für {entity.name} wurden gespeichert.', 'success')
+    else:
+        flash(f'Permissions for {entity.name} saved.', 'success')
+    
+    return redirect(url_for('admin_entity_users', entity_id=entity_id))
+
+
+# ============================================================================
 # TAX TYPE MANAGEMENT
 # ============================================================================
 
@@ -1159,15 +1517,26 @@ def admin_tax_type_new():
     """Create new tax type"""
     if request.method == 'POST':
         code = request.form.get('code', '').strip().upper()
-        name = request.form.get('name', '').strip()
-        description = request.form.get('description', '').strip()
+        name_de = request.form.get('name_de', '').strip()
+        name_en = request.form.get('name_en', '').strip()
+        description_de = request.form.get('description_de', '').strip()
+        description_en = request.form.get('description_en', '').strip()
         
         if TaxType.query.filter_by(code=code).first():
             flash('Code bereits vorhanden.', 'danger')
-        elif not code or not name:
-            flash('Code und Name sind erforderlich.', 'warning')
+        elif not code or not name_de or not name_en:
+            flash('Code und Name (DE/EN) sind erforderlich.', 'warning')
         else:
-            tax_type = TaxType(code=code, name=name, description=description or None, is_active=True)
+            tax_type = TaxType(
+                code=code, 
+                name=name_de,  # Legacy field gets German name
+                name_de=name_de,
+                name_en=name_en,
+                description=description_de or None,  # Legacy field
+                description_de=description_de or None,
+                description_en=description_en or None,
+                is_active=True
+            )
             db.session.add(tax_type)
             db.session.commit()
             log_action('CREATE', 'TaxType', tax_type.id, tax_type.code)
@@ -1184,8 +1553,12 @@ def admin_tax_type_edit(tax_type_id):
     tax_type = TaxType.query.get_or_404(tax_type_id)
     
     if request.method == 'POST':
-        tax_type.name = request.form.get('name', '').strip()
-        tax_type.description = request.form.get('description', '').strip() or None
+        tax_type.name_de = request.form.get('name_de', '').strip()
+        tax_type.name_en = request.form.get('name_en', '').strip()
+        tax_type.name = tax_type.name_de  # Keep legacy field in sync
+        tax_type.description_de = request.form.get('description_de', '').strip() or None
+        tax_type.description_en = request.form.get('description_en', '').strip() or None
+        tax_type.description = tax_type.description_de  # Keep legacy field in sync
         tax_type.is_active = request.form.get('is_active') == 'on'
         
         db.session.commit()
@@ -1213,20 +1586,26 @@ def admin_teams():
 def admin_team_new():
     """Create new team"""
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        description = request.form.get('description', '').strip()
+        name_de = request.form.get('name_de', '').strip()
+        name_en = request.form.get('name_en', '').strip()
+        description_de = request.form.get('description_de', '').strip()
+        description_en = request.form.get('description_en', '').strip()
         color = request.form.get('color', '#86BC25').strip()
         manager_id = request.form.get('manager_id', type=int)
         member_ids = request.form.getlist('members', type=int)
         
-        if Team.query.filter_by(name=name).first():
+        if Team.query.filter_by(name=name_de).first():
             flash('Teamname bereits vorhanden.', 'danger')
-        elif not name:
-            flash('Teamname ist erforderlich.', 'warning')
+        elif not name_de or not name_en:
+            flash('Teamname (DE/EN) ist erforderlich.', 'warning')
         else:
             team = Team(
-                name=name,
-                description=description or None,
+                name=name_de,  # Legacy field gets German name
+                name_de=name_de,
+                name_en=name_en,
+                description=description_de or None,  # Legacy field
+                description_de=description_de or None,
+                description_en=description_en or None,
                 color=color,
                 manager_id=manager_id if manager_id else None,
                 is_active=True
@@ -1242,7 +1621,7 @@ def admin_team_new():
             
             db.session.commit()
             log_action('CREATE', 'Team', team.id, team.name)
-            flash(f'Team "{name}" wurde erstellt.', 'success')
+            flash(f'Team "{name_de}" wurde erstellt.', 'success')
             return redirect(url_for('admin_teams'))
     
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
@@ -1256,17 +1635,22 @@ def admin_team_edit(team_id):
     team = Team.query.get_or_404(team_id)
     
     if request.method == 'POST':
-        name = request.form.get('name', '').strip()
+        name_de = request.form.get('name_de', '').strip()
+        name_en = request.form.get('name_en', '').strip()
         
         # Check for duplicate name (excluding current team)
-        existing = Team.query.filter(Team.name == name, Team.id != team_id).first()
+        existing = Team.query.filter(Team.name == name_de, Team.id != team_id).first()
         if existing:
             flash('Teamname bereits vorhanden.', 'danger')
-        elif not name:
-            flash('Teamname ist erforderlich.', 'warning')
+        elif not name_de or not name_en:
+            flash('Teamname (DE/EN) ist erforderlich.', 'warning')
         else:
-            team.name = name
-            team.description = request.form.get('description', '').strip() or None
+            team.name = name_de  # Keep legacy field in sync
+            team.name_de = name_de
+            team.name_en = name_en
+            team.description = request.form.get('description_de', '').strip() or None  # Legacy field
+            team.description_de = request.form.get('description_de', '').strip() or None
+            team.description_en = request.form.get('description_en', '').strip() or None
             team.color = request.form.get('color', '#86BC25').strip()
             team.manager_id = request.form.get('manager_id', type=int) or None
             team.is_active = request.form.get('is_active') == 'on'
@@ -1345,23 +1729,46 @@ def admin_presets():
 def admin_preset_new():
     """Create new task preset"""
     if request.method == 'POST':
-        title = request.form.get('title', '').strip()
+        title_de = request.form.get('title_de', '').strip()
+        title_en = request.form.get('title_en', '').strip()
         category = request.form.get('category', 'aufgabe')
         tax_type = request.form.get('tax_type', '').strip() or None
         law_reference = request.form.get('law_reference', '').strip() or None
-        description = request.form.get('description', '').strip() or None
+        description_de = request.form.get('description_de', '').strip() or None
+        description_en = request.form.get('description_en', '').strip() or None
         
-        if not title:
-            flash('Titel ist erforderlich.', 'warning')
+        # Recurrence fields
+        is_recurring = request.form.get('is_recurring') == 'on'
+        recurrence_frequency = request.form.get('recurrence_frequency', 'monthly')
+        recurrence_day_offset = int(request.form.get('recurrence_day_offset', 10) or 10)
+        recurrence_rrule = request.form.get('recurrence_rrule', '').strip() or None
+        recurrence_end_date_str = request.form.get('recurrence_end_date', '').strip()
+        recurrence_end_date = datetime.strptime(recurrence_end_date_str, '%Y-%m-%d').date() if recurrence_end_date_str else None
+        default_entity_id = int(request.form.get('default_entity_id')) if request.form.get('default_entity_id') else None
+        default_owner_id = int(request.form.get('default_owner_id')) if request.form.get('default_owner_id') else None
+        
+        if not title_de or not title_en:
+            flash('Titel (DE/EN) ist erforderlich.', 'warning')
         else:
             preset = TaskPreset(
-                title=title,
+                title=title_de,  # Legacy field gets German title
+                title_de=title_de,
+                title_en=title_en,
                 category=category,
                 tax_type=tax_type,
                 law_reference=law_reference,
-                description=description,
+                description=description_de,  # Legacy field
+                description_de=description_de,
+                description_en=description_en,
                 source='manual',
-                is_active=True
+                is_active=True,
+                is_recurring=is_recurring,
+                recurrence_frequency=recurrence_frequency if is_recurring else None,
+                recurrence_day_offset=recurrence_day_offset if is_recurring else None,
+                recurrence_rrule=recurrence_rrule if is_recurring and recurrence_frequency == 'custom' else None,
+                recurrence_end_date=recurrence_end_date if is_recurring else None,
+                default_entity_id=default_entity_id if is_recurring else None,
+                default_owner_id=default_owner_id if is_recurring else None
             )
             db.session.add(preset)
             db.session.commit()
@@ -1369,7 +1776,9 @@ def admin_preset_new():
             flash('Aufgabenvorlage wurde erstellt.', 'success')
             return redirect(url_for('admin_presets'))
     
-    return render_template('admin/preset_form.html', preset=None)
+    entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
+    users = User.query.filter_by(is_active=True).order_by(User.display_name, User.username).all()
+    return render_template('admin/preset_form.html', preset=None, entities=entities, users=users)
 
 
 @app.route('/admin/presets/<int:preset_id>', methods=['GET', 'POST'])
@@ -1379,19 +1788,44 @@ def admin_preset_edit(preset_id):
     preset = TaskPreset.query.get_or_404(preset_id)
     
     if request.method == 'POST':
-        preset.title = request.form.get('title', '').strip()
+        preset.title_de = request.form.get('title_de', '').strip()
+        preset.title_en = request.form.get('title_en', '').strip()
+        preset.title = preset.title_de  # Keep legacy field in sync
         preset.category = request.form.get('category', 'aufgabe')
         preset.tax_type = request.form.get('tax_type', '').strip() or None
         preset.law_reference = request.form.get('law_reference', '').strip() or None
-        preset.description = request.form.get('description', '').strip() or None
+        preset.description_de = request.form.get('description_de', '').strip() or None
+        preset.description_en = request.form.get('description_en', '').strip() or None
+        preset.description = preset.description_de  # Keep legacy field in sync
         preset.is_active = request.form.get('is_active') == 'on'
+        
+        # Recurrence fields
+        preset.is_recurring = request.form.get('is_recurring') == 'on'
+        if preset.is_recurring:
+            preset.recurrence_frequency = request.form.get('recurrence_frequency', 'monthly')
+            preset.recurrence_day_offset = int(request.form.get('recurrence_day_offset', 10) or 10)
+            recurrence_rrule = request.form.get('recurrence_rrule', '').strip()
+            preset.recurrence_rrule = recurrence_rrule if preset.recurrence_frequency == 'custom' else None
+            recurrence_end_date_str = request.form.get('recurrence_end_date', '').strip()
+            preset.recurrence_end_date = datetime.strptime(recurrence_end_date_str, '%Y-%m-%d').date() if recurrence_end_date_str else None
+            preset.default_entity_id = int(request.form.get('default_entity_id')) if request.form.get('default_entity_id') else None
+            preset.default_owner_id = int(request.form.get('default_owner_id')) if request.form.get('default_owner_id') else None
+        else:
+            preset.recurrence_frequency = None
+            preset.recurrence_day_offset = None
+            preset.recurrence_rrule = None
+            preset.recurrence_end_date = None
+            preset.default_entity_id = None
+            preset.default_owner_id = None
         
         db.session.commit()
         log_action('UPDATE', 'TaskPreset', preset.id, preset.title[:50])
         flash('Aufgabenvorlage wurde aktualisiert.', 'success')
         return redirect(url_for('admin_presets'))
     
-    return render_template('admin/preset_form.html', preset=preset)
+    entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
+    users = User.query.filter_by(is_active=True).order_by(User.display_name, User.username).all()
+    return render_template('admin/preset_form.html', preset=preset, entities=entities, users=users)
 
 
 @app.route('/admin/presets/<int:preset_id>/delete', methods=['POST'])
@@ -1681,6 +2115,52 @@ def api_presets():
     return jsonify([p.to_dict() for p in presets])
 
 
+@app.route('/api/tasks/<int:task_id>/approval-status')
+@login_required
+def api_task_approval_status(task_id):
+    """API endpoint for task approval status"""
+    task = Task.query.get_or_404(task_id)
+    status = ApprovalService.get_approval_status(task)
+    
+    return jsonify({
+        'total_reviewers': status.total_reviewers,
+        'approved_count': status.approved_count,
+        'rejected_count': status.rejected_count,
+        'pending_count': status.pending_count,
+        'is_complete': status.is_complete,
+        'is_rejected': status.is_rejected,
+        'progress_percent': status.progress_percent,
+        'pending_reviewers': [{'id': u.id, 'name': u.name, 'email': u.email} for u in status.pending_reviewers],
+        'approved_reviewers': [{'id': u.id, 'name': u.name, 'email': u.email} for u in status.approved_reviewers],
+        'rejected_reviewers': [{'id': u.id, 'name': u.name, 'email': u.email} for u in status.rejected_reviewers],
+        'summary': ApprovalService.format_approval_summary(task, session.get('lang', 'de'))
+    })
+
+
+@app.route('/api/tasks/<int:task_id>/workflow-timeline')
+@login_required
+def api_task_workflow_timeline(task_id):
+    """API endpoint for task workflow timeline"""
+    task = Task.query.get_or_404(task_id)
+    timeline = WorkflowService.get_workflow_timeline(task)
+    lang = session.get('lang', 'de')
+    
+    # Format for JSON response
+    formatted = []
+    for event in timeline:
+        formatted.append({
+            'timestamp': event['timestamp'].isoformat() if event['timestamp'] else None,
+            'action': event['action'],
+            'label': event[f'action_label_{lang}'],
+            'user': event['user'].name if event.get('user') else None,
+            'note': event.get('note'),
+            'icon': event['icon'],
+            'color': event['color']
+        })
+    
+    return jsonify(formatted)
+
+
 # ============================================================================
 # ERROR HANDLERS
 # ============================================================================
@@ -1722,6 +2202,133 @@ def createadmin():
     db.session.add(admin)
     db.session.commit()
     print('Admin user created: admin@example.com / admin123')
+
+
+@app.cli.command()
+@click.option('--days', default=7, help='Send reminders for tasks due within this many days')
+@click.option('--include-overdue', is_flag=True, default=True, help='Also send reminders for overdue tasks')
+@click.option('--dry-run', is_flag=True, help='Show what would be sent without actually sending')
+def send_due_reminders(days, include_overdue, dry_run):
+    """Send email reminders for tasks due soon or overdue"""
+    from datetime import date, timedelta
+    
+    today = date.today()
+    soon = today + timedelta(days=days)
+    
+    # Find tasks that are due soon and not completed
+    query = Task.query.filter(
+        Task.status.notin_(['completed', 'rejected']),
+        Task.due_date <= soon
+    )
+    
+    if not include_overdue:
+        query = query.filter(Task.due_date >= today)
+    
+    tasks = query.all()
+    
+    if dry_run:
+        print(f"[DRY RUN] Would send reminders for {len(tasks)} tasks:")
+    else:
+        print(f"Sending reminders for {len(tasks)} tasks...")
+    
+    sent_count = 0
+    for task in tasks:
+        days_until_due = (task.due_date - today).days
+        
+        # Determine recipients (owner and reviewers)
+        recipients = []
+        if task.owner:
+            recipients.append(task.owner)
+        for tr in task.reviewers:
+            if tr.user not in recipients:
+                recipients.append(tr.user)
+        
+        for user in recipients:
+            if dry_run:
+                status = "overdue" if days_until_due < 0 else f"due in {days_until_due} days"
+                print(f"  → {task.title} ({status}) → {user.email}")
+            else:
+                if email_service.send_due_reminder(task, user, days_until_due, 'de'):
+                    sent_count += 1
+    
+    if not dry_run:
+        print(f"Sent {sent_count} reminder emails.")
+
+
+@app.cli.command('generate-recurring-tasks')
+@click.option('--year', default=None, type=int, help='Year to generate tasks for (default: current year)')
+@click.option('--preset-id', default=None, type=int, help='Generate tasks only for a specific preset ID')
+@click.option('--entity-id', default=None, type=int, help='Generate tasks only for a specific entity ID')
+@click.option('--dry-run', is_flag=True, help='Show what would be created without actually creating')
+@click.option('--force', is_flag=True, help='Force creation even if tasks already exist')
+def generate_recurring_tasks(year, preset_id, entity_id, dry_run, force):
+    """Generate task instances from recurring presets"""
+    from datetime import date
+    
+    # Default to current year
+    if not year:
+        year = date.today().year
+    
+    print(f"Generating recurring tasks for year {year}...")
+    
+    if preset_id:
+        # Generate for specific preset
+        preset = TaskPreset.query.get(preset_id)
+        if not preset:
+            print(f"Error: Preset with ID {preset_id} not found.")
+            return
+        
+        if not preset.is_recurring:
+            print(f"Error: Preset '{preset.title}' is not configured as recurring.")
+            return
+        
+        entities = None
+        if entity_id:
+            entity = Entity.query.get(entity_id)
+            if not entity:
+                print(f"Error: Entity with ID {entity_id} not found.")
+                return
+            entities = [entity]
+        
+        if dry_run:
+            periods = RecurrenceService.get_period_dates(
+                preset.recurrence_frequency,
+                year,
+                preset.recurrence_day_offset or 10
+            )
+            print(f"\n[DRY RUN] Would create tasks for preset '{preset.title}':")
+            print(f"  Frequency: {preset.recurrence_frequency}")
+            print(f"  Periods: {len(periods)}")
+            for period, due_date in periods:
+                print(f"    - {period or 'Annual'}: due {due_date.strftime('%d.%m.%Y')}")
+            return
+        
+        tasks = RecurrenceService.generate_tasks_from_preset(preset, year, entities, force=force)
+        db.session.commit()
+        print(f"Created {len(tasks)} tasks from preset '{preset.title}'.")
+    else:
+        # Generate for all recurring presets
+        if dry_run:
+            presets = TaskPreset.query.filter_by(is_recurring=True, is_active=True).all()
+            print(f"\n[DRY RUN] Would process {len(presets)} recurring presets:")
+            for preset in presets:
+                periods = RecurrenceService.get_period_dates(
+                    preset.recurrence_frequency,
+                    year,
+                    preset.recurrence_day_offset or 10
+                )
+                entity_count = Entity.query.filter_by(is_active=True).count() if not preset.default_entity_id else 1
+                print(f"  - {preset.title}: {len(periods)} periods × {entity_count} entities = {len(periods) * entity_count} potential tasks")
+            return
+        
+        stats = RecurrenceService.generate_all_recurring_tasks(year, dry_run=False)
+        print(f"\nGeneration complete:")
+        print(f"  Presets processed: {stats['presets_processed']}")
+        print(f"  Tasks created: {stats['tasks_created']}")
+        if stats['errors']:
+            print(f"  Errors: {len(stats['errors'])}")
+            for error in stats['errors']:
+                print(f"    - {error}")
 
 
 @app.cli.command()
@@ -1847,10 +2454,641 @@ def seed():
 
 
 # ============================================================================
+# EXPORT ROUTES
+# ============================================================================
+
+@app.route('/tasks/export/excel')
+@login_required
+def export_tasks_excel():
+    """Export filtered task list to Excel"""
+    from datetime import date
+    from flask import Response
+    
+    lang = session.get('lang', 'de')
+    
+    # Get filter parameters (same as task_list)
+    status_filter = request.args.get('status', '')
+    entity_filter = request.args.get('entity', type=int)
+    tax_type_filter = request.args.get('tax_type', type=int)
+    year_filter = request.args.get('year', type=int, default=date.today().year)
+    
+    # Base query
+    query = Task.query
+    
+    # Apply role-based filtering
+    if not (current_user.is_admin() or current_user.is_manager()):
+        query = query.filter(
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        )
+    
+    # Apply filters
+    if status_filter:
+        if status_filter == 'overdue':
+            query = query.filter(Task.due_date < date.today(), Task.status != 'completed')
+        elif status_filter == 'due_soon':
+            from datetime import timedelta
+            soon = date.today() + timedelta(days=7)
+            query = query.filter(Task.due_date >= date.today(), Task.due_date <= soon, Task.status != 'completed')
+        else:
+            query = query.filter_by(status=status_filter)
+    
+    if entity_filter:
+        query = query.filter_by(entity_id=entity_filter)
+    
+    if tax_type_filter:
+        query = query.join(TaskTemplate).filter(TaskTemplate.tax_type_id == tax_type_filter)
+    
+    if year_filter:
+        query = query.filter_by(year=year_filter)
+    
+    tasks = query.order_by(Task.due_date).all()
+    
+    # Generate Excel
+    excel_bytes = ExportService.export_tasks_to_excel(tasks, lang)
+    
+    filename = f"aufgaben_{date.today().strftime('%Y%m%d')}.xlsx" if lang == 'de' else f"tasks_{date.today().strftime('%Y%m%d')}.xlsx"
+    
+    return Response(
+        excel_bytes,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+@app.route('/tasks/export/summary')
+@login_required
+def export_summary_report():
+    """Export summary report to Excel"""
+    from datetime import date
+    from flask import Response
+    
+    lang = session.get('lang', 'de')
+    
+    # Get all tasks (with role-based filtering)
+    query = Task.query
+    
+    if not (current_user.is_admin() or current_user.is_manager()):
+        query = query.filter(
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        )
+    
+    # Apply year filter if provided
+    year_filter = request.args.get('year', type=int, default=date.today().year)
+    if year_filter:
+        query = query.filter_by(year=year_filter)
+    
+    tasks = query.all()
+    
+    # Generate report
+    excel_bytes = ExportService.export_summary_report(tasks, lang)
+    
+    filename = f"bericht_{year_filter}.xlsx" if lang == 'de' else f"report_{year_filter}.xlsx"
+    
+    return Response(
+        excel_bytes,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+@app.route('/tasks/<int:task_id>/export/pdf')
+@login_required
+def export_task_pdf(task_id):
+    """Export single task to PDF"""
+    from flask import Response
+    from datetime import date
+    
+    task = Task.query.get_or_404(task_id)
+    lang = session.get('lang', 'de')
+    
+    # Check access
+    if not (current_user.is_admin() or current_user.is_manager() or 
+            task.owner_id == current_user.id or task.is_reviewer(current_user)):
+        flash('Keine Berechtigung.', 'danger')
+        return redirect(url_for('task_list'))
+    
+    # Generate PDF
+    pdf_bytes = ExportService.export_task_to_pdf(task, lang)
+    
+    # Sanitize filename
+    safe_title = "".join(c for c in task.title if c.isalnum() or c in (' ', '-', '_')).strip()[:50]
+    filename = f"{safe_title}_{date.today().strftime('%Y%m%d')}.pdf"
+    
+    return Response(
+        pdf_bytes,
+        mimetype='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+# ============================================================================
+# CALENDAR SYNC (iCal) ROUTES
+# ============================================================================
+
+@app.route('/calendar/feed/<token>.ics')
+def calendar_feed(token):
+    """
+    Public iCal feed endpoint for calendar subscription.
+    No login required - authenticated via unique token.
+    """
+    from flask import Response
+    
+    # Find user by calendar token
+    user = User.query.filter_by(calendar_token=token).first()
+    if not user:
+        abort(404)
+    
+    if not user.is_active:
+        abort(403)
+    
+    # Get tasks visible to this user
+    lang = request.args.get('lang', 'de')
+    
+    # Build task query based on user role
+    if user.is_admin() or user.is_manager():
+        # Admin/Manager sees all tasks
+        tasks = Task.query.filter(
+            Task.status != 'completed'  # Optionally exclude completed
+        ).all()
+    else:
+        # Regular users see tasks they own or review
+        user_teams = [team.id for team in user.get_teams()]
+        tasks = Task.query.filter(
+            db.or_(
+                Task.owner_id == user.id,
+                Task.owner_team_id.in_(user_teams) if user_teams else False,
+                Task.reviewers.any(TaskReviewer.user_id == user.id)
+            )
+        ).all()
+    
+    # Generate iCal feed
+    ical_bytes = CalendarService.generate_ical_feed(tasks, user.name, lang)
+    
+    return Response(
+        ical_bytes,
+        mimetype='text/calendar',
+        headers={
+            'Content-Disposition': f'attachment; filename="taxops-calendar.ics"',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    )
+
+
+@app.route('/calendar/subscription')
+@login_required
+def calendar_subscription():
+    """Show user's calendar subscription URL and settings"""
+    lang = session.get('lang', 'de')
+    
+    # Get or create user's calendar token
+    token = current_user.get_or_create_calendar_token()
+    
+    # Build full subscription URL
+    subscription_url = url_for('calendar_feed', token=token, _external=True)
+    
+    return render_template('calendar_subscription.html',
+                           subscription_url=subscription_url,
+                           lang=lang,
+                           t=t)
+
+
+@app.route('/calendar/regenerate-token', methods=['POST'])
+@login_required
+def regenerate_calendar_token():
+    """Regenerate the user's calendar token (invalidates old subscription URL)"""
+    new_token = current_user.regenerate_calendar_token()
+    
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash('Kalender-Token wurde erneuert. Bitte aktualisieren Sie Ihre Kalender-Abonnements.', 'success')
+    else:
+        flash('Calendar token regenerated. Please update your calendar subscriptions.', 'success')
+    
+    return redirect(url_for('calendar_subscription'))
+
+
+@app.route('/profile/notifications', methods=['GET', 'POST'])
+@login_required
+def profile_notifications():
+    """Manage user's email notification preferences"""
+    lang = session.get('lang', 'de')
+    
+    if request.method == 'POST':
+        # Update preferences
+        current_user.email_notifications = 'email_notifications' in request.form
+        current_user.email_on_assignment = 'email_on_assignment' in request.form
+        current_user.email_on_status_change = 'email_on_status_change' in request.form
+        current_user.email_on_due_reminder = 'email_on_due_reminder' in request.form
+        current_user.email_on_comment = 'email_on_comment' in request.form
+        
+        db.session.commit()
+        
+        if lang == 'de':
+            flash('E-Mail-Einstellungen gespeichert.', 'success')
+        else:
+            flash('Email preferences saved.', 'success')
+        
+        return redirect(url_for('profile_notifications'))
+    
+    return render_template('profile_notifications.html', 
+                           user=current_user,
+                           lang=lang, 
+                           t=t)
+
+
+# ============================================================================
+# BULK OPERATIONS API ROUTES
+# ============================================================================
+
+@app.route('/api/tasks/bulk-status', methods=['POST'])
+@login_required
+def api_bulk_status():
+    """Bulk change status for multiple tasks"""
+    data = request.get_json()
+    task_ids = data.get('task_ids', [])
+    new_status = data.get('status')
+    
+    if not task_ids or not new_status:
+        return jsonify({'success': False, 'error': 'Missing task_ids or status'}), 400
+    
+    valid_statuses = ['draft', 'submitted', 'in_review', 'approved', 'completed', 'rejected']
+    if new_status not in valid_statuses:
+        return jsonify({'success': False, 'error': 'Invalid status'}), 400
+    
+    success_count = 0
+    error_count = 0
+    
+    for task_id in task_ids:
+        task = Task.query.get(task_id)
+        if not task:
+            error_count += 1
+            continue
+        
+        # Check permissions
+        if not (current_user.is_admin() or current_user.is_manager() or 
+                task.owner_id == current_user.id or task.is_reviewer(current_user)):
+            error_count += 1
+            continue
+        
+        # Try to transition
+        if task.can_transition_to(new_status, current_user):
+            try:
+                old_status = task.transition_to(new_status, current_user)
+                log_action('STATUS_CHANGE', 'Task', task.id, task.title, old_status, new_status)
+                success_count += 1
+            except ValueError:
+                error_count += 1
+        else:
+            error_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'changed': success_count,
+        'skipped': error_count,
+        'message': f'{success_count} Aufgaben geändert, {error_count} übersprungen'
+    })
+
+
+@app.route('/api/tasks/bulk-assign-owner', methods=['POST'])
+@login_required
+def api_bulk_assign_owner():
+    """Bulk assign owner to multiple tasks"""
+    # Only admin/manager can bulk assign
+    if not (current_user.is_admin() or current_user.is_manager()):
+        return jsonify({'success': False, 'error': 'Keine Berechtigung'}), 403
+    
+    data = request.get_json()
+    task_ids = data.get('task_ids', [])
+    owner_id = data.get('owner_id')
+    
+    if not task_ids or not owner_id:
+        return jsonify({'success': False, 'error': 'Missing task_ids or owner_id'}), 400
+    
+    # Verify owner exists
+    owner = User.query.get(owner_id)
+    if not owner or not owner.is_active:
+        return jsonify({'success': False, 'error': 'Invalid owner'}), 400
+    
+    success_count = 0
+    lang = session.get('lang', 'de')
+    notifications = []
+    
+    for task_id in task_ids:
+        task = Task.query.get(task_id)
+        if task:
+            old_owner_id = task.owner_id
+            task.owner_id = owner_id
+            log_action('UPDATE', 'Task', task.id, task.title, 
+                      f'Owner: {old_owner_id}', f'Owner: {owner_id}')
+            
+            # Notify new owner
+            if owner_id != current_user.id:
+                notification = NotificationService.notify_task_assigned(task, owner_id, current_user.id)
+                notifications.append(notification)
+            
+            success_count += 1
+    
+    db.session.commit()
+    
+    if notifications:
+        emit_notifications_to_users(notifications, lang)
+    
+    return jsonify({
+        'success': True,
+        'assigned': success_count,
+        'message': f'{success_count} Aufgaben zugewiesen'
+    })
+
+
+@app.route('/api/tasks/bulk-delete', methods=['POST'])
+@login_required
+def api_bulk_delete():
+    """Bulk delete multiple tasks (admin/manager only)"""
+    if not (current_user.is_admin() or current_user.is_manager()):
+        return jsonify({'success': False, 'error': 'Keine Berechtigung'}), 403
+    
+    data = request.get_json()
+    task_ids = data.get('task_ids', [])
+    
+    if not task_ids:
+        return jsonify({'success': False, 'error': 'Missing task_ids'}), 400
+    
+    success_count = 0
+    
+    for task_id in task_ids:
+        task = Task.query.get(task_id)
+        if task:
+            task_title = task.title
+            
+            # Delete related records
+            TaskReviewer.query.filter_by(task_id=task_id).delete()
+            TaskEvidence.query.filter_by(task_id=task_id).delete()
+            Comment.query.filter_by(task_id=task_id).delete()
+            AuditLog.query.filter_by(entity_type='Task', entity_id=task_id).delete()
+            Notification.query.filter_by(entity_type='task', entity_id=task_id).delete()
+            
+            db.session.delete(task)
+            log_action('DELETE', 'Task', task_id, task_title, '-', '-')
+            success_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'deleted': success_count,
+        'message': f'{success_count} Aufgaben gelöscht'
+    })
+
+
+# ============================================================================
+# DASHBOARD CHART API ROUTES
+# ============================================================================
+
+@app.route('/api/dashboard/status-chart')
+@login_required
+def api_status_chart():
+    """Get task distribution by status for pie chart"""
+    from collections import Counter
+    
+    # Get base query based on user role
+    if current_user.is_admin() or current_user.is_manager():
+        tasks = Task.query.all()
+    else:
+        user_teams = [team.id for team in current_user.get_teams()]
+        tasks = Task.query.filter(
+            db.or_(
+                Task.owner_id == current_user.id,
+                Task.owner_team_id.in_(user_teams) if user_teams else False,
+                Task.reviewers.any(TaskReviewer.user_id == current_user.id)
+            )
+        ).all()
+    
+    lang = session.get('lang', 'de')
+    
+    # Count by status
+    status_counts = Counter(task.status for task in tasks)
+    
+    # Status labels and colors (Deloitte palette)
+    status_config = {
+        'draft': {'label_de': 'Entwurf', 'label_en': 'Draft', 'color': '#6C757D'},
+        'submitted': {'label_de': 'Eingereicht', 'label_en': 'Submitted', 'color': '#0D6EFD'},
+        'in_review': {'label_de': 'In Prüfung', 'label_en': 'In Review', 'color': '#0DCAF0'},
+        'approved': {'label_de': 'Genehmigt', 'label_en': 'Approved', 'color': '#198754'},
+        'completed': {'label_de': 'Abgeschlossen', 'label_en': 'Completed', 'color': '#86BC25'},
+        'rejected': {'label_de': 'Abgelehnt', 'label_en': 'Rejected', 'color': '#DC3545'},
+    }
+    
+    labels = []
+    data = []
+    colors = []
+    
+    for status, config in status_config.items():
+        if status_counts.get(status, 0) > 0:
+            label = config['label_de'] if lang == 'de' else config['label_en']
+            labels.append(label)
+            data.append(status_counts[status])
+            colors.append(config['color'])
+    
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'colors': colors
+    })
+
+
+@app.route('/api/dashboard/monthly-chart')
+@login_required
+def api_monthly_chart():
+    """Get tasks by month for bar chart"""
+    from collections import defaultdict
+    from datetime import date
+    
+    year = request.args.get('year', date.today().year, type=int)
+    
+    # Get base query based on user role
+    if current_user.is_admin() or current_user.is_manager():
+        tasks = Task.query.filter(Task.year == year).all()
+    else:
+        user_teams = [team.id for team in current_user.get_teams()]
+        tasks = Task.query.filter(
+            Task.year == year,
+            db.or_(
+                Task.owner_id == current_user.id,
+                Task.owner_team_id.in_(user_teams) if user_teams else False,
+                Task.reviewers.any(TaskReviewer.user_id == current_user.id)
+            )
+        ).all()
+    
+    lang = session.get('lang', 'de')
+    
+    # Month names
+    month_names_de = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+    month_names_en = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    month_names = month_names_de if lang == 'de' else month_names_en
+    
+    # Count by month and status
+    monthly_data = defaultdict(lambda: {'completed': 0, 'pending': 0, 'overdue': 0})
+    today = date.today()
+    
+    for task in tasks:
+        if task.due_date:
+            month = task.due_date.month - 1  # 0-indexed
+            if task.status == 'completed':
+                monthly_data[month]['completed'] += 1
+            elif task.due_date.date() < today and task.status != 'completed':
+                monthly_data[month]['overdue'] += 1
+            else:
+                monthly_data[month]['pending'] += 1
+    
+    # Build datasets
+    completed = [monthly_data[m]['completed'] for m in range(12)]
+    pending = [monthly_data[m]['pending'] for m in range(12)]
+    overdue = [monthly_data[m]['overdue'] for m in range(12)]
+    
+    return jsonify({
+        'labels': month_names,
+        'datasets': [
+            {
+                'label': 'Abgeschlossen' if lang == 'de' else 'Completed',
+                'data': completed,
+                'backgroundColor': '#86BC25'
+            },
+            {
+                'label': 'Ausstehend' if lang == 'de' else 'Pending',
+                'data': pending,
+                'backgroundColor': '#0DCAF0'
+            },
+            {
+                'label': 'Überfällig' if lang == 'de' else 'Overdue',
+                'data': overdue,
+                'backgroundColor': '#DC3545'
+            }
+        ]
+    })
+
+
+@app.route('/api/dashboard/team-chart')
+@login_required
+def api_team_chart():
+    """Get workload by team/owner for bar chart"""
+    from collections import Counter
+    
+    # Only admins and managers can see team workload
+    if not (current_user.is_admin() or current_user.is_manager()):
+        return jsonify({'labels': [], 'data': [], 'colors': []})
+    
+    lang = session.get('lang', 'de')
+    
+    # Get active tasks (not completed)
+    tasks = Task.query.filter(Task.status != 'completed').all()
+    
+    # Count by team
+    team_counts = Counter()
+    for task in tasks:
+        if task.owner_team:
+            team_name = task.owner_team.get_name(lang)
+        elif task.owner:
+            team_name = task.owner.name
+        else:
+            team_name = 'Nicht zugewiesen' if lang == 'de' else 'Unassigned'
+        team_counts[team_name] += 1
+    
+    # Sort by count (top 10)
+    sorted_teams = team_counts.most_common(10)
+    
+    labels = [t[0] for t in sorted_teams]
+    data = [t[1] for t in sorted_teams]
+    
+    # Generate colors (Deloitte palette variations)
+    base_colors = ['#86BC25', '#0D6EFD', '#0DCAF0', '#198754', '#FFC107', '#6C757D', '#DC3545', '#6610F2', '#D63384', '#20C997']
+    colors = [base_colors[i % len(base_colors)] for i in range(len(labels))]
+    
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'colors': colors
+    })
+
+
+# ============================================================================
+# NOTIFICATION API ROUTES
+# ============================================================================
+
+@app.route('/api/notifications')
+@login_required
+def api_notifications():
+    """Get recent notifications for current user"""
+    lang = session.get('lang', 'de')
+    limit = request.args.get('limit', 10, type=int)
+    include_read = request.args.get('include_read', 'true').lower() == 'true'
+    
+    notifications = NotificationService.get_recent(
+        current_user.id, 
+        limit=min(limit, 50),  # Cap at 50
+        include_read=include_read
+    )
+    
+    return jsonify({
+        'notifications': [n.to_dict(lang) for n in notifications],
+        'unread_count': NotificationService.get_unread_count(current_user.id)
+    })
+
+
+@app.route('/api/notifications/unread-count')
+@login_required
+def api_notifications_unread_count():
+    """Get unread notification count for badge"""
+    return jsonify({
+        'count': NotificationService.get_unread_count(current_user.id)
+    })
+
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def api_notification_mark_read(notification_id):
+    """Mark a single notification as read"""
+    success = NotificationService.mark_as_read(notification_id, current_user.id)
+    if success:
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Notification not found'}), 404
+
+
+@app.route('/api/notifications/mark-all-read', methods=['POST'])
+@login_required
+def api_notifications_mark_all_read():
+    """Mark all notifications as read"""
+    count = NotificationService.mark_all_as_read(current_user.id)
+    db.session.commit()
+    return jsonify({'success': True, 'count': count})
+
+
+@app.route('/notifications')
+@login_required
+def notifications_page():
+    """Full notifications page with pagination"""
+    lang = session.get('lang', 'de')
+    page = request.args.get('page', 1, type=int)
+    
+    pagination = NotificationService.get_all_paginated(current_user.id, page=page, per_page=20)
+    
+    return render_template('notifications.html',
+        notifications=pagination.items,
+        pagination=pagination,
+        lang=lang
+    )
+
+
+# ============================================================================
 # RUN
 # ============================================================================
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5000)
+    # Use socketio.run() instead of app.run() for WebSocket support
+    socketio.run(app, debug=True, port=5000)

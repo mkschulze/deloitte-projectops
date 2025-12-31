@@ -13,6 +13,10 @@ python-dotenv = "*"
 flask-migrate = "*"
 openpyxl = "*"
 python-dateutil = "*"
+flask-socketio = "*"
+eventlet = "*"
+weasyprint = "*"
+icalendar = "*"
 
 [dev-packages]
 

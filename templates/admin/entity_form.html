@@ -15,10 +15,21 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
-                        <div class="mb-3">
-                            <label for="name" class="form-label">{{ t('name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" 
-                                   value="{{ entity.name if entity else '' }}" required>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="name_de" class="form-label">
+                                    🇩🇪 {{ t('name') }} ({{ t('german') }}) <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="name_de" name="name_de" 
+                                       value="{{ entity.name_de if entity else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="name_en" class="form-label">
+                                    🇬🇧 {{ t('name') }} ({{ t('english') }}) <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="name_en" name="name_en" 
+                                       value="{{ entity.name_en if entity else '' }}" required>
+                            </div>
                         </div>
                         
                         <div class="row mb-3">

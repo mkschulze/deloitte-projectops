@@ -23,6 +23,52 @@ team_members = db.Table('team_members',
 )
 
 
+class EntityAccessLevel(Enum):
+    """Access level for entity permissions"""
+    VIEW = 'view'       # Can view tasks for this entity
+    EDIT = 'edit'       # Can create/edit tasks for this entity
+    MANAGE = 'manage'   # Full access including reassign, delete
+    
+    @classmethod
+    def choices(cls):
+        return [(level.value, level.name.title()) for level in cls]
+
+
+class UserEntity(db.Model):
+    """Association table for User-Entity permissions with access level"""
+    __tablename__ = 'user_entity'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    entity_id = db.Column(db.Integer, db.ForeignKey('entity.id'), nullable=False)
+    access_level = db.Column(db.String(20), default='view')  # view, edit, manage
+    inherit_to_children = db.Column(db.Boolean, default=True)  # Inherit access to child entities
+    granted_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    granted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='entity_permissions')
+    entity = db.relationship('Entity', backref='user_permissions')
+    granted_by = db.relationship('User', foreign_keys=[granted_by_id])
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'entity_id', name='unique_user_entity'),
+    )
+    
+    def can_view(self):
+        return self.access_level in ['view', 'edit', 'manage']
+    
+    def can_edit(self):
+        return self.access_level in ['edit', 'manage']
+    
+    def can_manage(self):
+        return self.access_level == 'manage'
+    
+    def __repr__(self):
+        return f'<UserEntity {self.user_id}:{self.entity_id}:{self.access_level}>'
+
+
 class TaskReviewer(db.Model):
     """Association table for Task-Reviewer many-to-many with approval tracking"""
     __tablename__ = 'task_reviewer'
@@ -134,6 +180,14 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    calendar_token = db.Column(db.String(64), unique=True, index=True)  # Token for iCal feed access
+    
+    # Email notification preferences (JSON field)
+    email_notifications = db.Column(db.Boolean, default=True)  # Master switch
+    email_on_assignment = db.Column(db.Boolean, default=True)
+    email_on_status_change = db.Column(db.Boolean, default=True)
+    email_on_due_reminder = db.Column(db.Boolean, default=True)
+    email_on_comment = db.Column(db.Boolean, default=False)  # Off by default (can be noisy)
     
     # Relationships
     owned_tasks = db.relationship('Task', foreign_keys='Task.owner_id', backref='owner', lazy='dynamic')
@@ -165,6 +219,121 @@ class User(UserMixin, db.Model):
     def get_teams(self):
         """Get all teams this user belongs to"""
         return Team.query.filter(Team.members.contains(self)).all()
+    
+    def get_or_create_calendar_token(self):
+        """Get existing calendar token or create a new one"""
+        if not self.calendar_token:
+            import secrets
+            self.calendar_token = secrets.token_urlsafe(32)
+            db.session.commit()
+        return self.calendar_token
+    
+    def regenerate_calendar_token(self):
+        """Generate a new calendar token (invalidates old subscription URLs)"""
+        import secrets
+        self.calendar_token = secrets.token_urlsafe(32)
+        db.session.commit()
+        return self.calendar_token
+    
+    # =========================================================================
+    # ENTITY ACCESS METHODS
+    # =========================================================================
+    
+    def get_accessible_entities(self, min_level='view'):
+        """
+        Get all entities this user can access at the specified level or higher.
+        Includes inherited access from parent entities.
+        
+        Args:
+            min_level: Minimum access level required ('view', 'edit', 'manage')
+        
+        Returns:
+            List of Entity objects
+        """
+        # Admins and managers can access all entities
+        if self.is_admin() or self.is_manager():
+            from models import Entity
+            return Entity.query.filter_by(is_active=True).all()
+        
+        # Get direct permissions
+        level_hierarchy = {'view': 0, 'edit': 1, 'manage': 2}
+        min_level_num = level_hierarchy.get(min_level, 0)
+        
+        accessible_ids = set()
+        
+        for perm in self.entity_permissions:
+            perm_level_num = level_hierarchy.get(perm.access_level, 0)
+            if perm_level_num >= min_level_num:
+                accessible_ids.add(perm.entity_id)
+                
+                # If inherit_to_children, add all child entities
+                if perm.inherit_to_children:
+                    self._add_child_entities(perm.entity, accessible_ids)
+        
+        if not accessible_ids:
+            return []
+        
+        from models import Entity
+        return Entity.query.filter(Entity.id.in_(accessible_ids), Entity.is_active == True).all()
+    
+    def _add_child_entities(self, entity, id_set):
+        """Recursively add child entity IDs to the set"""
+        for child in entity.children:
+            id_set.add(child.id)
+            self._add_child_entities(child, id_set)
+    
+    def get_accessible_entity_ids(self, min_level='view'):
+        """Get IDs of accessible entities (for query filtering)"""
+        return [e.id for e in self.get_accessible_entities(min_level)]
+    
+    def can_access_entity(self, entity_or_id, min_level='view'):
+        """
+        Check if user can access a specific entity at the given level.
+        
+        Args:
+            entity_or_id: Entity object or entity ID
+            min_level: Required access level
+        
+        Returns:
+            bool
+        """
+        # Admins and managers have full access
+        if self.is_admin() or self.is_manager():
+            return True
+        
+        entity_id = entity_or_id if isinstance(entity_or_id, int) else entity_or_id.id
+        accessible_ids = self.get_accessible_entity_ids(min_level)
+        return entity_id in accessible_ids
+    
+    def get_entity_access_level(self, entity_or_id):
+        """
+        Get the access level for a specific entity.
+        
+        Returns:
+            'manage', 'edit', 'view', or None
+        """
+        if self.is_admin() or self.is_manager():
+            return 'manage'
+        
+        entity_id = entity_or_id if isinstance(entity_or_id, int) else entity_or_id.id
+        
+        # Check direct permission
+        for perm in self.entity_permissions:
+            if perm.entity_id == entity_id:
+                return perm.access_level
+        
+        # Check inherited from parent
+        from models import Entity
+        entity = Entity.query.get(entity_id) if isinstance(entity_or_id, int) else entity_or_id
+        if entity and entity.parent:
+            parent_level = self.get_entity_access_level(entity.parent)
+            if parent_level:
+                # Check if parent permission allows inheritance
+                for perm in self.entity_permissions:
+                    if perm.entity_id == entity.parent.id and perm.inherit_to_children:
+                        return parent_level
+        
+        return None
 
 
 class Team(db.Model):
@@ -172,8 +341,12 @@ class Team(db.Model):
     __tablename__ = 'team'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)  # Internal identifier
+    name_de = db.Column(db.String(100))  # German display name
+    name_en = db.Column(db.String(100))  # English display name
     description = db.Column(db.Text)
+    description_de = db.Column(db.Text)  # German description
+    description_en = db.Column(db.Text)  # English description
     color = db.Column(db.String(7), default='#86BC25')  # Deloitte Green as default
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -207,6 +380,22 @@ class Team(db.Model):
     def get_member_count(self):
         """Get number of team members"""
         return self.members.count()
+    
+    def get_name(self, lang='de'):
+        """Get translated name based on language"""
+        if lang == 'en' and self.name_en:
+            return self.name_en
+        if lang == 'de' and self.name_de:
+            return self.name_de
+        return self.name_de or self.name_en or self.name
+    
+    def get_description(self, lang='de'):
+        """Get translated description based on language"""
+        if lang == 'en' and self.description_en:
+            return self.description_en
+        if lang == 'de' and self.description_de:
+            return self.description_de
+        return self.description_de or self.description_en or self.description or ''
     
     def __repr__(self):
         return f'<Team {self.name}>'
@@ -245,7 +434,9 @@ class Entity(db.Model):
     __tablename__ = 'entity'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
+    name = db.Column(db.String(200), nullable=False)  # Internal identifier
+    name_de = db.Column(db.String(200))  # German display name
+    name_en = db.Column(db.String(200))  # English display name
     short_name = db.Column(db.String(50))
     country = db.Column(db.String(5), default='DE')  # ISO country code
     group_id = db.Column(db.Integer, db.ForeignKey('entity.id'), nullable=True)
@@ -255,6 +446,14 @@ class Entity(db.Model):
     # Self-referential relationship for entity groups
     children = db.relationship('Entity', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
     tasks = db.relationship('Task', backref='entity', lazy='dynamic')
+    
+    def get_name(self, lang='de'):
+        """Get translated name based on language"""
+        if lang == 'en' and self.name_en:
+            return self.name_en
+        if lang == 'de' and self.name_de:
+            return self.name_de
+        return self.name_de or self.name_en or self.name
     
     def __repr__(self):
         return f'<Entity {self.name}>'
@@ -266,11 +465,31 @@ class TaxType(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False)  # KSt, USt, GewSt
-    name = db.Column(db.String(100), nullable=False)  # Körperschaftsteuer
-    description = db.Column(db.Text)
+    name = db.Column(db.String(100), nullable=False)  # Internal/legacy name
+    name_de = db.Column(db.String(100))  # German display name (e.g. Körperschaftsteuer)
+    name_en = db.Column(db.String(100))  # English display name (e.g. Corporate Tax)
+    description = db.Column(db.Text)  # Legacy description field
+    description_de = db.Column(db.Text)  # German description
+    description_en = db.Column(db.Text)  # English description
     is_active = db.Column(db.Boolean, default=True)
     
     templates = db.relationship('TaskTemplate', backref='tax_type', lazy='dynamic')
+    
+    def get_name(self, lang='de'):
+        """Get translated name based on language"""
+        if lang == 'en' and self.name_en:
+            return self.name_en
+        if lang == 'de' and self.name_de:
+            return self.name_de
+        return self.name_de or self.name_en or self.name
+    
+    def get_description(self, lang='de'):
+        """Get translated description based on language"""
+        if lang == 'en' and self.description_en:
+            return self.description_en
+        if lang == 'de' and self.description_de:
+            return self.description_de
+        return self.description_de or self.description_en or self.description or ''
     
     def __repr__(self):
         return f'<TaxType {self.code}>'
@@ -303,16 +522,60 @@ class TaskPreset(db.Model):
     
     CATEGORIES = ['antrag', 'aufgabe']
     
+    # Recurrence frequency options
+    RECURRENCE_FREQUENCIES = [
+        ('none', 'Keine Wiederholung'),
+        ('monthly', 'Monatlich'),
+        ('quarterly', 'Vierteljährlich'),
+        ('semi_annual', 'Halbjährlich'),
+        ('annual', 'Jährlich'),
+        ('custom', 'Benutzerdefiniert (RRULE)')
+    ]
+    
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(20), nullable=False, default='aufgabe')  # antrag, aufgabe
     tax_type = db.Column(db.String(100))  # Steuerart (free text, more flexible than FK)
-    title = db.Column(db.String(300), nullable=False)  # Aufgabe / Zweck des Antrags
+    title = db.Column(db.String(300), nullable=False)  # Internal/legacy title
+    title_de = db.Column(db.String(300))  # German title
+    title_en = db.Column(db.String(300))  # English title
     law_reference = db.Column(db.String(100))  # § Paragraph (for Anträge)
-    description = db.Column(db.Text)  # Erläuterung
+    description = db.Column(db.Text)  # Legacy description field
+    description_de = db.Column(db.Text)  # German description
+    description_en = db.Column(db.Text)  # English description
     source = db.Column(db.String(50))  # Import source: 'json', 'excel', 'manual'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Recurrence fields
+    is_recurring = db.Column(db.Boolean, default=False)
+    recurrence_frequency = db.Column(db.String(20), default='none')  # monthly, quarterly, semi_annual, annual, custom
+    recurrence_rrule = db.Column(db.String(500))  # Custom RRULE string for complex patterns
+    recurrence_day_offset = db.Column(db.Integer, default=0)  # Days offset from period start (e.g., 10 = 10th of month)
+    recurrence_end_date = db.Column(db.Date)  # Optional end date for recurrence
+    last_generated_date = db.Column(db.Date)  # Last date for which tasks were generated
+    default_owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Default owner for generated tasks
+    default_entity_id = db.Column(db.Integer, db.ForeignKey('entity.id'))  # Default entity for generated tasks
+    
+    # Relationships
+    default_owner = db.relationship('User', foreign_keys=[default_owner_id])
+    default_entity = db.relationship('Entity', foreign_keys=[default_entity_id])
+    
+    def get_title(self, lang='de'):
+        """Get translated title based on language"""
+        if lang == 'en' and self.title_en:
+            return self.title_en
+        if lang == 'de' and self.title_de:
+            return self.title_de
+        return self.title_de or self.title_en or self.title
+    
+    def get_description(self, lang='de'):
+        """Get translated description based on language"""
+        if lang == 'en' and self.description_en:
+            return self.description_en
+        if lang == 'de' and self.description_de:
+            return self.description_de
+        return self.description_de or self.description_en or self.description or ''
     
     def __repr__(self):
         return f'<TaskPreset {self.title[:30]}>'
@@ -324,8 +587,12 @@ class TaskPreset(db.Model):
             'category': self.category,
             'tax_type': self.tax_type,
             'title': self.title,
+            'title_de': self.title_de,
+            'title_en': self.title_en,
             'law_reference': self.law_reference,
             'description': self.description,
+            'description_de': self.description_de,
+            'description_en': self.description_en,
             'is_active': self.is_active
         }
 
@@ -377,6 +644,10 @@ class Task(db.Model):
     reviewer_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)  # Reviewer team
     approver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Manager who approves
     
+    # Recurring task fields
+    preset_id = db.Column(db.Integer, db.ForeignKey('task_preset.id'), nullable=True, index=True)
+    is_recurring_instance = db.Column(db.Boolean, default=False)  # True if auto-generated from preset
+    
     # Workflow timestamps
     submitted_at = db.Column(db.DateTime)
     submitted_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -413,6 +684,9 @@ class Task(db.Model):
     
     # Team relationships
     reviewer_team = db.relationship('Team', foreign_keys=[reviewer_team_id], backref='tasks_to_review')
+    
+    # Preset relationship (for recurring tasks)
+    preset = db.relationship('TaskPreset', backref='generated_tasks')
     
     # =========================================================================
     # TEAM METHODS
@@ -740,6 +1014,152 @@ class ReferenceApplication(db.Model):
     
     def __repr__(self):
         return f'<ReferenceApplication {self.law} {self.paragraph}>'
+
+
+# ============================================================================
+# NOTIFICATION SYSTEM
+# ============================================================================
+
+class NotificationType(Enum):
+    """Types of in-app notifications"""
+    TASK_ASSIGNED = 'task_assigned'
+    TASK_STATUS_CHANGED = 'task_status_changed'
+    TASK_COMMENT = 'task_comment'
+    TASK_APPROVED = 'task_approved'
+    TASK_REJECTED = 'task_rejected'
+    REVIEW_REQUESTED = 'review_requested'
+    TASK_DUE_SOON = 'task_due_soon'
+    TASK_OVERDUE = 'task_overdue'
+    REVIEWER_ADDED = 'reviewer_added'
+    
+    @classmethod
+    def choices(cls):
+        return [(t.value, t.name.replace('_', ' ').title()) for t in cls]
+
+
+class Notification(db.Model):
+    """In-app notification for users"""
+    __tablename__ = 'notification'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Notification content
+    notification_type = db.Column(db.String(50), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    title_de = db.Column(db.String(200))
+    title_en = db.Column(db.String(200))
+    message = db.Column(db.Text)
+    message_de = db.Column(db.Text)
+    message_en = db.Column(db.Text)
+    
+    # Related entity (task, comment, etc.)
+    entity_type = db.Column(db.String(50))  # 'task', 'comment', etc.
+    entity_id = db.Column(db.Integer, index=True)
+    
+    # Actor who triggered the notification
+    actor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # State
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    read_at = db.Column(db.DateTime)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='notifications')
+    actor = db.relationship('User', foreign_keys=[actor_id])
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = datetime.utcnow()
+    
+    def get_title(self, lang='de'):
+        """Get translated title"""
+        if lang == 'en' and self.title_en:
+            return self.title_en
+        if lang == 'de' and self.title_de:
+            return self.title_de
+        return self.title_de or self.title_en or self.title
+    
+    def get_message(self, lang='de'):
+        """Get translated message"""
+        if lang == 'en' and self.message_en:
+            return self.message_en
+        if lang == 'de' and self.message_de:
+            return self.message_de
+        return self.message_de or self.message_en or self.message or ''
+    
+    def get_icon(self):
+        """Get Bootstrap icon class based on notification type"""
+        icons = {
+            NotificationType.TASK_ASSIGNED.value: 'bi-person-plus',
+            NotificationType.TASK_STATUS_CHANGED.value: 'bi-arrow-repeat',
+            NotificationType.TASK_COMMENT.value: 'bi-chat-dots',
+            NotificationType.TASK_APPROVED.value: 'bi-check-circle',
+            NotificationType.TASK_REJECTED.value: 'bi-x-circle',
+            NotificationType.REVIEW_REQUESTED.value: 'bi-eye',
+            NotificationType.TASK_DUE_SOON.value: 'bi-clock',
+            NotificationType.TASK_OVERDUE.value: 'bi-exclamation-triangle',
+            NotificationType.REVIEWER_ADDED.value: 'bi-person-check',
+        }
+        return icons.get(self.notification_type, 'bi-bell')
+    
+    def get_color(self):
+        """Get color class based on notification type"""
+        colors = {
+            NotificationType.TASK_ASSIGNED.value: 'text-primary',
+            NotificationType.TASK_STATUS_CHANGED.value: 'text-info',
+            NotificationType.TASK_COMMENT.value: 'text-secondary',
+            NotificationType.TASK_APPROVED.value: 'text-success',
+            NotificationType.TASK_REJECTED.value: 'text-danger',
+            NotificationType.REVIEW_REQUESTED.value: 'text-warning',
+            NotificationType.TASK_DUE_SOON.value: 'text-warning',
+            NotificationType.TASK_OVERDUE.value: 'text-danger',
+            NotificationType.REVIEWER_ADDED.value: 'text-primary',
+        }
+        return colors.get(self.notification_type, 'text-muted')
+    
+    def to_dict(self, lang='de'):
+        """Convert to dictionary for JSON/API"""
+        return {
+            'id': self.id,
+            'type': self.notification_type,
+            'title': self.get_title(lang),
+            'message': self.get_message(lang),
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'actor': self.actor.name if self.actor else None,
+            'icon': self.get_icon(),
+            'color': self.get_color(),
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'time_ago': self._time_ago()
+        }
+    
+    def _time_ago(self):
+        """Get human-readable time ago string"""
+        if not self.created_at:
+            return ''
+        delta = datetime.utcnow() - self.created_at
+        seconds = delta.total_seconds()
+        if seconds < 60:
+            return 'gerade eben'
+        elif seconds < 3600:
+            mins = int(seconds // 60)
+            return f'vor {mins} Min.'
+        elif seconds < 86400:
+            hours = int(seconds // 3600)
+            return f'vor {hours} Std.'
+        else:
+            days = int(seconds // 86400)
+            return f'vor {days} Tag{"en" if days > 1 else ""}'
+    
+    def __repr__(self):
+        return f'<Notification {self.id} for User {self.user_id}: {self.notification_type}>'
 
 
 # ============================================================================

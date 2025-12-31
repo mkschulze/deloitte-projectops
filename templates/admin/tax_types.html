@@ -30,8 +30,8 @@
                             <td>
                                 <span class="badge bg-primary">{{ tax_type.code }}</span>
                             </td>
-                            <td><strong>{{ tax_type.name }}</strong></td>
-                            <td>{{ tax_type.description or '-' }}</td>
+                            <td><strong>{{ tax_type.get_name(lang) }}</strong></td>
+                            <td>{{ tax_type.get_description(lang) or '-' }}</td>
                             <td>
                                 {% if tax_type.is_active %}
                                 <span class="badge bg-success">{{ t('active') }}</span>

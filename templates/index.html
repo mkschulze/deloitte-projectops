@@ -1,100 +1,152 @@
 {% extends "base.html" %}
-{% block title %}{{ t('nav_home') }} - {{ app_name }}{% endblock %}
+{% block title %}{{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1><i class="bi bi-house-door me-2"></i>{{ t('welcome') }}</h1>
+<!-- Hero Section -->
+<div class="row align-items-center py-5">
+    <div class="col-lg-7">
+        <h1 class="display-4 fw-bold mb-3">
+            <i class="bi bi-calendar-check text-primary me-3"></i>{{ app_name }}
+        </h1>
+        <p class="lead text-muted mb-4">
+            {% if lang == 'de' %}
+            Ihre zentrale Plattform für steuerliche Compliance. Verwalten Sie Fristen, Aufgaben und Genehmigungsprozesse effizient und sicher.
+            {% else %}
+            Your central platform for tax compliance. Manage deadlines, tasks, and approval workflows efficiently and securely.
+            {% endif %}
+        </p>
+        <div class="d-flex gap-3">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>{{ t('login_button') }}
+            </a>
+        </div>
+    </div>
+    <div class="col-lg-5 text-center d-none d-lg-block">
+        <div class="p-4">
+            <i class="bi bi-calendar3 text-primary" style="font-size: 12rem; opacity: 0.15;"></i>
+        </div>
+    </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-rocket-takeoff me-2"></i>Willkommen bei {{ app_name }}</h5>
-            </div>
-            <div class="card-body">
-                <p class="lead">Dies ist eine leere Flask-App-Vorlage mit Deloitte-Branding.</p>
-                
-                <h5 class="mt-4">🚀 Erste Schritte</h5>
-                <ol>
-                    <li>Passe <code>config.py</code> an (APP_NAME, APP_VERSION)</li>
-                    <li>Füge deine Models in <code>models.py</code> hinzu</li>
-                    <li>Erstelle deine Routes in <code>app.py</code></li>
-                    <li>Erweitere <code>translations.py</code> mit deinen Texten</li>
-                    <li>Erstelle deine Templates im <code>templates/</code> Ordner</li>
-                </ol>
-                
-                <h5 class="mt-4">📁 Projektstruktur</h5>
-                <pre class="bg-light p-3 rounded"><code>apptemplate/
-├── app.py              # Flask Application
-├── config.py           # Konfiguration
-├── models.py           # SQLAlchemy Models
-├── translations.py     # DE/EN Übersetzungen
-├── init_db.py          # Datenbank-Setup
-├── Pipfile             # Dependencies
-│
-├── templates/
-│   ├── base.html       # Basis-Layout mit Deloitte-Branding
-│   ├── index.html      # Startseite
-│   ├── login.html      # Login-Seite
-│   ├── admin/          # Admin-Templates
-│   └── errors/         # Error-Seiten
-│
-└── static/
-    ├── favicon/        # Favicon-Dateien
-    ├── Deloitte-Master-Logo/
-    └── Deloitte Special Case Web Icons/</code></pre>
+<hr class="my-5">
+
+<!-- Features Section -->
+<div class="row g-4 py-4">
+    <div class="col-12">
+        <h2 class="text-center mb-4">
+            {% if lang == 'de' %}Kernfunktionen{% else %}Key Features{% endif %}
+        </h2>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex p-3 mb-3">
+                    <i class="bi bi-list-task text-primary fs-2"></i>
+                </div>
+                <h5 class="card-title">{{ t('nav_tasks') }}</h5>
+                <p class="card-text text-muted small">
+                    {% if lang == 'de' %}
+                    Erstellen und verfolgen Sie steuerliche Aufgaben mit Fristen, Prioritäten und Verantwortlichkeiten.
+                    {% else %}
+                    Create and track tax tasks with deadlines, priorities, and responsibilities.
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Status</h5>
-            </div>
-            <div class="card-body">
-                {% if current_user.is_authenticated %}
-                <div class="alert alert-success mb-0">
-                    <i class="bi bi-check-circle me-2"></i>
-                    Angemeldet als <strong>{{ current_user.name }}</strong>
-                    {% if current_user.is_admin() %}
-                    <span class="badge bg-dark ms-2">Admin</span>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex p-3 mb-3">
+                    <i class="bi bi-calendar3 text-success fs-2"></i>
+                </div>
+                <h5 class="card-title">{{ t('nav_calendar') }}</h5>
+                <p class="card-text text-muted small">
+                    {% if lang == 'de' %}
+                    Visualisieren Sie alle Fristen im Kalender – Monats- und Jahresansicht verfügbar.
+                    {% else %}
+                    Visualize all deadlines in the calendar – month and year views available.
                     {% endif %}
-                </div>
-                {% else %}
-                <div class="alert alert-info mb-3">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Sie sind nicht angemeldet.
-                </div>
-                <a href="{{ url_for('login') }}" class="btn btn-primary w-100">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>Anmelden
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Info</h5>
-            </div>
-            <div class="card-body">
-                <table class="table table-sm mb-0">
-                    <tr>
-                        <td><strong>App</strong></td>
-                        <td>{{ app_name }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Version</strong></td>
-                        <td>{{ app_version }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Sprache</strong></td>
-                        <td>{{ lang|upper }}</td>
-                    </tr>
-                </table>
+                </p>
             </div>
         </div>
     </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex p-3 mb-3">
+                    <i class="bi bi-people text-warning fs-2"></i>
+                </div>
+                <h5 class="card-title">{% if lang == 'de' %}Genehmigungen{% else %}Approvals{% endif %}</h5>
+                <p class="card-text text-muted small">
+                    {% if lang == 'de' %}
+                    Mehrstufiger Freigabeworkflow mit mehreren Reviewern und Teams.
+                    {% else %}
+                    Multi-stage approval workflow with multiple reviewers and teams.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-info bg-opacity-10 d-inline-flex p-3 mb-3">
+                    <i class="bi bi-file-earmark-text text-info fs-2"></i>
+                </div>
+                <h5 class="card-title">{% if lang == 'de' %}Nachweise{% else %}Evidence{% endif %}</h5>
+                <p class="card-text text-muted small">
+                    {% if lang == 'de' %}
+                    Laden Sie Dokumente hoch und fügen Sie Links als Nachweise zu Ihren Aufgaben hinzu.
+                    {% else %}
+                    Upload documents and add links as evidence for your tasks.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="my-5">
+
+<!-- Info Section -->
+<div class="row py-4">
+    <div class="col-lg-6">
+        <div class="card border-0 bg-light h-100">
+            <div class="card-body p-4">
+                <h4><i class="bi bi-shield-check text-success me-2"></i>{% if lang == 'de' %}Compliance im Fokus{% else %}Compliance Focused{% endif %}</h4>
+                <p class="text-muted mb-0">
+                    {% if lang == 'de' %}
+                    TaxOps Calendar wurde speziell für Steuerabteilungen entwickelt. Verwalten Sie Körperschaftsteuer, Gewerbesteuer, Umsatzsteuer und weitere Steuerarten mit vollständiger Prüfspur und revisionssicherer Dokumentation.
+                    {% else %}
+                    TaxOps Calendar was designed specifically for tax departments. Manage corporate tax, trade tax, VAT and other tax types with complete audit trail and audit-proof documentation.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 bg-light h-100">
+            <div class="card-body p-4">
+                <h4><i class="bi bi-building text-primary me-2"></i>{% if lang == 'de' %}Multi-Entity-Fähig{% else %}Multi-Entity Support{% endif %}</h4>
+                <p class="text-muted mb-0">
+                    {% if lang == 'de' %}
+                    Verwalten Sie Aufgaben für mehrere Gesellschaften und Konzernstrukturen. Definieren Sie Teams, weisen Sie Verantwortlichkeiten zu und behalten Sie den Überblick über alle Einheiten.
+                    {% else %}
+                    Manage tasks for multiple companies and group structures. Define teams, assign responsibilities, and maintain oversight across all entities.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer Info -->
+<div class="text-center py-5 text-muted">
+    <small>{{ app_name }} v{{ app_version }}</small>
 </div>
 {% endblock %}

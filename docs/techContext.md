@@ -15,7 +15,11 @@
 | **Forms** | Flask-WTF + WTForms | Form handling & CSRF |
 | **Password Hashing** | Werkzeug | Secure password storage |
 | **Excel Processing** | openpyxl | Import/export Excel files |
+| **PDF Export** | WeasyPrint | HTML to PDF conversion |
 | **Environment** | python-dotenv | Configuration management |
+| **WebSocket** | Flask-SocketIO + eventlet | Real-time notifications |
+| **Date Handling** | python-dateutil | RRULE parsing, date calculations |
+| **iCal Generation** | icalendar | Calendar feed generation |
 
 ### Frontend
 
@@ -24,8 +28,8 @@
 | **CSS Framework** | Bootstrap 5.3 | Responsive UI components |
 | **Icons** | Bootstrap Icons + Deloitte Icons | UI iconography |
 | **Templating** | Jinja2 | Server-side rendering |
-| **JavaScript** | Vanilla JS (MVP) | Minimal interactivity |
-| **Future Enhancement** | HTMX / Alpine.js | Enhanced UX (Phase 2) |
+| **JavaScript** | Vanilla JS + Socket.IO Client | Interactivity, WebSocket |
+| **Charts** | Chart.js 4.x (CDN) | Dashboard visualizations |
 
 ### Database
 
@@ -50,9 +54,10 @@
 
 ```
 deloitte-taxops-calendar/
-├── app.py                  # Application factory & routes (~1850 lines)
+├── app.py                  # Application factory & routes (~3100 lines)
 ├── config.py               # Configuration classes
-├── models.py               # SQLAlchemy models (~750 lines)
+├── models.py               # SQLAlchemy models (~850 lines)
+├── services.py             # Business logic services (~650 lines)
 ├── translations.py         # i18n dictionary (DE/EN)
 ├── init_db.py              # Database initialization
 ├── Pipfile                 # Dependencies (Pipenv)
@@ -71,7 +76,9 @@ deloitte-taxops-calendar/
 │       ├── ebe34cad8512_add_multi_stage_approval_workflow_fields.py
 │       ├── 76fd77636f22_add_taskpreset_model_for_predefined_.py
 │       ├── f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py
-│       └── 76a36e71cb1c_add_team_model_and_task_team_assignments.py
+│       ├── 76a36e71cb1c_add_team_model_and_task_team_assignments.py
+│       ├── bc78eb8f008d_add_multilingual_name_fields_to_team_.py
+│       └── c3d4e5f6g7h8_add_recurring_task_fields.py
 │
 ├── docs/                   # Memory Bank documentation
 │   ├── technicalConcept.md
@@ -161,7 +168,7 @@ deloitte-taxops-calendar/
 
 ## Dependencies
 
-### Current (from Pipfile)
+### Current (Installed)
 
 ```toml
 [packages]
@@ -169,43 +176,20 @@ flask = "*"
 flask-sqlalchemy = "*"
 flask-login = "*"
 flask-wtf = "*"
+flask-migrate = "*"
+flask-socketio = "*"
 werkzeug = "*"
 python-dotenv = "*"
+openpyxl = "*"
+python-dateutil = "*"
+weasyprint = "*"
+eventlet = "*"
+icalendar = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.9"
-```
-
-### Required Additions for TaxOps Calendar
-
-```toml
-[packages]
-# Existing
-flask = "*"
-flask-sqlalchemy = "*"
-flask-login = "*"
-flask-wtf = "*"
-werkzeug = "*"
-python-dotenv = "*"
-
-# New - Database migrations
-flask-migrate = "*"
-
-# New - Excel processing
-openpyxl = "*"
-
-# New - Date handling
-python-dateutil = "*"
-
-# New - File uploads
-flask-uploads = "*"          # Or handle manually
-
-[dev-packages]
-pytest = "*"
-pytest-flask = "*"
-faker = "*"                  # Test data generation
 ```
 
 ### Production Additions (Deployment)

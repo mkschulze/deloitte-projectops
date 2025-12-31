@@ -26,17 +26,40 @@
                             {% endif %}
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="name" class="form-label">{{ t('name') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" 
-                                   value="{{ tax_type.name if tax_type else '' }}" 
-                                   placeholder="z.B. Körperschaftsteuer" required>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="name_de" class="form-label">
+                                    <span class="fi fi-de me-1"></span>{{ t('name') }} ({{ t('german') }}) <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="name_de" name="name_de" 
+                                       value="{{ tax_type.name_de if tax_type else '' }}" 
+                                       placeholder="z.B. Körperschaftsteuer" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="name_en" class="form-label">
+                                    <span class="fi fi-gb me-1"></span>{{ t('name') }} ({{ t('english') }}) <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="name_en" name="name_en" 
+                                       value="{{ tax_type.name_en if tax_type else '' }}" 
+                                       placeholder="e.g. Corporate Tax" required>
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="description" class="form-label">{{ t('description') }}</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"
-                                      placeholder="{{ t('description_placeholder') }}">{{ tax_type.description if tax_type and tax_type.description else '' }}</textarea>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="description_de" class="form-label">
+                                    <span class="fi fi-de me-1"></span>{{ t('description') }} ({{ t('german') }})
+                                </label>
+                                <textarea class="form-control" id="description_de" name="description_de" rows="3"
+                                          placeholder="{{ t('description_placeholder') }}">{{ tax_type.description_de if tax_type and tax_type.description_de else '' }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="description_en" class="form-label">
+                                    <span class="fi fi-gb me-1"></span>{{ t('description') }} ({{ t('english') }})
+                                </label>
+                                <textarea class="form-control" id="description_en" name="description_en" rows="3"
+                                          placeholder="Optional description...">{{ tax_type.description_en if tax_type and tax_type.description_en else '' }}</textarea>
+                            </div>
                         </div>
                         
                         {% if tax_type %}

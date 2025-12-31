@@ -78,7 +78,7 @@
                                     {% for entity in entities %}
                                     <option value="{{ entity.id }}" 
                                             {{ 'selected' if task and task.entity_id == entity.id }}>
-                                        {{ entity.name }} {% if entity.short_name %}({{ entity.short_name }}){% endif %}
+                                        {{ entity.get_name(lang) }} {% if entity.short_name %}({{ entity.short_name }}){% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -171,7 +171,7 @@
                                     <option value="{{ team.id }}" 
                                             {{ 'selected' if task and task.owner_team_id == team.id }}
                                             style="border-left: 4px solid {{ team.color }}">
-                                        {{ team.name }} ({{ team.get_member_count() }} {{ t('members') }})
+                                        {{ team.get_name(lang) }} ({{ team.get_member_count() }} {{ t('members') }})
                                     </option>
                                     {% endfor %}
                                 </select>
@@ -203,7 +203,7 @@
                                     <option value="{{ team.id }}" 
                                             {{ 'selected' if task and task.reviewer_team_id == team.id }}
                                             style="border-left: 4px solid {{ team.color }}">
-                                        {{ team.name }} ({{ team.get_member_count() }} {{ t('members') }})
+                                        {{ team.get_name(lang) }} ({{ team.get_member_count() }} {{ t('members') }})
                                     </option>
                                     {% endfor %}
                                 </select>

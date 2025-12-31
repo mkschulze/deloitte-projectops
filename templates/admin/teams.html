@@ -35,9 +35,9 @@
                                 </span>
                             </td>
                             <td>
-                                <strong>{{ team.name }}</strong>
+                                <strong>{{ team.get_name(lang) }}</strong>
                             </td>
-                            <td>{{ team.description|truncate(50) if team.description else '-' }}</td>
+                            <td>{{ team.get_description(lang)|truncate(50) if team.get_description(lang) else '-' }}</td>
                             <td>
                                 {% if team.manager %}
                                 <span class="badge bg-light text-dark">

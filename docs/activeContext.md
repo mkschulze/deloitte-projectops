@@ -8,61 +8,68 @@
 
 ## Session Information
 
-**Date:** 2025-12-28 (Session 4)  
-**Last Action:** Implemented Team Management System  
-**Status:** MVP Complete with Teams — All core features + team-based user management
+**Date:** 2025-12-31 (Session 6)  
+**Last Action:** Implemented Phase H — Recurring Tasks (RRULE)  
+**Status:** MVP Complete + Phase A-H — All core features + notifications, bulk ops, exports, calendar sync, email, charts, entity scoping, recurring tasks
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished
+### ✅ What Was Accomplished (Session 6)
 
-1. **Team Management System** (Session 4 - Complete)
-   - `Team` model with name, description, color, manager
-   - `team_members` many-to-many association table
-   - Task fields: `owner_team_id`, `reviewer_team_id`
-   - Admin CRUD for teams with multi-select member assignment
-   - Team selection in task create/edit forms
-   - Team display in task detail view
-   - `is_reviewer()` checks team membership for access control
-   - Navigation link in admin menu
+1. **Phase H: Recurring Tasks (RRULE)** (Complete)
+   - **TaskPreset Model Extended:**
+     - `is_recurring` — Boolean to enable recurring generation
+     - `recurrence_frequency` — monthly, quarterly, semi_annual, annual, custom
+     - `recurrence_rrule` — Custom iCalendar RRULE pattern
+     - `recurrence_day_offset` — Day of period when task is due (1-28)
+     - `recurrence_end_date` — Optional end date for generation
+     - `last_generated_date` — Tracking field
+     - `default_owner_id`, `default_entity_id` — Default assignments with relationships
+   
+   - **Task Model Extended:**
+     - `preset_id` — Foreign key linking to source TaskPreset
+     - `is_recurring_instance` — Boolean marking auto-generated tasks
+     - `preset` relationship with backref 'generated_tasks'
+   
+   - **RecurrenceService (services.py):**
+     - `get_period_dates(frequency, year, day_offset)` — Generates period labels and due dates
+     - `generate_tasks_from_preset(preset, year, entities, owner_id, force)` — Creates task instances
+     - `generate_all_recurring_tasks(year, dry_run)` — Batch generation from all presets
+     - `parse_rrule(rrule_string, start_date, count)` — RRULE parsing via python-dateutil
+   
+   - **CLI Command:**
+     - `flask generate-recurring-tasks --year --preset-id --entity-id --dry-run --force`
+     - Supports single preset or all recurring presets
+     - Dry-run mode shows what would be created
+   
+   - **Admin UI (preset_form.html):**
+     - Recurrence settings card with toggle
+     - Frequency dropdown with German/English labels
+     - Day offset input (1-28)
+     - RRULE input field for custom patterns
+     - Default entity and owner selection
+     - End date picker
+     - Shows last generated date and task count
+   
+   - **Task Detail:**
+     - "Wiederkehrend/Recurring" badge for generated tasks
+     - Tooltip shows source preset name
+   
+   - **Database Migration:**
+     - `c3d4e5f6g7h8_add_recurring_task_fields.py` applied
 
-2. **Evidence Upload System** (Complete)
-   - File upload with secure unique filenames
-   - Link addition for external references
-   - Preview modal for PDF, images, and text files
-   - Download with proper MIME types
-   - Delete functionality
+### ✅ Previously Completed (Sessions 1-5)
 
-3. **Comments System** (Complete)
-   - Add/delete comments
-   - User avatars and timestamps
-   - Owner/admin-only deletion
-
-4. **Task Presets** (Complete)
-   - TaskPreset model with categories (aufgabe/antrag)
-   - Admin CRUD interface
-   - JSON import via `flask loadpresets`
-   - Preset selection in task creation
-
-5. **Multi-Reviewer Approval** (Complete)
-   - `TaskReviewer` model with approval tracking
-   - Multi-select field for reviewer assignment
-   - Individual reviewer approve/reject actions
-   - Progress bar showing approval status
-   - Auto-transition: all approve → approved status
-   - Auto-transition: any reject → rejected status
-
-6. **UI Enhancements** (Complete)
-   - Navbar with "TaxOps Calendar" app name
-   - Calendar preview popovers on month/year views
-   - Task list preview column with hover details
-   - Color-coded audit log badges
-
-7. **Documentation** (Complete)
-   - Comprehensive README.md for GitHub
-   - Updated Memory Bank documentation
+- **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
+- **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)
+- **Phase C:** Excel/PDF Export (task list, detail, status summary)
+- **Phase D:** Calendar Sync (iCal feed with secure tokens)
+- **Phase E:** Email Notifications (SMTP/SendGrid, templates, preferences)
+- **Phase F:** Dashboard Charts (Chart.js — status pie, monthly bar, team workload)
+- **Phase G:** Entity Scoping (access levels, hierarchy inheritance)
+- **MVP:** Full task lifecycle, evidence, comments, multi-reviewer, teams
 
 ---
 
@@ -71,33 +78,35 @@
 ### Database Tables
 
 ```
-user                  ✅ Extended with roles
+user                  ✅ Extended with roles, email preferences, calendar token
 audit_log             ✅ With action types
 entity                ✅ With group hierarchy
 tax_type              ✅ Tax categories
 task_template         ✅ Reusable templates
-task                  ✅ Core tasks with status + team fields
+task                  ✅ Core tasks with status, teams, preset_id, is_recurring_instance
 task_reviewer         ✅ Multi-reviewer tracking
 task_evidence         ✅ Files and links
 comment               ✅ Discussion threads
-task_preset           ✅ Predefined task templates
+task_preset           ✅ Extended with recurrence fields
 reference_application ✅ Anträge library
 entity_user_access    ✅ Association table
-team                  ✅ NEW - User grouping
-team_members          ✅ NEW - Team-User many-to-many
+team                  ✅ User grouping
+team_members          ✅ Team-User many-to-many
+notification          ✅ In-app notifications
+user_entity           ✅ Entity access with levels
 ```
 
 ### Key Models
 
-| Model | Lines | Purpose |
-|-------|-------|---------|
-| `User` | ~50 | User accounts with roles |
-| `Task` | ~280 | Core task with workflow + team methods |
-| `Team` | ~50 | User grouping with members |
-| `TaskReviewer` | ~60 | Multi-reviewer approval tracking |
-| `TaskEvidence` | ~30 | File/link attachments |
-| `Comment` | ~20 | Discussion threads |
-| `TaskPreset` | ~30 | Predefined task templates |
+| Model | Purpose |
+|-------|---------|
+| `User` | User accounts with roles, preferences |
+| `Task` | Core task with workflow, teams, recurrence |
+| `TaskPreset` | Predefined templates with recurrence config |
+| `Team` | User grouping with members |
+| `TaskReviewer` | Multi-reviewer approval tracking |
+| `Notification` | In-app notification system |
+| `UserEntity` | Entity access permissions |
 
 ### Routes (app.py ~1850 lines)
 
@@ -176,23 +185,28 @@ team.get_member_count()      # Count members
 
 ```
 deloitte-taxops-calendar/
-├── app.py                  # ~1735 lines - All routes
-├── models.py               # ~650 lines - All models
+├── app.py                  # ~3100 lines - All routes + CLI commands
+├── models.py               # ~850 lines - All models
+├── services.py             # ~650 lines - Business logic services
 ├── config.py               # Configuration
 ├── translations.py         # i18n (DE/EN)
 │
 ├── templates/
-│   ├── base.html           # Master layout with navbar
-│   ├── dashboard.html      # KPI cards, my tasks
+│   ├── base.html           # Master layout with navbar + notification bell
+│   ├── dashboard.html      # KPI cards, my tasks, Chart.js charts
 │   ├── calendar.html       # Month view with popovers
 │   ├── calendar_year.html  # Year view with popovers
+│   ├── profile_notifications.html  # Email preferences
+│   ├── calendar_sync.html  # iCal subscription instructions
 │   ├── tasks/
-│   │   ├── list.html       # Filterable list with preview
-│   │   ├── detail.html     # Tabs, evidence, comments, reviewers
+│   │   ├── list.html       # Filterable list with bulk ops, preview
+│   │   ├── detail.html     # Tabs, evidence, comments, recurring badge
 │   │   └── form.html       # Create/edit with multi-reviewer
 │   └── admin/
 │       ├── presets.html    # Preset management
-│       └── preset_form.html
+│       ├── preset_form.html # With recurrence settings
+│       ├── teams.html      # Team management
+│       └── team_form.html  # Team create/edit
 │
 ├── uploads/                # Evidence files
 │   └── task_*/             # Per-task folders
@@ -202,7 +216,7 @@ deloitte-taxops-calendar/
 │   └── Antraege.json
 │
 └── docs/                   # Memory Bank
-    ├── progress.md         # This checklist
+    ├── progress.md         # Development checklist
     ├── activeContext.md    # Current session state
     ├── technicalConcept.md # Architecture
     ├── techContext.md      # Tech stack
@@ -223,50 +237,61 @@ deloitte-taxops-calendar/
 
 ---
 
+## CLI Commands
+
+| Command | Purpose |
+|---------|---------|
+| `flask initdb` | Initialize database tables |
+| `flask createadmin` | Create admin user |
+| `flask seed` | Seed sample data |
+| `flask loadpresets` | Load presets from JSON files |
+| `flask send_due_reminders --days=7` | Send reminder emails |
+| `flask generate-recurring-tasks --year --dry-run` | Generate tasks from presets |
+
+---
+
 ## App URLs
 
 | URL | Purpose |
 |-----|---------|
 | `/` | Landing page |
 | `/login` | Login form |
-| `/dashboard` | Main dashboard with KPIs |
-| `/tasks` | Task list with filters |
+| `/dashboard` | Main dashboard with KPIs + charts |
+| `/tasks` | Task list with filters + bulk operations |
 | `/tasks/new` | Create new task |
 | `/tasks/<id>` | Task detail (tabs: overview, evidence, comments, audit) |
 | `/tasks/<id>/edit` | Edit task |
-| `/tasks/<id>/status` | Change task status |
-| `/tasks/<id>/reviewer-action` | Individual reviewer approve/reject |
 | `/calendar` | Month calendar |
 | `/calendar/year` | Year calendar |
+| `/calendar/feed/<token>.ics` | iCal feed (subscriptions) |
+| `/profile/notifications` | Email preferences |
+| `/profile/calendar-sync` | Calendar sync settings |
 | `/admin` | Admin dashboard |
 | `/admin/entities` | Entity management |
+| `/admin/entities/<id>/users` | Entity user permissions |
+| `/admin/users/<id>/entities` | User entity permissions |
 | `/admin/tax-types` | Tax type management |
-| `/admin/teams` | Team management (NEW) |
-| `/admin/teams/new` | Create team (NEW) |
-| `/admin/teams/<id>` | Edit team (NEW) |
-| `/admin/users` | User management |
-| `/admin/presets` | Task preset management |
+| `/admin/teams` | Team management |
+| `/admin/presets` | Task preset management (with recurrence) |
 
 ---
 
 ## Next Steps (If Continuing Development)
 
-### Immediate Priorities
-1. **Excel Export:** Add download button to task list
-2. **Batch Operations:** Select multiple tasks for reassignment
-3. **Email Notifications:** Reminder emails for due soon tasks
+### Remaining Phases
+1. **Phase I:** Archival & Soft-Delete (is_archived flag, archive view, retention)
 
-### Phase 2 Features
+### Future Considerations
 1. OIDC/Entra ID SSO integration
-2. Teams notifications via webhooks
-3. RRULE-based recurring task generation
-4. Advanced compliance reports
+2. MS Teams notifications via webhooks
+3. Virus scanning for uploads
+4. Template builder UI
 
 ---
 
 ## Blockers
 
-None currently. MVP is complete and functional.
+None currently. All Phase A-H features are complete and functional.
 
 ---
 

@@ -126,12 +126,12 @@
                             <td>
                                 <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" 
                                    class="text-decoration-none">
-                                    {{ preset.title }}
+                                    {{ preset.get_title(lang) }}
                                 </a>
-                                {% if preset.description %}
+                                {% if preset.get_description(lang) %}
                                 <i class="bi bi-info-circle text-muted ms-1" 
                                    data-bs-toggle="tooltip" 
-                                   title="{{ preset.description[:200] }}"></i>
+                                   title="{{ preset.get_description(lang)[:200] }}"></i>
                                 {% endif %}
                             </td>
                             <td>

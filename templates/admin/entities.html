@@ -29,13 +29,13 @@
                         {% for entity in entities %}
                         <tr class="{{ 'text-muted' if not entity.is_active }}">
                             <td>
-                                <strong>{{ entity.name }}</strong>
+                                <strong>{{ entity.get_name(lang) }}</strong>
                             </td>
                             <td>{{ entity.short_name or '-' }}</td>
                             <td>
                                 <span class="badge bg-secondary">{{ entity.country }}</span>
                             </td>
-                            <td>{{ entity.parent.name if entity.parent else '-' }}</td>
+                            <td>{{ entity.parent.get_name(lang) if entity.parent else '-' }}</td>
                             <td>
                                 {% if entity.is_active %}
                                 <span class="badge bg-success">{{ t('active') }}</span>
@@ -44,6 +44,11 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
+                                <a href="{{ url_for('admin_entity_users', entity_id=entity.id) }}" 
+                                   class="btn btn-sm btn-outline-secondary me-1"
+                                   title="{{ 'Benutzerberechtigungen' if lang == 'de' else 'User Permissions' }}">
+                                    <i class="bi bi-people"></i>
+                                </a>
                                 <a href="{{ url_for('admin_entity_edit', entity_id=entity.id) }}" 
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-pencil"></i>

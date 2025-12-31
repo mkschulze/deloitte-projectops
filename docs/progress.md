@@ -2,9 +2,9 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete with Multi-Reviewer + Teams
+## Current Status: ✅ MVP Complete + Phase A/B/C/D/E/F/G/H (Notifications, Bulk Ops, Exports, iCal, Email, Charts, Entity Scoping, Recurring Tasks)
 
-**Last Updated:** 2025-12-28 (Session 4)
+**Last Updated:** 2025-12-31 (Session 6)
 
 ---
 
@@ -127,37 +127,112 @@
 - [x] "My Tasks" panel
 - [x] Due soon / Overdue automatic marking (via Task properties)
 
-### Phase 8: Reports & Export
+### Phase 8: Reports & Export ✅
 
-- [ ] Task list Excel export
-- [ ] Status summary report
-- [ ] Basic filtering for exports
+- [x] Task list Excel export
+- [x] Task PDF export (weasyprint)
+- [x] Status summary report (multi-sheet Excel)
+- [x] Filtering preserved in exports
 
 ---
 
-## Phase 2 Backlog (Post-MVP)
+## Phase 2 Backlog (Post-MVP) — Feature Roadmap
 
-### Authentication & Security
+### Phase A: In-App Notifications (WebSocket) ✅
+- [x] Flask-SocketIO + eventlet dependencies
+- [x] Notification model with NotificationType enum
+- [x] NotificationService with helper methods
+- [x] WebSocket events (connect, disconnect, emit)
+- [x] Notification API routes
+- [x] Notification triggers in task/comment routes
+- [x] Navbar notification bell with dropdown
+- [x] Real-time WebSocket JavaScript client
+- [x] Translations (DE/EN)
+- [x] Database migration
+
+### Phase B: Bulk Operations ✅
+- [x] Bulk selection UI (checkboxes in task list)
+- [x] "Select all" toggle
+- [x] Bulk status change
+- [x] Bulk reassign owner
+- [x] Bulk delete (hard delete with related records)
+- [x] Confirmation modals
+- [x] Loading spinners during operations
+- [x] Success/error handling
+
+### Phase C: Excel/PDF Export ✅
+- [x] Task list Excel export with filters
+- [x] Task detail PDF export (weasyprint)
+- [x] Status summary report (Excel with charts)
+- [x] Export buttons in UI (dropdown in task list, button in task detail)
+- [x] Deloitte branding in exports (colors, logo)
+
+### Phase D: Calendar Sync (iCal) ✅
+- [x] iCal feed endpoint per user (`/calendar/feed/<token>.ics`)
+- [x] Task deadlines as calendar events with alarms
+- [x] Secure token-based subscription URL generation
+- [x] User settings for calendar sync (subscription page)
+- [x] Instructions for Outlook, Google Calendar, Apple Calendar
+- [x] Token regeneration for security
+
+### Phase E: E-Mail Notifications ✅
+- [x] Email service abstraction (SMTP/SendGrid/SES providers)
+- [x] Email configuration in config.py
+- [x] HTML email templates with Deloitte branding (inline CSS)
+- [x] Task assignment email notification
+- [x] Status change email notification
+- [x] Due reminder email (via CLI command)
+- [x] New comment email notification
+- [x] User email preferences (profile_notifications.html)
+- [x] Master toggle + per-notification-type settings
+- [x] CLI command: `flask send_due_reminders --days=7`
+- [x] Database migration for User email preferences
+
+### Phase F: Dashboard Extensions (Chart.js) ✅
+- [x] Chart.js integration (CDN)
+- [x] Tasks by status doughnut chart (pie chart with cutout)
+- [x] Tasks by month stacked bar chart (with year selector)
+- [x] Team workload horizontal bar chart
+- [x] API endpoints for chart data
+- [x] Responsive chart containers
+
+### Phase G: Entity Scoping ✅
+- [x] UserEntity model with access levels (view, edit, manage)
+- [x] EntityAccessLevel enum
+- [x] Entity-based task filtering in dashboard and task list
+- [x] Entity hierarchy access inheritance (inherit_to_children flag)
+- [x] User.get_accessible_entities() and get_accessible_entity_ids() methods
+- [x] User.can_access_entity() and get_entity_access_level() methods
+- [x] Admin UI: User entity permissions (/admin/users/<id>/entities)
+- [x] Admin UI: Entity user permissions (/admin/entities/<id>/users)
+- [x] Links in admin users and entities lists
+- [x] Auto-access for admins and managers (bypass permissions)
+- [x] Database migration for user_entity table
+
+### Phase H: Recurring Tasks (RRULE) ✅
+- [x] TaskPreset extended with recurrence fields (is_recurring, frequency, rrule, day_offset, end_date)
+- [x] Task model extended with preset_id and is_recurring_instance
+- [x] RECURRENCE_FREQUENCIES constant (monthly, quarterly, semi_annual, annual, custom)
+- [x] RecurrenceService with get_period_dates(), generate_tasks_from_preset(), parse_rrule()
+- [x] CLI command: `flask generate-recurring-tasks --year --preset-id --entity-id --dry-run --force`
+- [x] Admin preset form with recurrence configuration UI
+- [x] Frequency selector, day offset, RRULE input, default entity/owner
+- [x] Task detail shows recurring badge with preset reference
+- [x] Database migration for recurrence fields
+
+### Phase I: Archival & Soft-Delete
+- [ ] Soft-delete for tasks (is_archived flag)
+- [ ] Archive view for completed tasks
+- [ ] Retention policy settings
+- [ ] Bulk archive by date range
+- [ ] Restore from archive
+
+### Future Considerations
 - [ ] OIDC/Entra ID integration
 - [ ] Role mapping from Azure AD groups
 - [ ] Virus scanning for uploads
-
-### Advanced Features
-- [ ] RRULE recurrence rules
-- [ ] Automatic recurring task generation
-- [ ] Email reminders
-- [ ] Teams notifications
-- [ ] Batch operations (reassign, change due dates)
-
-### Advanced Reports
-- [ ] Compliance heatmap (entity × month)
-- [ ] Overdue aging report
-- [ ] On-time rate by tax type
-- [ ] Workload by owner report
-
-### Template Management
-- [ ] Template builder UI (no Excel needed)
-- [ ] Template versioning
+- [ ] MS Teams notifications
+- [ ] Template builder UI
 
 ---
 
@@ -252,6 +327,49 @@
   - Task form with owner team and reviewer team selection
   - Task detail shows team assignments
   - is_reviewer() checks team membership for access control
+
+### 2025-12-31 — Session 6: Recurring Tasks (Phase H)
+
+**Completed:**
+- **TaskPreset Model Extended:**
+  - Added is_recurring, recurrence_frequency, recurrence_rrule fields
+  - Added recurrence_day_offset (day of period when task is due)
+  - Added recurrence_end_date for optional end date
+  - Added last_generated_date for tracking
+  - Added default_owner_id and default_entity_id with relationships
+  - RECURRENCE_FREQUENCIES constant with labels (DE/EN)
+
+- **Task Model Extended:**
+  - Added preset_id foreign key to task_preset
+  - Added is_recurring_instance boolean flag
+  - Added preset relationship with backref 'generated_tasks'
+
+- **RecurrenceService:**
+  - get_period_dates(frequency, year, day_offset) - generates period labels and due dates
+  - generate_tasks_from_preset(preset, year, entities, owner_id, force) - creates task instances
+  - generate_all_recurring_tasks(year, dry_run) - batch generation from all presets
+  - parse_rrule(rrule_string, start_date, count) - RRULE parsing via python-dateutil
+
+- **CLI Command:**
+  - `flask generate-recurring-tasks` with --year, --preset-id, --entity-id, --dry-run, --force options
+  - Dry-run shows what would be created without changes
+  - Supports single preset or all recurring presets
+
+- **Admin UI:**
+  - Preset form extended with recurrence settings card
+  - Toggle to enable recurring generation
+  - Frequency dropdown (monthly, quarterly, semi-annual, annual, custom RRULE)
+  - Day offset input, RRULE field for custom patterns
+  - Default entity and owner selection
+  - End date picker
+  - Shows last generated date and task count
+
+- **Task Detail:**
+  - Shows "Recurring" badge for is_recurring_instance tasks
+  - Links to source preset on hover
+
+- **Database Migration:**
+  - c3d4e5f6g7h8_add_recurring_task_fields.py applied
 
 ---
 
