@@ -42,6 +42,19 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     
+    /* Wizard Cards */
+    .wizard-card, .wizard-tax-card, .wizard-freq-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .wizard-card:hover, .wizard-tax-card:hover, .wizard-freq-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
     /* Category Selector */
     .category-selector .btn {
         padding: 0.75rem 1.5rem;
@@ -491,6 +504,278 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        <!-- ========================================= -->
+                        <!-- WIZARD MODE -->
+                        <!-- ========================================= -->
+                        <div id="wizardMode" style="display: none;">
+                            <!-- Step Indicator -->
+                            <div class="step-indicator mb-4">
+                                <div class="step active" id="step1Indicator">1</div>
+                                <div class="step" id="step2Indicator">2</div>
+                                <div class="step" id="step3Indicator">3</div>
+                                <div class="step" id="step4Indicator">4</div>
+                            </div>
+                            
+                            <!-- Step 1: Basic Info -->
+                            <div class="wizard-step active" id="wizardStep1">
+                                <div class="text-center mb-4">
+                                    <h4 class="text-primary">
+                                        <i class="bi bi-1-circle-fill me-2"></i>
+                                        {{ 'Basic Information' if lang == 'en' else 'Grundinformationen' }}
+                                    </h4>
+                                    <p class="text-muted">{{ 'Define the title and category of your preset' if lang == 'en' else 'Definiere Titel und Kategorie der Vorlage' }}</p>
+                                </div>
+                                
+                                <!-- Category Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold mb-3">{{ 'What type of preset?' if lang == 'en' else 'Welche Art von Vorlage?' }}</label>
+                                    <div class="row g-3 justify-content-center">
+                                        <div class="col-sm-5">
+                                            <div class="card h-100 wizard-card cursor-pointer" onclick="selectWizardCategory('aufgabe')">
+                                                <div class="card-body text-center p-4" id="wizardCatAufgabe">
+                                                    <i class="bi bi-check2-square text-primary" style="font-size: 3rem;"></i>
+                                                    <h5 class="mt-3">{{ 'Recurring Task' if lang == 'en' else 'Wiederkehrende Aufgabe' }}</h5>
+                                                    <p class="text-muted small mb-0">{{ 'Monthly, quarterly, or annual duties' if lang == 'en' else 'Monatliche, quartalsweise oder jährliche Pflichten' }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-5">
+                                            <div class="card h-100 wizard-card cursor-pointer" onclick="selectWizardCategory('antrag')">
+                                                <div class="card-body text-center p-4" id="wizardCatAntrag">
+                                                    <i class="bi bi-file-earmark-text text-info" style="font-size: 3rem;"></i>
+                                                    <h5 class="mt-3">{{ 'Application' if lang == 'en' else 'Antrag' }}</h5>
+                                                    <p class="text-muted small mb-0">{{ 'One-time filings and requests' if lang == 'en' else 'Einmalige Anträge und Anfragen' }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Title Input -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">🇩🇪 {{ 'German Title' if lang == 'en' else 'Deutscher Titel' }} *</label>
+                                        <input type="text" class="form-control form-control-lg" id="wizardTitleDe"
+                                               placeholder="{{ 'e.g. USt-Voranmeldung' if lang == 'en' else 'z.B. USt-Voranmeldung' }}"
+                                               oninput="syncWizardField('title_de', this.value)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">🇬🇧 {{ 'English Title' if lang == 'en' else 'Englischer Titel' }} *</label>
+                                        <input type="text" class="form-control form-control-lg" id="wizardTitleEn"
+                                               placeholder="{{ 'e.g. VAT Return' if lang == 'en' else 'z.B. VAT Return' }}"
+                                               oninput="syncWizardField('title_en', this.value)">
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="toggleWizardMode()">
+                                        <i class="bi bi-x me-1"></i>{{ 'Exit Wizard' if lang == 'en' else 'Assistent beenden' }}
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-lg" onclick="goToWizardStep(2)">
+                                        {{ 'Next' if lang == 'en' else 'Weiter' }} <i class="bi bi-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 2: Tax Type & Law Reference -->
+                            <div class="wizard-step" id="wizardStep2">
+                                <div class="text-center mb-4">
+                                    <h4 class="text-primary">
+                                        <i class="bi bi-2-circle-fill me-2"></i>
+                                        {{ 'Tax Classification' if lang == 'en' else 'Steuerliche Einordnung' }}
+                                    </h4>
+                                    <p class="text-muted">{{ 'Select the tax type and legal basis' if lang == 'en' else 'Wähle Steuerart und Rechtsgrundlage' }}</p>
+                                </div>
+                                
+                                <!-- Tax Type Selection (visual cards) -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold mb-3">{{ 'Tax Type' if lang == 'en' else 'Steuerart' }}</label>
+                                    <div class="row g-2" id="wizardTaxTypeCards">
+                                        {% for tt in tax_types[:8] %}
+                                        <div class="col-6 col-md-3">
+                                            <div class="card wizard-tax-card cursor-pointer" onclick="selectWizardTaxType('{{ tt.code }}')">
+                                                <div class="card-body text-center py-3" id="wizardTax_{{ tt.code }}">
+                                                    <span class="badge bg-primary d-block mb-1">{{ tt.code }}</span>
+                                                    <small>{{ tt.get_name(lang)[:20] }}{% if tt.get_name(lang)|length > 20 %}...{% endif %}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mt-2">
+                                        <input type="text" class="form-control" id="wizardTaxTypeOther"
+                                               placeholder="{{ 'Or type a custom tax type...' if lang == 'en' else 'Oder benutzerdefinierte Steuerart eingeben...' }}"
+                                               oninput="syncWizardField('tax_type', this.value)">
+                                    </div>
+                                </div>
+                                
+                                <!-- Law Reference -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-book me-1"></i>
+                                        {{ 'Law Reference' if lang == 'en' else 'Gesetzesreferenz' }}
+                                    </label>
+                                    <input type="text" class="form-control" id="wizardLawRef"
+                                           placeholder="{{ 'e.g. §1 (3) EStG' if lang == 'en' else 'z.B. §1 (3) EStG' }}"
+                                           oninput="syncWizardField('law_reference', this.value)">
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="goToWizardStep(1)">
+                                        <i class="bi bi-arrow-left me-1"></i>{{ 'Back' if lang == 'en' else 'Zurück' }}
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-lg" onclick="goToWizardStep(3)">
+                                        {{ 'Next' if lang == 'en' else 'Weiter' }} <i class="bi bi-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 3: Recurrence Configuration -->
+                            <div class="wizard-step" id="wizardStep3">
+                                <div class="text-center mb-4">
+                                    <h4 class="text-primary">
+                                        <i class="bi bi-3-circle-fill me-2"></i>
+                                        {{ 'Recurrence Settings' if lang == 'en' else 'Wiederholungseinstellungen' }}
+                                    </h4>
+                                    <p class="text-muted">{{ 'Configure how often tasks should be generated' if lang == 'en' else 'Konfiguriere, wie oft Aufgaben generiert werden sollen' }}</p>
+                                </div>
+                                
+                                <!-- Enable Recurrence Toggle -->
+                                <div class="text-center mb-4">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" id="wizardRecurring" style="width: 3rem; height: 1.5rem;"
+                                               onchange="toggleWizardRecurrence()">
+                                        <label class="form-check-label fs-5 ms-2" for="wizardRecurring">
+                                            {{ 'Enable Recurring Generation' if lang == 'en' else 'Wiederkehrende Generierung aktivieren' }}
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Recurrence Options (hidden by default) -->
+                                <div id="wizardRecurrenceOptions" style="display: none;">
+                                    <!-- Frequency Cards -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold mb-3">{{ 'How often?' if lang == 'en' else 'Wie oft?' }}</label>
+                                        <div class="row g-2 justify-content-center">
+                                            {% for freq, icon, label_de, label_en in [
+                                                ('monthly', 'calendar3', 'Monatlich', 'Monthly'),
+                                                ('quarterly', 'calendar3-range', 'Quartalsweise', 'Quarterly'),
+                                                ('semi_annual', 'calendar3-week', 'Halbjährlich', 'Semi-Annual'),
+                                                ('annual', 'calendar3-event', 'Jährlich', 'Annually')
+                                            ] %}
+                                            <div class="col-6 col-md-3">
+                                                <div class="card wizard-freq-card cursor-pointer" onclick="selectWizardFrequency('{{ freq }}')">
+                                                    <div class="card-body text-center py-3" id="wizardFreq_{{ freq }}">
+                                                        <i class="bi bi-{{ icon }} d-block mb-2" style="font-size: 2rem;"></i>
+                                                        <small class="fw-bold">{{ label_en if lang == 'en' else label_de }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Due Date Offset -->
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">{{ 'Due Date Offset' if lang == 'en' else 'Fälligkeits-Offset' }}</label>
+                                        <div class="row align-items-center justify-content-center">
+                                            <div class="col-auto">
+                                                <span class="text-muted">{{ 'Period ends' if lang == 'en' else 'Periodenende' }}</span>
+                                            </div>
+                                            <div class="col-auto">
+                                                <span class="display-6">+</span>
+                                            </div>
+                                            <div class="col-auto">
+                                                <input type="number" class="form-control form-control-lg text-center" 
+                                                       id="wizardDayOffset" value="10" min="1" max="90" style="width: 100px;"
+                                                       oninput="syncWizardField('recurrence_day_offset', this.value); updateWizardPreviewDates()">
+                                            </div>
+                                            <div class="col-auto">
+                                                <span class="text-muted">{{ 'days' if lang == 'en' else 'Tage' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-2">
+                                            <span class="badge bg-success fs-6" id="wizardDueDateExample">
+                                                {{ 'e.g. January → Due 10th Feb' if lang == 'en' else 'z.B. Januar → Fällig 10. Feb' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Preview Calendar -->
+                                    <div class="card bg-light mb-4">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">
+                                                <i class="bi bi-calendar-check me-2"></i>
+                                                {{ 'Preview: Due Dates in' if lang == 'en' else 'Vorschau: Fälligkeiten in' }} 
+                                                <span id="wizardPreviewYear">{{ "now"|datetime("Y") }}</span>
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="wizardRecurrenceDates" class="d-flex flex-wrap justify-content-center gap-2">
+                                                <!-- Filled by JavaScript -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="goToWizardStep(2)">
+                                        <i class="bi bi-arrow-left me-1"></i>{{ 'Back' if lang == 'en' else 'Zurück' }}
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-lg" onclick="goToWizardStep(4)">
+                                        {{ 'Next' if lang == 'en' else 'Weiter' }} <i class="bi bi-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 4: Review & Save -->
+                            <div class="wizard-step" id="wizardStep4">
+                                <div class="text-center mb-4">
+                                    <h4 class="text-success">
+                                        <i class="bi bi-4-circle-fill me-2"></i>
+                                        {{ 'Review & Save' if lang == 'en' else 'Überprüfen & Speichern' }}
+                                    </h4>
+                                    <p class="text-muted">{{ 'Review your preset before saving' if lang == 'en' else 'Überprüfe die Vorlage vor dem Speichern' }}</p>
+                                </div>
+                                
+                                <!-- Summary Card -->
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-4">{{ 'Category' if lang == 'en' else 'Kategorie' }}</dt>
+                                            <dd class="col-sm-8" id="wizardSummaryCategory">-</dd>
+                                            
+                                            <dt class="col-sm-4">{{ 'Title (DE)' if lang == 'en' else 'Titel (DE)' }}</dt>
+                                            <dd class="col-sm-8" id="wizardSummaryTitleDe">-</dd>
+                                            
+                                            <dt class="col-sm-4">{{ 'Title (EN)' if lang == 'en' else 'Titel (EN)' }}</dt>
+                                            <dd class="col-sm-8" id="wizardSummaryTitleEn">-</dd>
+                                            
+                                            <dt class="col-sm-4">{{ 'Tax Type' if lang == 'en' else 'Steuerart' }}</dt>
+                                            <dd class="col-sm-8" id="wizardSummaryTaxType">-</dd>
+                                            
+                                            <dt class="col-sm-4">{{ 'Law Reference' if lang == 'en' else 'Gesetzesreferenz' }}</dt>
+                                            <dd class="col-sm-8" id="wizardSummaryLawRef">-</dd>
+                                            
+                                            <dt class="col-sm-4">{{ 'Recurring' if lang == 'en' else 'Wiederkehrend' }}</dt>
+                                            <dd class="col-sm-8" id="wizardSummaryRecurring">-</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="goToWizardStep(3)">
+                                        <i class="bi bi-arrow-left me-1"></i>{{ 'Back' if lang == 'en' else 'Zurück' }}
+                                    </button>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="bi bi-check-lg me-1"></i>{{ 'Save Preset' if lang == 'en' else 'Vorlage speichern' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- END WIZARD MODE -->
+                        
                     </form>
                 </div>
             </div>
@@ -757,9 +1042,287 @@
         return div.innerHTML;
     }
     
-    // Wizard Mode Toggle (placeholder for future)
+    // ========================================
+    // WIZARD MODE FUNCTIONS
+    // ========================================
+    
+    let wizardActive = false;
+    let currentWizardStep = 1;
+    let wizardData = {
+        category: 'aufgabe',
+        frequency: 'monthly'
+    };
+    
     function toggleWizardMode() {
-        alert(lang === 'de' ? 'Wizard-Modus kommt in Phase C2!' : 'Wizard mode coming in Phase C2!');
+        wizardActive = !wizardActive;
+        const standardForm = document.getElementById('standardForm');
+        const wizardMode = document.getElementById('wizardMode');
+        const toggleBtn = document.getElementById('wizardToggle');
+        
+        if (wizardActive) {
+            standardForm.style.display = 'none';
+            wizardMode.style.display = 'block';
+            toggleBtn.innerHTML = '<i class="bi bi-list-ul me-1"></i>' + (lang === 'de' ? 'Standard-Formular' : 'Standard Form');
+            toggleBtn.classList.remove('btn-outline-light');
+            toggleBtn.classList.add('btn-warning');
+            
+            // Sync existing form values to wizard
+            syncFormToWizard();
+            goToWizardStep(1);
+        } else {
+            standardForm.style.display = 'block';
+            wizardMode.style.display = 'none';
+            toggleBtn.innerHTML = '<i class="bi bi-magic me-1"></i>' + (lang === 'de' ? 'Assistent' : 'Wizard');
+            toggleBtn.classList.add('btn-outline-light');
+            toggleBtn.classList.remove('btn-warning');
+        }
+    }
+    
+    function syncFormToWizard() {
+        // Sync existing values from standard form to wizard
+        document.getElementById('wizardTitleDe').value = document.getElementById('title_de').value;
+        document.getElementById('wizardTitleEn').value = document.getElementById('title_en').value;
+        document.getElementById('wizardLawRef').value = document.getElementById('law_reference').value;
+        document.getElementById('wizardTaxTypeOther').value = document.getElementById('tax_type').value;
+        
+        // Sync category
+        const category = document.querySelector('input[name="category"]:checked')?.value || 'aufgabe';
+        selectWizardCategory(category, false);
+        
+        // Sync recurrence
+        const isRecurring = document.getElementById('is_recurring')?.checked;
+        document.getElementById('wizardRecurring').checked = isRecurring;
+        if (isRecurring) {
+            document.getElementById('wizardRecurrenceOptions').style.display = 'block';
+            const freq = document.querySelector('input[name="recurrence_frequency"]:checked')?.value || 'monthly';
+            selectWizardFrequency(freq, false);
+            document.getElementById('wizardDayOffset').value = document.getElementById('recurrence_day_offset').value;
+        }
+    }
+    
+    function syncWizardField(fieldId, value) {
+        const el = document.getElementById(fieldId);
+        if (el) {
+            el.value = value;
+            updatePreview();
+        }
+    }
+    
+    function goToWizardStep(step) {
+        // Validate current step before moving forward
+        if (step > currentWizardStep && !validateWizardStep(currentWizardStep)) {
+            return;
+        }
+        
+        currentWizardStep = step;
+        
+        // Update step indicators
+        for (let i = 1; i <= 4; i++) {
+            const indicator = document.getElementById(`step${i}Indicator`);
+            const stepEl = document.getElementById(`wizardStep${i}`);
+            
+            indicator.classList.remove('active', 'completed');
+            stepEl.classList.remove('active');
+            
+            if (i < step) {
+                indicator.classList.add('completed');
+            } else if (i === step) {
+                indicator.classList.add('active');
+                stepEl.classList.add('active');
+            }
+        }
+        
+        // Update summary on final step
+        if (step === 4) {
+            updateWizardSummary();
+        }
+        
+        // Update preview dates on step 3
+        if (step === 3) {
+            updateWizardPreviewDates();
+        }
+    }
+    
+    function validateWizardStep(step) {
+        if (step === 1) {
+            const titleDe = document.getElementById('wizardTitleDe').value.trim();
+            const titleEn = document.getElementById('wizardTitleEn').value.trim();
+            if (!titleDe || !titleEn) {
+                alert(lang === 'de' ? 'Bitte beide Titel ausfüllen.' : 'Please fill in both titles.');
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    function selectWizardCategory(category, sync = true) {
+        wizardData.category = category;
+        
+        // Update visual selection
+        document.querySelectorAll('.wizard-card').forEach(card => {
+            card.classList.remove('border-primary', 'border-3');
+        });
+        
+        const selectedCard = document.getElementById(`wizardCat${category.charAt(0).toUpperCase() + category.slice(1)}`);
+        if (selectedCard) {
+            selectedCard.closest('.card').classList.add('border-primary', 'border-3');
+        }
+        
+        // Sync to actual form
+        if (sync) {
+            const radio = document.getElementById(`cat_${category}`);
+            if (radio) radio.checked = true;
+        }
+    }
+    
+    function selectWizardTaxType(code, sync = true) {
+        // Update visual selection
+        document.querySelectorAll('.wizard-tax-card').forEach(card => {
+            card.classList.remove('border-primary', 'border-2');
+            card.querySelector('.card-body').classList.remove('bg-primary', 'text-white');
+        });
+        
+        const selectedCard = document.getElementById(`wizardTax_${code}`);
+        if (selectedCard) {
+            selectedCard.closest('.card').classList.add('border-primary', 'border-2');
+            selectedCard.classList.add('bg-primary', 'text-white');
+        }
+        
+        // Sync to actual form
+        if (sync) {
+            document.getElementById('tax_type').value = code;
+            document.getElementById('wizardTaxTypeOther').value = code;
+            updatePreview();
+        }
+    }
+    
+    function selectWizardFrequency(freq, sync = true) {
+        wizardData.frequency = freq;
+        
+        // Update visual selection
+        document.querySelectorAll('.wizard-freq-card').forEach(card => {
+            card.classList.remove('border-success', 'border-2');
+            card.querySelector('.card-body').classList.remove('bg-success', 'text-white');
+        });
+        
+        const selectedCard = document.getElementById(`wizardFreq_${freq}`);
+        if (selectedCard) {
+            selectedCard.closest('.card').classList.add('border-success', 'border-2');
+            selectedCard.classList.add('bg-success', 'text-white');
+        }
+        
+        // Sync to actual form
+        if (sync) {
+            const radio = document.getElementById(`freq_${freq}`);
+            if (radio) radio.checked = true;
+            updateRecurrencePreview();
+        }
+        
+        updateWizardPreviewDates();
+    }
+    
+    function toggleWizardRecurrence() {
+        const isRecurring = document.getElementById('wizardRecurring').checked;
+        document.getElementById('wizardRecurrenceOptions').style.display = isRecurring ? 'block' : 'none';
+        
+        // Sync to actual form
+        document.getElementById('is_recurring').checked = isRecurring;
+        toggleRecurrence();
+        
+        if (isRecurring) {
+            updateWizardPreviewDates();
+        }
+    }
+    
+    function updateWizardPreviewDates() {
+        const freq = wizardData.frequency;
+        const offset = parseInt(document.getElementById('wizardDayOffset').value) || 10;
+        const container = document.getElementById('wizardRecurrenceDates');
+        const year = new Date().getFullYear();
+        
+        let dates = [];
+        
+        if (freq === 'monthly') {
+            for (let m = 0; m < 12; m++) {
+                const periodEnd = new Date(year, m + 1, 0); // Last day of month
+                const dueDate = new Date(periodEnd);
+                dueDate.setDate(dueDate.getDate() + offset);
+                dates.push(dueDate);
+            }
+        } else if (freq === 'quarterly') {
+            for (let q = 0; q < 4; q++) {
+                const periodEnd = new Date(year, (q + 1) * 3, 0);
+                const dueDate = new Date(periodEnd);
+                dueDate.setDate(dueDate.getDate() + offset);
+                dates.push(dueDate);
+            }
+        } else if (freq === 'semi_annual') {
+            for (let h = 0; h < 2; h++) {
+                const periodEnd = new Date(year, (h + 1) * 6, 0);
+                const dueDate = new Date(periodEnd);
+                dueDate.setDate(dueDate.getDate() + offset);
+                dates.push(dueDate);
+            }
+        } else if (freq === 'annual') {
+            const periodEnd = new Date(year, 12, 0);
+            const dueDate = new Date(periodEnd);
+            dueDate.setDate(dueDate.getDate() + offset);
+            dates.push(dueDate);
+        }
+        
+        const today = new Date();
+        let html = '';
+        dates.forEach(d => {
+            const isPast = d < today;
+            const isNext = !isPast && dates.filter(dd => dd >= today).indexOf(d) === 0;
+            html += `
+                <div class="recurrence-date ${isPast ? 'past' : ''} ${isNext ? 'next' : ''}">
+                    ${d.getDate()}. ${monthNames[d.getMonth()]}
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html || '<p class="text-muted">-</p>';
+        
+        // Update due date example
+        if (dates.length > 0) {
+            const firstDate = dates[0];
+            const periodMonth = new Date(firstDate);
+            periodMonth.setDate(periodMonth.getDate() - offset);
+            const example = `${monthNames[periodMonth.getMonth()]} → ${firstDate.getDate()}. ${monthNames[firstDate.getMonth()]}`;
+            document.getElementById('wizardDueDateExample').textContent = example;
+        }
+    }
+    
+    function updateWizardSummary() {
+        const categoryLabels = {
+            'aufgabe': lang === 'de' ? 'Wiederkehrende Aufgabe' : 'Recurring Task',
+            'antrag': lang === 'de' ? 'Antrag' : 'Application'
+        };
+        
+        const frequencyLabels = {
+            'monthly': lang === 'de' ? 'Monatlich' : 'Monthly',
+            'quarterly': lang === 'de' ? 'Quartalsweise' : 'Quarterly',
+            'semi_annual': lang === 'de' ? 'Halbjährlich' : 'Semi-Annual',
+            'annual': lang === 'de' ? 'Jährlich' : 'Annually'
+        };
+        
+        document.getElementById('wizardSummaryCategory').textContent = categoryLabels[wizardData.category] || wizardData.category;
+        document.getElementById('wizardSummaryTitleDe').textContent = document.getElementById('wizardTitleDe').value || '-';
+        document.getElementById('wizardSummaryTitleEn').textContent = document.getElementById('wizardTitleEn').value || '-';
+        document.getElementById('wizardSummaryTaxType').textContent = document.getElementById('tax_type').value || '-';
+        document.getElementById('wizardSummaryLawRef').textContent = document.getElementById('law_reference').value || '-';
+        
+        const isRecurring = document.getElementById('wizardRecurring').checked;
+        if (isRecurring) {
+            const offset = document.getElementById('wizardDayOffset').value;
+            document.getElementById('wizardSummaryRecurring').innerHTML = 
+                `<span class="badge bg-success">${frequencyLabels[wizardData.frequency]}</span> ` +
+                `<small class="text-muted">(+${offset} ${lang === 'de' ? 'Tage' : 'days'})</small>`;
+        } else {
+            document.getElementById('wizardSummaryRecurring').innerHTML = 
+                `<span class="badge bg-secondary">${lang === 'de' ? 'Nein' : 'No'}</span>`;
+        }
     }
     
     // Custom Fields Management
