@@ -327,6 +327,11 @@
                             <i class="bi bi-calendar3"></i> {{ t('nav_calendar') }}
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'projects' in request.endpoint %}active{% endif %}" href="{{ url_for('projects.project_list') }}">
+                            <i class="bi bi-kanban"></i> {{ 'Projekte' if lang == 'de' else 'Projects' }}
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
                 
