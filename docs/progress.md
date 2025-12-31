@@ -2,9 +2,10 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phase A/B/C/D/E/F/G/H/I (Notifications, Bulk Ops, Exports, iCal, Email, Charts, Entity Scoping, Recurring Tasks, Archival)
+## Current Status: ✅ MVP Complete + Phases A-J (Notifications, Bulk Ops, Exports, iCal, Email, Charts, Entity Scoping, Recurring Tasks, Archival, Template Builder UI)
 
-**Last Updated:** 2025-12-31 (Session 7)
+**Last Updated:** 2025-12-31 (Session 7)  
+**Version:** 1.2.0
 
 ---
 
@@ -280,12 +281,43 @@
 - [ ] Charts (Burndown, Velocity)
 - [ ] Konfigurierbare Workflows
 
+### Phase J: Template Builder UI ✅
+**Full Form Builder (Option C) implementation**
+
+#### C1: Enhanced Preset Form ✅
+- [x] Live preview panel showing task card with current form values
+- [x] Recurrence wizard with visual calendar date preview
+- [x] Tax type search dropdown with filtering
+- [x] Due date calculator showing next occurrences
+
+#### C2: Visual Category Tree ✅
+- [x] 3 views: Tree (grouped by tax type), Card (grid), Table (classic)
+- [x] Drag & drop reordering (SortableJS)
+- [x] Bulk selection with floating action bar
+- [x] Quick edit slide-out panel
+- [x] JSON export (includes custom fields)
+- [x] View persistence in localStorage
+
+#### C3: Custom Fields ✅
+- [x] PresetCustomField model (name, labels, type, required, options, conditions)
+- [x] TaskCustomFieldValue model for storing values
+- [x] CustomFieldType enum (text, textarea, number, date, select, checkbox)
+- [x] Custom Fields UI section in preset form
+- [x] Modal dialog for field creation/editing
+- [x] API endpoints for CRUD operations
+- [x] Template variables support ({{year}}, {{entity}}, etc.)
+
+#### C4: Import/Export Enhancement ✅
+- [x] Enhanced JSON export includes custom fields
+- [x] JSON import handles enhanced format with custom fields
+- [x] Import counts imported fields in message
+- [x] Conditional visibility fields (condition_field, condition_operator, condition_value)
+
 ### Future Considerations
 - [ ] OIDC/Entra ID integration
 - [ ] Role mapping from Azure AD groups
 - [ ] Virus scanning for uploads
 - [ ] MS Teams notifications
-- [ ] Template builder UI
 
 ---
 

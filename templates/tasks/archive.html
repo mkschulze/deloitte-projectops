@@ -72,6 +72,11 @@
                 <button type="button" class="btn btn-success btn-sm" id="btnBulkRestore">
                     <i class="bi bi-arrow-counterclockwise me-1"></i>{{ 'Wiederherstellen' if lang == 'de' else 'Restore' }}
                 </button>
+                {% if current_user.is_admin() %}
+                <button type="button" class="btn btn-danger btn-sm" id="btnBulkDelete" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+                    <i class="bi bi-trash me-1"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Permanently delete' }}
+                </button>
+                {% endif %}
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnClearSelection">
                     <i class="bi bi-x-lg me-1"></i>{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}
                 </button>
@@ -128,19 +133,28 @@
                             <td>{{ task.archived_at.strftime('%d.%m.%Y %H:%M') if task.archived_at else '-' }}</td>
                             <td>{{ task.archived_by.name if task.archived_by else '-' }}</td>
                             <td class="text-end">
-                                {% if current_user.is_admin() or current_user.is_manager() %}
-                                <form method="POST" action="{{ url_for('task_restore', task_id=task.id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-success btn-sm" 
-                                            title="{{ 'Wiederherstellen' if lang == 'de' else 'Restore' }}"
-                                            onclick="return confirm('{{ 'Aufgabe wirklich wiederherstellen?' if lang == 'de' else 'Really restore this task?' }}')">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                <div class="btn-group" role="group">
+                                    {% if current_user.is_admin() or current_user.is_manager() %}
+                                    <form method="POST" action="{{ url_for('task_restore', task_id=task.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-success btn-sm" style="width: 36px; height: 32px;"
+                                                title="{{ 'Wiederherstellen' if lang == 'de' else 'Restore' }}"
+                                                onclick="return confirm('{{ 'Aufgabe wirklich wiederherstellen?' if lang == 'de' else 'Really restore this task?' }}')">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    {% if current_user.is_admin() %}
+                                    <button type="button" class="btn btn-danger btn-sm" style="width: 36px; height: 32px;"
+                                            title="{{ 'Endgültig löschen' if lang == 'de' else 'Permanently delete' }}"
+                                            onclick="confirmSingleDelete({{ task.id }}, '{{ task.title|e }}')">
+                                        <i class="bi bi-trash"></i>
                                     </button>
-                                </form>
-                                {% endif %}
-                                <a href="{{ url_for('task_detail', task_id=task.id) }}" class="btn btn-outline-primary btn-sm" 
-                                   title="{{ 'Details anzeigen' if lang == 'de' else 'View details' }}">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('task_detail', task_id=task.id) }}" class="btn btn-outline-primary btn-sm" style="width: 36px; height: 32px;"
+                                       title="{{ 'Details anzeigen' if lang == 'de' else 'View details' }}">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -193,6 +207,62 @@
 </div>
 
 {% if current_user.is_admin() or current_user.is_manager() %}
+<!-- Bulk Delete Modal (admin only) -->
+{% if current_user.is_admin() %}
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Permanently Delete' }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon me-2"></i>
+                    <strong>{{ 'Warnung:' if lang == 'de' else 'Warning:' }}</strong> 
+                    {{ 'Diese Aktion kann nicht rückgängig gemacht werden! Alle ausgewählten Aufgaben und deren Anhänge, Kommentare und Genehmigungen werden unwiderruflich gelöscht.' if lang == 'de' else 'This action cannot be undone! All selected tasks and their attachments, comments, and approvals will be permanently deleted.' }}
+                </div>
+                <p><span id="bulkDeleteCount">0</span> {{ 'Aufgabe(n) werden gelöscht.' if lang == 'de' else 'task(s) will be deleted.' }}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}</button>
+                <button type="button" class="btn btn-danger" id="confirmBulkDelete">
+                    <i class="bi bi-trash me-1"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Permanently Delete' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Single Delete Modal -->
+<div class="modal fade" id="singleDeleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Permanently Delete' }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon me-2"></i>
+                    <strong>{{ 'Warnung:' if lang == 'de' else 'Warning:' }}</strong> 
+                    {{ 'Diese Aktion kann nicht rückgängig gemacht werden!' if lang == 'de' else 'This action cannot be undone!' }}
+                </div>
+                <p>{{ 'Aufgabe' if lang == 'de' else 'Task' }}: <strong id="deleteTaskTitle"></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}</button>
+                <form id="singleDeleteForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Permanently Delete' }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('selectAll');
@@ -206,6 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const checked = document.querySelectorAll('.task-checkbox:checked');
         const count = checked.length;
         selectedCount.textContent = count;
+        
+        // Update bulk delete modal count
+        const bulkDeleteCount = document.getElementById('bulkDeleteCount');
+        if (bulkDeleteCount) bulkDeleteCount.textContent = count;
         
         if (count > 0) {
             bulkBar.classList.remove('d-none');
@@ -256,7 +330,43 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    
+    // Bulk delete (admin only)
+    const confirmBulkDelete = document.getElementById('confirmBulkDelete');
+    if (confirmBulkDelete) {
+        confirmBulkDelete.addEventListener('click', function() {
+            const taskIds = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => parseInt(cb.value));
+            
+            if (taskIds.length === 0) return;
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>{{ "Lösche..." if lang == "de" else "Deleting..." }}';
+            
+            fetch('{{ url_for("api_bulk_permanent_delete") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({task_ids: taskIds})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error');
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-trash me-1"></i>{{ "Endgültig löschen" if lang == "de" else "Permanently Delete" }}';
+                }
+            });
+        });
+    }
 });
+
+// Single delete function
+function confirmSingleDelete(taskId, taskTitle) {
+    document.getElementById('deleteTaskTitle').textContent = taskTitle;
+    document.getElementById('singleDeleteForm').action = '/tasks/' + taskId + '/delete';
+    new bootstrap.Modal(document.getElementById('singleDeleteModal')).show();
+}
 </script>
 {% endif %}
 {% endblock %}

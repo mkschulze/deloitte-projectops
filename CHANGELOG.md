@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2025-12-31
+
+### 🛠️ Phase J: Template Builder UI (Full Form Builder)
+
+This release adds comprehensive template/preset management with enhanced UI, custom fields, and improved import/export.
+
+#### Added
+- **C1: Enhanced Preset Form**
+  - Live preview panel showing task card with current form values
+  - Recurrence wizard with visual calendar date preview
+  - Tax type search dropdown with filtering
+  - Due date calculator showing next occurrences
+
+- **C2: Visual Category Tree**
+  - 3 views: Tree (grouped by tax type), Card (grid), Table (classic)
+  - Drag & drop reordering with SortableJS
+  - Bulk selection with floating action bar
+  - Quick edit slide-out panel
+  - View toggle with persistence in localStorage
+
+- **C3: Custom Fields**
+  - `PresetCustomField` model (name, labels, type, required, options, conditions)
+  - `TaskCustomFieldValue` model for storing field values on tasks
+  - `CustomFieldType` enum (text, textarea, number, date, select, checkbox)
+  - Custom Fields UI section in preset form
+  - Modal dialog for field creation/editing
+  - API endpoints: `GET/POST /api/preset-fields`, `PUT/DELETE /api/preset-fields/<id>`
+  - Template variables support: `{{year}}`, `{{entity}}`, `{{quarter}}`, etc.
+  - Conditional visibility (show field based on other field values)
+
+- **C4: Import/Export Enhancement**
+  - Enhanced JSON export includes custom fields
+  - JSON import handles enhanced format with custom fields
+  - Import counts imported fields in success message
+
+- **Deloitte Color Scheme Enhancement**
+  - Page headers with Deloitte gradient
+  - View toggle buttons with proper colors
+  - Filter cards with styled inputs
+  - Enhanced table view with dark green header
+  - Action buttons with hover states
+
+#### Fixed
+- Added missing `make_response` import for export route
+- Fixed `User.display_name` to `User.name` in preset routes
+- Fixed checkbox styling in preset list
+- Fixed search input minimum width
+- Fixed card text overflow handling
+- Fixed view toggle icon visibility when active
+
+---
+
 ## [1.1.0] - 2025-12-31
 
 ### 🗄️ Phase I: Archival & Soft-Delete

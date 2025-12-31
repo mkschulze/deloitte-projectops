@@ -104,6 +104,10 @@ TRANSLATIONS = {
     'archive_reason': {'de': 'Archivierungsgrund', 'en': 'Archive Reason'},
     'restore': {'de': 'Wiederherstellen', 'en': 'Restore'},
     'no_archived_tasks': {'de': 'Keine archivierten Aufgaben', 'en': 'No archived tasks'},
+    'permanently_delete': {'de': 'Endgültig löschen', 'en': 'Permanently Delete'},
+    'permanent_delete_warning': {'de': 'Diese Aktion kann nicht rückgängig gemacht werden!', 'en': 'This action cannot be undone!'},
+    'tasks_selected': {'de': 'Aufgaben ausgewählt', 'en': 'tasks selected'},
+    'confirm_permanent_delete': {'de': 'Wirklich endgültig löschen?', 'en': 'Really permanently delete?'},
     
     # Workflow
     'workflow': {'de': 'Freigabe-Workflow', 'en': 'Approval Workflow'},

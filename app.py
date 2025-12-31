@@ -9,7 +9,7 @@ from functools import wraps
 from io import BytesIO
 
 import click
-from flask import Flask, render_template, redirect, url_for, flash, request, session, send_file, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, session, send_file, jsonify, make_response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_migrate import Migrate
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -36,7 +36,10 @@ def create_app(config_name='default'):
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    
+    # Initialize SocketIO with threading mode (works everywhere, no special dependencies)
+    # For production with high concurrency, consider using gevent or an ASGI server
+    socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
     
     # Login manager
     login_manager = LoginManager()
@@ -891,6 +894,76 @@ def api_bulk_restore():
         'success': True,
         'restored_count': restored_count,
         'message': f'{restored_count} Aufgabe(n) wiederhergestellt.' if session.get('lang', 'de') == 'de' else f'{restored_count} task(s) restored.'
+    })
+
+
+@app.route('/tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+def task_permanent_delete(task_id):
+    """Permanently delete an archived task (admin only)"""
+    if not current_user.is_admin():
+        flash('Nur Administratoren können Aufgaben endgültig löschen.' if session.get('lang', 'de') == 'de' else 'Only administrators can permanently delete tasks.', 'danger')
+        return redirect(url_for('task_archive_list'))
+    
+    task = Task.query.get_or_404(task_id)
+    
+    if not task.is_archived:
+        flash('Nur archivierte Aufgaben können endgültig gelöscht werden.' if session.get('lang', 'de') == 'de' else 'Only archived tasks can be permanently deleted.', 'warning')
+        return redirect(url_for('task_detail', task_id=task_id))
+    
+    task_title = task.title
+    task_id_log = task.id
+    
+    # Delete related records first
+    TaskEvidence.query.filter_by(task_id=task_id).delete()
+    Comment.query.filter_by(task_id=task_id).delete()
+    TaskReviewer.query.filter_by(task_id=task_id).delete()
+    Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
+    
+    db.session.delete(task)
+    db.session.commit()
+    
+    log_action('DELETE', 'Task', task_id_log, task_title, 'archived', 'deleted')
+    
+    flash(f'Aufgabe "{task_title}" wurde endgültig gelöscht.' if session.get('lang', 'de') == 'de' else f'Task "{task_title}" has been permanently deleted.', 'success')
+    return redirect(url_for('task_archive_list'))
+
+
+@app.route('/api/tasks/archive/bulk-delete', methods=['POST'])
+@login_required
+def api_bulk_permanent_delete():
+    """Bulk permanently delete multiple archived tasks (admin only)"""
+    if not current_user.is_admin():
+        return jsonify({'success': False, 'error': 'Permission denied - admin only'}), 403
+    
+    data = request.get_json()
+    task_ids = data.get('task_ids', [])
+    
+    if not task_ids:
+        return jsonify({'success': False, 'error': 'No tasks selected'}), 400
+    
+    deleted_count = 0
+    for task_id in task_ids:
+        task = Task.query.get(task_id)
+        if task and task.is_archived:
+            task_title = task.title
+            
+            # Delete related records first
+            TaskEvidence.query.filter_by(task_id=task_id).delete()
+            Comment.query.filter_by(task_id=task_id).delete()
+            TaskReviewer.query.filter_by(task_id=task_id).delete()
+            Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
+            
+            db.session.delete(task)
+            log_action('DELETE', 'Task', task_id, task_title, 'archived', 'deleted')
+            deleted_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'deleted_count': deleted_count,
+        'message': f'{deleted_count} Aufgabe(n) endgültig gelöscht.' if session.get('lang', 'de') == 'de' else f'{deleted_count} task(s) permanently deleted.'
     })
 
 
@@ -1877,11 +1950,14 @@ def admin_team_delete(team_id):
 def admin_presets():
     """Task preset management"""
     category_filter = request.args.get('category', '')
+    tax_type_filter = request.args.get('tax_type', '')
     search = request.args.get('search', '').strip()
     
     query = TaskPreset.query
     if category_filter:
         query = query.filter(TaskPreset.category == category_filter)
+    if tax_type_filter:
+        query = query.filter(TaskPreset.tax_type == tax_type_filter)
     if search:
         query = query.filter(TaskPreset.title.ilike(f'%{search}%') | 
                             TaskPreset.tax_type.ilike(f'%{search}%') |
@@ -1890,14 +1966,15 @@ def admin_presets():
     presets = query.order_by(TaskPreset.category, TaskPreset.tax_type, TaskPreset.title).all()
     
     # Get unique tax types for filter
-    tax_types = db.session.query(TaskPreset.tax_type).filter(TaskPreset.tax_type.isnot(None)).distinct().all()
-    tax_types = sorted([t[0] for t in tax_types if t[0]])
+    tax_types_used = db.session.query(TaskPreset.tax_type).filter(TaskPreset.tax_type.isnot(None)).distinct().all()
+    tax_types_used = sorted([t[0] for t in tax_types_used if t[0]])
     
-    return render_template('admin/presets.html', 
+    return render_template('admin/presets_enhanced.html', 
                            presets=presets, 
                            category_filter=category_filter,
+                           tax_type_filter=tax_type_filter,
                            search=search,
-                           tax_types=tax_types)
+                           tax_types_used=tax_types_used)
 
 
 @app.route('/admin/presets/new', methods=['GET', 'POST'])
@@ -1953,8 +2030,9 @@ def admin_preset_new():
             return redirect(url_for('admin_presets'))
     
     entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
-    users = User.query.filter_by(is_active=True).order_by(User.display_name, User.username).all()
-    return render_template('admin/preset_form.html', preset=None, entities=entities, users=users)
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    tax_types = TaxType.query.filter_by(is_active=True).order_by(TaxType.code).all()
+    return render_template('admin/preset_form_enhanced.html', preset=None, entities=entities, users=users, tax_types=tax_types)
 
 
 @app.route('/admin/presets/<int:preset_id>', methods=['GET', 'POST'])
@@ -2000,8 +2078,9 @@ def admin_preset_edit(preset_id):
         return redirect(url_for('admin_presets'))
     
     entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
-    users = User.query.filter_by(is_active=True).order_by(User.display_name, User.username).all()
-    return render_template('admin/preset_form.html', preset=preset, entities=entities, users=users)
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    tax_types = TaxType.query.filter_by(is_active=True).order_by(TaxType.code).all()
+    return render_template('admin/preset_form_enhanced.html', preset=preset, entities=entities, users=users, tax_types=tax_types)
 
 
 @app.route('/admin/presets/<int:preset_id>/delete', methods=['POST'])
@@ -2015,6 +2094,247 @@ def admin_preset_delete(preset_id):
     log_action('DELETE', 'TaskPreset', preset_id, title[:50])
     flash('Aufgabenvorlage wurde gelöscht.', 'success')
     return redirect(url_for('admin_presets'))
+
+
+# API endpoints for preset management
+@app.route('/api/presets/<int:preset_id>', methods=['GET'])
+@login_required
+def api_preset_get(preset_id):
+    """Get preset data for quick edit"""
+    preset = TaskPreset.query.get_or_404(preset_id)
+    return jsonify({
+        'id': preset.id,
+        'title_de': preset.title_de,
+        'title_en': preset.title_en,
+        'category': preset.category,
+        'tax_type': preset.tax_type,
+        'law_reference': preset.law_reference,
+        'description_de': preset.description_de,
+        'description_en': preset.description_en,
+        'is_active': preset.is_active,
+        'is_recurring': preset.is_recurring
+    })
+
+
+@app.route('/api/presets/<int:preset_id>', methods=['PATCH'])
+@admin_required
+def api_preset_update(preset_id):
+    """Quick update preset"""
+    preset = TaskPreset.query.get_or_404(preset_id)
+    data = request.get_json()
+    
+    if 'title_de' in data:
+        preset.title_de = data['title_de']
+        preset.title = data['title_de']  # Keep legacy field in sync
+    if 'title_en' in data:
+        preset.title_en = data['title_en']
+    if 'tax_type' in data:
+        preset.tax_type = data['tax_type'] or None
+    if 'law_reference' in data:
+        preset.law_reference = data['law_reference'] or None
+    if 'is_active' in data:
+        preset.is_active = data['is_active']
+    
+    db.session.commit()
+    log_action('UPDATE', 'TaskPreset', preset.id, f"Quick edit: {preset.title[:30]}")
+    return jsonify({'success': True})
+
+
+@app.route('/api/presets/bulk-toggle-active', methods=['POST'])
+@admin_required
+def api_presets_bulk_toggle_active():
+    """Bulk activate/deactivate presets"""
+    data = request.get_json()
+    ids = data.get('ids', [])
+    active = data.get('active', True)
+    
+    count = TaskPreset.query.filter(TaskPreset.id.in_(ids)).update(
+        {'is_active': active}, synchronize_session=False
+    )
+    db.session.commit()
+    log_action('BULK_UPDATE', 'TaskPreset', None, f"{'Activated' if active else 'Deactivated'} {count} presets")
+    return jsonify({'success': True, 'count': count})
+
+
+@app.route('/api/presets/bulk-delete', methods=['POST'])
+@admin_required
+def api_presets_bulk_delete():
+    """Bulk delete presets"""
+    data = request.get_json()
+    ids = data.get('ids', [])
+    
+    count = TaskPreset.query.filter(TaskPreset.id.in_(ids)).delete(synchronize_session=False)
+    db.session.commit()
+    log_action('BULK_DELETE', 'TaskPreset', None, f"Deleted {count} presets")
+    return jsonify({'success': True, 'count': count})
+
+
+# Custom Field CRUD API Endpoints
+@app.route('/api/preset-fields', methods=['POST'])
+@admin_required
+def api_preset_field_create():
+    """Create a new custom field for a preset"""
+    from models import PresetCustomField
+    data = request.get_json()
+    
+    preset_id = data.get('preset_id')
+    if not preset_id:
+        return jsonify({'error': 'preset_id required'}), 400
+    
+    # Get next sort order
+    max_order = db.session.query(db.func.max(PresetCustomField.sort_order)).filter(
+        PresetCustomField.preset_id == preset_id
+    ).scalar() or 0
+    
+    field = PresetCustomField(
+        preset_id=preset_id,
+        name=data.get('name', '').lower().replace(' ', '_'),
+        label_de=data.get('label_de', ''),
+        label_en=data.get('label_en', ''),
+        field_type=data.get('field_type', 'text'),
+        is_required=data.get('is_required', False),
+        placeholder_de=data.get('placeholder_de', ''),
+        placeholder_en=data.get('placeholder_en', ''),
+        default_value=data.get('default_value', ''),
+        options=data.get('options', ''),
+        help_text_de=data.get('help_text_de', ''),
+        help_text_en=data.get('help_text_en', ''),
+        condition_field=data.get('condition_field', ''),
+        condition_operator=data.get('condition_operator', ''),
+        condition_value=data.get('condition_value', ''),
+        sort_order=max_order + 1
+    )
+    
+    db.session.add(field)
+    db.session.commit()
+    log_action('CREATE', 'PresetCustomField', field.id, f"Created custom field {field.name}")
+    
+    return jsonify({'success': True, 'id': field.id})
+
+
+@app.route('/api/preset-fields/<int:field_id>', methods=['GET'])
+@admin_required
+def api_preset_field_get(field_id):
+    """Get a custom field by ID"""
+    from models import PresetCustomField
+    field = PresetCustomField.query.get_or_404(field_id)
+    
+    return jsonify({
+        'id': field.id,
+        'preset_id': field.preset_id,
+        'name': field.name,
+        'label_de': field.label_de,
+        'label_en': field.label_en,
+        'field_type': field.field_type,
+        'is_required': field.is_required,
+        'placeholder_de': field.placeholder_de,
+        'placeholder_en': field.placeholder_en,
+        'default_value': field.default_value,
+        'options': field.options,
+        'help_text_de': field.help_text_de,
+        'help_text_en': field.help_text_en,
+        'condition_field': field.condition_field,
+        'condition_operator': field.condition_operator,
+        'condition_value': field.condition_value,
+        'sort_order': field.sort_order
+    })
+
+
+@app.route('/api/preset-fields/<int:field_id>', methods=['PUT'])
+@admin_required
+def api_preset_field_update(field_id):
+    """Update a custom field"""
+    from models import PresetCustomField
+    field = PresetCustomField.query.get_or_404(field_id)
+    data = request.get_json()
+    
+    field.name = data.get('name', field.name).lower().replace(' ', '_')
+    field.label_de = data.get('label_de', field.label_de)
+    field.label_en = data.get('label_en', field.label_en)
+    field.field_type = data.get('field_type', field.field_type)
+    field.is_required = data.get('is_required', field.is_required)
+    field.placeholder_de = data.get('placeholder_de', field.placeholder_de)
+    field.placeholder_en = data.get('placeholder_en', field.placeholder_en)
+    field.default_value = data.get('default_value', field.default_value)
+    field.options = data.get('options', field.options)
+    field.help_text_de = data.get('help_text_de', field.help_text_de)
+    field.help_text_en = data.get('help_text_en', field.help_text_en)
+    field.condition_field = data.get('condition_field', field.condition_field)
+    field.condition_operator = data.get('condition_operator', field.condition_operator)
+    field.condition_value = data.get('condition_value', field.condition_value)
+    
+    db.session.commit()
+    log_action('UPDATE', 'PresetCustomField', field.id, f"Updated custom field {field.name}")
+    
+    return jsonify({'success': True})
+
+
+@app.route('/api/preset-fields/<int:field_id>', methods=['DELETE'])
+@admin_required
+def api_preset_field_delete(field_id):
+    """Delete a custom field"""
+    from models import PresetCustomField
+    field = PresetCustomField.query.get_or_404(field_id)
+    
+    db.session.delete(field)
+    db.session.commit()
+    log_action('DELETE', 'PresetCustomField', field_id, f"Deleted custom field {field.name}")
+    
+    return jsonify({'success': True})
+
+
+@app.route('/admin/presets/export')
+@admin_required
+def admin_preset_export():
+    """Export all presets as JSON with custom fields"""
+    from models import PresetCustomField
+    presets = TaskPreset.query.order_by(TaskPreset.category, TaskPreset.tax_type).all()
+    
+    data = []
+    for p in presets:
+        preset_data = {
+            'category': p.category,
+            'tax_type': p.tax_type,
+            'title_de': p.title_de,
+            'title_en': p.title_en,
+            'law_reference': p.law_reference,
+            'description_de': p.description_de,
+            'description_en': p.description_en,
+            'is_recurring': p.is_recurring,
+            'recurrence_frequency': p.recurrence_frequency,
+            'recurrence_day_offset': p.recurrence_day_offset,
+            'recurrence_rrule': p.recurrence_rrule,
+            'is_active': p.is_active,
+            'custom_fields': []
+        }
+        
+        # Include custom fields
+        for field in p.custom_fields.all():
+            preset_data['custom_fields'].append({
+                'name': field.name,
+                'label_de': field.label_de,
+                'label_en': field.label_en,
+                'field_type': field.field_type,
+                'is_required': field.is_required,
+                'placeholder_de': field.placeholder_de,
+                'placeholder_en': field.placeholder_en,
+                'default_value': field.default_value,
+                'options': field.options,
+                'help_text_de': field.help_text_de,
+                'help_text_en': field.help_text_en,
+                'condition_field': field.condition_field,
+                'condition_operator': field.condition_operator,
+                'condition_value': field.condition_value,
+                'sort_order': field.sort_order
+            })
+        
+        data.append(preset_data)
+    
+    import json as json_module
+    response = make_response(json_module.dumps(data, ensure_ascii=False, indent=2))
+    response.headers['Content-Type'] = 'application/json'
+    response.headers['Content-Disposition'] = 'attachment; filename=presets_export.json'
+    return response
 
 
 @app.route('/admin/presets/import', methods=['POST'])
@@ -2035,13 +2355,71 @@ def admin_preset_import():
     filename = file.filename.lower()
     imported = 0
     skipped = 0
+    fields_imported = 0
     
     try:
         if filename.endswith('.json'):
+            from models import PresetCustomField
             data = json_module.load(file)
             
+            # Handle enhanced export format (list of presets with custom_fields)
+            if isinstance(data, list) and len(data) > 0 and 'title_de' in data[0]:
+                for record in data:
+                    title = record.get('title_de') or record.get('title')
+                    if not title:
+                        skipped += 1
+                        continue
+                    category = record.get('category', 'aufgabe')
+                    existing = TaskPreset.query.filter_by(title_de=title, category=category).first()
+                    if existing:
+                        skipped += 1
+                        continue
+                    preset = TaskPreset(
+                        category=category,
+                        title=title,
+                        title_de=title,
+                        title_en=record.get('title_en'),
+                        tax_type=record.get('tax_type'),
+                        law_reference=record.get('law_reference'),
+                        description=record.get('description_de'),
+                        description_de=record.get('description_de'),
+                        description_en=record.get('description_en'),
+                        is_recurring=record.get('is_recurring', False),
+                        recurrence_frequency=record.get('recurrence_frequency'),
+                        recurrence_day_offset=record.get('recurrence_day_offset'),
+                        recurrence_rrule=record.get('recurrence_rrule'),
+                        is_active=record.get('is_active', True),
+                        source='json'
+                    )
+                    db.session.add(preset)
+                    db.session.flush()  # Get preset.id
+                    imported += 1
+                    
+                    # Import custom fields
+                    for field_data in record.get('custom_fields', []):
+                        field = PresetCustomField(
+                            preset_id=preset.id,
+                            name=field_data.get('name', ''),
+                            label_de=field_data.get('label_de', ''),
+                            label_en=field_data.get('label_en'),
+                            field_type=field_data.get('field_type', 'text'),
+                            is_required=field_data.get('is_required', False),
+                            placeholder_de=field_data.get('placeholder_de'),
+                            placeholder_en=field_data.get('placeholder_en'),
+                            default_value=field_data.get('default_value'),
+                            options=field_data.get('options'),
+                            help_text_de=field_data.get('help_text_de'),
+                            help_text_en=field_data.get('help_text_en'),
+                            condition_field=field_data.get('condition_field'),
+                            condition_operator=field_data.get('condition_operator'),
+                            condition_value=field_data.get('condition_value'),
+                            sort_order=field_data.get('sort_order', 0)
+                        )
+                        db.session.add(field)
+                        fields_imported += 1
+            
             # Handle Antraege.json format
-            if 'sheets' in data:
+            elif 'sheets' in data:
                 for sheet_name, records in data['sheets'].items():
                     for record in records:
                         title = record.get('Zweck des Antrags') or record.get('title')
@@ -2160,8 +2538,11 @@ def admin_preset_import():
             return redirect(url_for('admin_presets'))
         
         db.session.commit()
-        log_action('IMPORT', 'TaskPreset', None, f'{imported} imported, {skipped} skipped')
-        flash(f'{imported} Vorlagen importiert, {skipped} übersprungen.', 'success')
+        log_action('IMPORT', 'TaskPreset', None, f'{imported} imported, {skipped} skipped, {fields_imported} fields')
+        if fields_imported > 0:
+            flash(f'{imported} Vorlagen importiert (inkl. {fields_imported} Felder), {skipped} übersprungen.', 'success')
+        else:
+            flash(f'{imported} Vorlagen importiert, {skipped} übersprungen.', 'success')
     
     except Exception as e:
         db.session.rollback()
@@ -2505,6 +2886,71 @@ def generate_recurring_tasks(year, preset_id, entity_id, dry_run, force):
             print(f"  Errors: {len(stats['errors'])}")
             for error in stats['errors']:
                 print(f"    - {error}")
+
+
+@app.cli.command('purge-archive')
+@click.option('--days', default=365, help='Delete archived tasks older than N days')
+@click.option('--dry-run', is_flag=True, help='Show what would be deleted without actually deleting')
+@click.option('--force', is_flag=True, help='Skip confirmation prompt')
+def purge_archive(days, dry_run, force):
+    """Permanently delete archived tasks older than N days.
+    
+    Examples:
+        flask purge-archive --days=365 --dry-run
+        flask purge-archive --days=90 --force
+    """
+    from datetime import datetime, timedelta
+    
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Find archived tasks older than cutoff
+    old_tasks = Task.query.filter(
+        Task.is_archived == True,
+        Task.archived_at < cutoff_date
+    ).all()
+    
+    if not old_tasks:
+        print(f"No archived tasks older than {days} days found.")
+        return
+    
+    print(f"\nFound {len(old_tasks)} archived task(s) older than {days} days:")
+    print("-" * 60)
+    
+    for task in old_tasks:
+        age_days = (datetime.utcnow() - task.archived_at).days if task.archived_at else 0
+        print(f"  [{task.id}] {task.title}")
+        print(f"      Archived: {task.archived_at.strftime('%Y-%m-%d') if task.archived_at else 'Unknown'} ({age_days} days ago)")
+        print(f"      Entity: {task.entity.name if task.entity else '-'}")
+    
+    print("-" * 60)
+    
+    if dry_run:
+        print("\n[DRY RUN] No tasks were deleted.")
+        return
+    
+    if not force:
+        confirm = input(f"\nPermanently delete {len(old_tasks)} task(s)? This cannot be undone! [y/N]: ")
+        if confirm.lower() != 'y':
+            print("Aborted.")
+            return
+    
+    deleted_count = 0
+    for task in old_tasks:
+        task_id = task.id
+        task_title = task.title
+        
+        # Delete related records first
+        TaskEvidence.query.filter_by(task_id=task_id).delete()
+        Comment.query.filter_by(task_id=task_id).delete()
+        TaskReviewer.query.filter_by(task_id=task_id).delete()
+        Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
+        
+        db.session.delete(task)
+        log_action('PURGE', 'Task', task_id, task_title, 'archived', 'deleted')
+        deleted_count += 1
+    
+    db.session.commit()
+    print(f"\n✓ Permanently deleted {deleted_count} task(s).")
 
 
 @app.cli.command()
@@ -3266,5 +3712,6 @@ def notifications_page():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # Use socketio.run() instead of app.run() for WebSocket support
-    socketio.run(app, debug=True, port=5000)
+    # Use socketio.run() for WebSocket support with threading mode
+    # Hot reload works with use_reloader=True in threading mode
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, use_reloader=True, allow_unsafe_werkzeug=True)

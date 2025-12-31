@@ -516,6 +516,103 @@ class TaskTemplate(db.Model):
         return f'<TaskTemplate {self.keyword}>'
 
 
+class CustomFieldType(Enum):
+    """Types of custom fields for presets"""
+    TEXT = 'text'
+    TEXTAREA = 'textarea'
+    NUMBER = 'number'
+    DATE = 'date'
+    SELECT = 'select'
+    CHECKBOX = 'checkbox'
+    
+    @classmethod
+    def choices(cls):
+        return [(t.value, t.value.title()) for t in cls]
+
+
+class PresetCustomField(db.Model):
+    """Custom fields that can be added to presets for extended data collection"""
+    __tablename__ = 'preset_custom_field'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    preset_id = db.Column(db.Integer, db.ForeignKey('task_preset.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # Internal field name (e.g., 'filing_deadline')
+    label_de = db.Column(db.String(200), nullable=False)  # German label
+    label_en = db.Column(db.String(200))  # English label
+    field_type = db.Column(db.String(20), nullable=False, default='text')  # text, textarea, number, date, select, checkbox
+    is_required = db.Column(db.Boolean, default=False)
+    placeholder_de = db.Column(db.String(200))  # German placeholder
+    placeholder_en = db.Column(db.String(200))  # English placeholder
+    default_value = db.Column(db.String(500))  # Default value
+    options = db.Column(db.Text)  # JSON array of options for select fields
+    validation_regex = db.Column(db.String(200))  # Optional regex validation
+    help_text_de = db.Column(db.Text)  # German help text
+    help_text_en = db.Column(db.Text)  # English help text
+    sort_order = db.Column(db.Integer, default=0)  # Display order
+    
+    # Conditional visibility
+    condition_field = db.Column(db.String(100))  # Field name to check
+    condition_operator = db.Column(db.String(20))  # 'equals', 'not_equals', 'contains'
+    condition_value = db.Column(db.String(200))  # Value to compare
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    preset = db.relationship('TaskPreset', backref=db.backref('custom_fields', lazy='dynamic', order_by='PresetCustomField.sort_order'))
+    
+    def get_label(self, lang='de'):
+        if lang == 'en' and self.label_en:
+            return self.label_en
+        return self.label_de
+    
+    def get_placeholder(self, lang='de'):
+        if lang == 'en' and self.placeholder_en:
+            return self.placeholder_en
+        return self.placeholder_de or ''
+    
+    def get_help_text(self, lang='de'):
+        if lang == 'en' and self.help_text_en:
+            return self.help_text_en
+        return self.help_text_de or ''
+    
+    def get_options_list(self):
+        """Parse options JSON into list"""
+        if not self.options:
+            return []
+        import json
+        try:
+            return json.loads(self.options)
+        except:
+            return []
+    
+    def __repr__(self):
+        return f'<PresetCustomField {self.name}>'
+
+
+class TaskCustomFieldValue(db.Model):
+    """Stores custom field values for individual tasks"""
+    __tablename__ = 'task_custom_field_value'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    field_id = db.Column(db.Integer, db.ForeignKey('preset_custom_field.id'), nullable=False)
+    value = db.Column(db.Text)  # Stored as string, parsed based on field type
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    task = db.relationship('Task', backref=db.backref('custom_field_values', lazy='dynamic'))
+    field = db.relationship('PresetCustomField')
+    
+    __table_args__ = (
+        db.UniqueConstraint('task_id', 'field_id', name='unique_task_field_value'),
+    )
+    
+    def __repr__(self):
+        return f'<TaskCustomFieldValue {self.field_id}={self.value[:20] if self.value else ""}>'
+
+
 class TaskPreset(db.Model):
     """Predefined task templates for quick task creation (Aufgabenvorlagen)"""
     __tablename__ = 'task_preset'

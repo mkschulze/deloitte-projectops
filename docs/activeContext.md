@@ -9,8 +9,9 @@
 ## Session Information
 
 **Date:** 2025-12-31 (Session 7)  
-**Last Action:** Implemented Phase I — Archival & Soft-Delete  
-**Status:** MVP Complete + Phase A-I — All core features + notifications, bulk ops, exports, calendar sync, email, charts, entity scoping, recurring tasks, archival
+**Last Action:** Completed Phase J — Template Builder UI (Full Form Builder)  
+**Status:** MVP Complete + Phase A-J — All core features + notifications, bulk ops, exports, calendar sync, email, charts, entity scoping, recurring tasks, archival, template builder UI
+**Version:** 1.2.0
 
 ---
 
@@ -18,38 +19,50 @@
 
 ### ✅ What Was Accomplished (Session 7)
 
-1. **Phase I: Archival & Soft-Delete** (Complete)
-   - **Task Model Extended:**
-     - `is_archived` — Boolean flag for soft-delete (indexed)
-     - `archived_at` — DateTime when task was archived
-     - `archived_by_id` — Foreign key to user who archived
-     - `archive_reason` — Optional text explaining why archived
-     - `archive(user, reason)` — Method to archive a task
-     - `restore()` — Method to restore from archive
-     - `archived_by` — Relationship to User
-   
-   - **Routes Added (app.py):**
-     - `POST /tasks/<id>/archive` — Archive single task with reason modal
-     - `POST /tasks/<id>/restore` — Restore single task from archive
-     - `GET /tasks/archive` — View archived tasks with filters & pagination
-     - `POST /api/tasks/bulk-archive` — Bulk archive multiple tasks
-     - `POST /api/tasks/bulk-restore` — Bulk restore multiple tasks
-   
-   - **Views Updated:**
-     - Dashboard, task list, calendar views exclude archived tasks
-     - Task detail shows archived banner with info
-     - Archive button in task detail (for admin/manager/owner)
-     - Restore button for archived tasks (admin/manager only)
-   
-   - **UI Components:**
-     - Archive modal with reason input
-     - Archive view page (templates/tasks/archive.html)
-     - Bulk archive button in task list
-     - Bulk restore in archive view
-     - Navigation dropdown with archive link
-   
-   - **Database Migration:**
-     - `b4301e4eea63_add_archive_fields_to_task_model.py` applied
+1. **Phase J: Template Builder UI** (Complete)
+
+   #### C1: Enhanced Preset Form
+   - Live preview panel showing task card with current form values
+   - Recurrence wizard with visual calendar date preview
+   - Tax type search dropdown with filtering
+   - Due date calculator showing next occurrences
+
+   #### C2: Visual Category Tree
+   - 3 views: Tree (grouped by tax type), Card (grid), Table (classic)
+   - Drag & drop reordering with SortableJS
+   - Bulk selection with floating action bar
+   - Quick edit slide-out panel
+   - View toggle with persistence in localStorage
+
+   #### C3: Custom Fields
+   - `PresetCustomField` model (name, labels, type, required, options, conditions)
+   - `TaskCustomFieldValue` model for storing field values on tasks
+   - `CustomFieldType` enum (text, textarea, number, date, select, checkbox)
+   - Custom Fields UI section in preset form
+   - Modal dialog for field creation/editing
+   - API endpoints: `GET/POST /api/preset-fields`, `PUT/DELETE /api/preset-fields/<id>`
+   - Template variables support: `{{year}}`, `{{entity}}`, `{{quarter}}`, etc.
+   - Conditional visibility (show field based on other field values)
+
+   #### C4: Import/Export Enhancement
+   - Enhanced JSON export includes custom fields
+   - JSON import handles enhanced format with custom fields
+   - Import counts imported fields in success message
+
+   #### Deloitte Color Scheme Enhancement
+   - Page headers with Deloitte gradient
+   - View toggle buttons with proper colors
+   - Filter cards with styled inputs
+   - Enhanced table view with dark green header
+   - Action buttons with hover states
+
+   #### Bug Fixes
+   - Added missing `make_response` import for export route
+   - Fixed `User.display_name` to `User.name` in preset routes
+   - Fixed checkbox styling in preset list
+   - Fixed search input minimum width
+   - Fixed card text overflow handling
+   - Fixed view toggle icon visibility when active
 
 ### ✅ Previously Completed (Sessions 1-6)
 
@@ -61,28 +74,7 @@
 - **Phase F:** Dashboard Charts (Chart.js — status pie, monthly bar, team workload)
 - **Phase G:** Entity Scoping (access levels, hierarchy inheritance)
 - **Phase H:** Recurring Tasks (RRULE)
-- **MVP:** Full task lifecycle, evidence, comments, multi-reviewer, teams
-     - RRULE input field for custom patterns
-     - Default entity and owner selection
-     - End date picker
-     - Shows last generated date and task count
-   
-   - **Task Detail:**
-     - "Wiederkehrend/Recurring" badge for generated tasks
-     - Tooltip shows source preset name
-   
-   - **Database Migration:**
-     - `c3d4e5f6g7h8_add_recurring_task_fields.py` applied
-
-### ✅ Previously Completed (Sessions 1-5)
-
-- **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
-- **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)
-- **Phase C:** Excel/PDF Export (task list, detail, status summary)
-- **Phase D:** Calendar Sync (iCal feed with secure tokens)
-- **Phase E:** Email Notifications (SMTP/SendGrid, templates, preferences)
-- **Phase F:** Dashboard Charts (Chart.js — status pie, monthly bar, team workload)
-- **Phase G:** Entity Scoping (access levels, hierarchy inheritance)
+- **Phase I:** Archival & Soft-Delete
 - **MVP:** Full task lifecycle, evidence, comments, multi-reviewer, teams
 
 ---
