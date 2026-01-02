@@ -2,7 +2,7 @@
 
 > **Tax Compliance Calendar & Deadline Tracking** — A centralized platform for managing tax compliance deadlines across entities and tax types.
 
-![Version](https://img.shields.io/badge/Version-1.0.0-blue)
+![Version](https://img.shields.io/badge/Version-1.10.0-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?logo=bootstrap)
