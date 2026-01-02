@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-01-02
+
+### 📊 PM-5: Sprint Reports & Analytics
+
+#### Added
+- **Sprint Report Route** (`/projects/<id>/sprints/<sprint_id>/report`):
+  - Complete sprint statistics (total, completed, in-progress, todo issues)
+  - Story points summary with progress percentage
+  - Burndown chart with ideal vs actual lines (Chart.js)
+  - Velocity chart comparing committed vs completed points
+  - Issue breakdown by type and assignee
+  - Completed issues table with details
+
+- **Sprint Report Template** (`report.html`):
+  - Modern Deloitte design with teal header bar
+  - 4 stat cards (Total Issues, Completed, Story Points, Completion %)
+  - Responsive Chart.js burndown chart (300px fixed height)
+  - Velocity bar chart with averages (200px fixed height)
+  - Breakdown cards with Bootstrap badges
+  - Completed issues table with links
+
+- **Velocity Calculation**:
+  - `calculate_velocity_data(project)`: Average velocity from last 10 closed sprints
+  - Average velocity display on sprint list page
+
+- **Sprint List Enhancement**:
+  - Report button (📊) for active and closed sprints
+  - Average velocity display in quick stats
+
+#### Fixed
+- `issue.type` → `issue.issue_type` in templates (correct model attribute)
+- `issue.resolved_at` → `issue.resolution_date` in burndown calculation
+- `IssueStatus.order` → `IssueStatus.sort_order` in sprint board query
+- `issue.assignee.username` → `issue.assignee.name` in sprint board template
+- `projects.kanban_move` → `projects.kanban_move_issue` endpoint name
+- Chart.js container height fixed to prevent auto-resize
+
+---
+
 ## [1.6.0] - 2026-01-02
 
 ### Changed - UI Redesign: Deloitte Design System

@@ -1340,10 +1340,18 @@ def sprint_list(project_id, project=None):
         Sprint.created_at.desc()
     ).all()
     
+    # Calculate average velocity from closed sprints
+    closed_sprints = [s for s in sprints if s.state == 'closed']
+    average_velocity = 0
+    if closed_sprints:
+        total_completed = sum(s.completed_points for s in closed_sprints)
+        average_velocity = round(total_completed / len(closed_sprints), 1)
+    
     return render_template(
         'projects/sprints/list.html',
         project=project,
         sprints=sprints,
+        average_velocity=average_velocity,
         lang=lang
     )
 
@@ -1608,7 +1616,7 @@ def sprint_board(project_id, sprint_id, project=None):
     sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
     
     # Get statuses and issues for this sprint
-    statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.order).all()
+    statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
     
     issues_by_status = {}
     for status in statuses:
@@ -1702,6 +1710,166 @@ def sprint_remove_issue(project_id, sprint_id, project=None):
         'success': True,
         'message': 'Issue aus Sprint entfernt' if lang == 'de' else 'Issue removed from sprint'
     })
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/report')
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_report(project_id, sprint_id, project=None):
+    """Sprint report with burndown chart and statistics"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    # Collect sprint statistics
+    issues = list(sprint.issues)
+    total_issues = len(issues)
+    completed_issues = [i for i in issues if i.status and i.status.is_final]
+    in_progress_issues = [i for i in issues if i.status and i.status.category == 'in_progress']
+    todo_issues = [i for i in issues if i.status and i.status.category == 'todo']
+    
+    total_points = sprint.total_points
+    completed_points = sprint.completed_points
+    
+    # Calculate burndown data
+    burndown_data = calculate_burndown_data(sprint, issues)
+    
+    # Calculate velocity for this sprint and previous sprints
+    velocity_data = calculate_velocity_data(project)
+    
+    # Issue breakdown by type
+    issues_by_type = {}
+    for issue in issues:
+        type_name = issue.issue_type.get_name(lang) if issue.issue_type else 'Unknown'
+        if type_name not in issues_by_type:
+            issues_by_type[type_name] = {'total': 0, 'completed': 0, 'color': issue.issue_type.color if issue.issue_type else '#666'}
+        issues_by_type[type_name]['total'] += 1
+        if issue.status and issue.status.is_final:
+            issues_by_type[type_name]['completed'] += 1
+    
+    # Issue breakdown by assignee
+    issues_by_assignee = {}
+    for issue in issues:
+        assignee_name = issue.assignee.name if issue.assignee else ('Nicht zugewiesen' if lang == 'de' else 'Unassigned')
+        if assignee_name not in issues_by_assignee:
+            issues_by_assignee[assignee_name] = {'total': 0, 'completed': 0, 'points': 0}
+        issues_by_assignee[assignee_name]['total'] += 1
+        issues_by_assignee[assignee_name]['points'] += issue.story_points or 0
+        if issue.status and issue.status.is_final:
+            issues_by_assignee[assignee_name]['completed'] += 1
+    
+    return render_template(
+        'projects/sprints/report.html',
+        project=project,
+        sprint=sprint,
+        total_issues=total_issues,
+        completed_issues=len(completed_issues),
+        in_progress_issues=len(in_progress_issues),
+        todo_issues=len(todo_issues),
+        total_points=total_points,
+        completed_points=completed_points,
+        burndown_data=burndown_data,
+        velocity_data=velocity_data,
+        issues_by_type=issues_by_type,
+        issues_by_assignee=issues_by_assignee,
+        completed_issue_list=completed_issues,
+        lang=lang
+    )
+
+
+def calculate_burndown_data(sprint, issues):
+    """Calculate burndown chart data for a sprint"""
+    from datetime import timedelta
+    
+    if not sprint.start_date or not sprint.end_date:
+        return {'labels': [], 'ideal': [], 'actual': [], 'remaining': []}
+    
+    start = sprint.start_date
+    end = sprint.end_date
+    days = (end - start).days + 1
+    
+    if days <= 0:
+        return {'labels': [], 'ideal': [], 'actual': [], 'remaining': []}
+    
+    # Total story points at sprint start
+    total_points = sum(i.story_points or 0 for i in issues)
+    
+    # Ideal burndown (linear)
+    ideal = []
+    labels = []
+    for i in range(days):
+        current_date = start + timedelta(days=i)
+        labels.append(current_date.strftime('%d.%m'))
+        ideal.append(round(total_points - (total_points / (days - 1) * i) if days > 1 else 0, 1))
+    
+    # Actual burndown based on when issues were completed
+    actual = []
+    today = datetime.now().date()
+    
+    for i in range(days):
+        current_date = start + timedelta(days=i)
+        
+        if current_date > today:
+            # Future dates - no actual data
+            actual.append(None)
+        else:
+            # Count remaining points as of this date
+            remaining = 0
+            for issue in issues:
+                points = issue.story_points or 0
+                # Issue is remaining if not completed or completed after this date
+                if issue.status and issue.status.is_final:
+                    # Check if completed after this date
+                    if issue.resolution_date and issue.resolution_date.date() > current_date:
+                        remaining += points
+                    elif not issue.resolution_date:
+                        # No resolution_date but marked done - assume completed at sprint end
+                        pass  # Count as completed
+                else:
+                    remaining += points
+            actual.append(remaining)
+    
+    return {
+        'labels': labels,
+        'ideal': ideal,
+        'actual': actual
+    }
+
+
+def calculate_velocity_data(project):
+    """Calculate velocity data for closed sprints"""
+    closed_sprints = Sprint.query.filter_by(
+        project_id=project.id,
+        state='closed'
+    ).order_by(Sprint.completed_at.desc()).limit(10).all()
+    
+    # Reverse to show chronologically
+    closed_sprints = list(reversed(closed_sprints))
+    
+    velocity_data = {
+        'labels': [],
+        'committed': [],
+        'completed': [],
+        'average': 0
+    }
+    
+    total_completed = 0
+    for sprint in closed_sprints:
+        velocity_data['labels'].append(sprint.name)
+        committed = sum(i.story_points or 0 for i in sprint.issues)
+        completed = sprint.completed_points
+        velocity_data['committed'].append(committed)
+        velocity_data['completed'].append(completed)
+        total_completed += completed
+    
+    if closed_sprints:
+        velocity_data['average'] = round(total_completed / len(closed_sprints), 1)
+    
+    return velocity_data
 
 
 # ============================================================================

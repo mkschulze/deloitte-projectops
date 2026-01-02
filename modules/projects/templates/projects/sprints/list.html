@@ -87,13 +87,11 @@
             <div class="col-6 col-md-3">
                 <div class="quick-stat-card">
                     <div class="quick-stat-icon bg-warning bg-opacity-10 text-warning">
-                        <i class="bi bi-lightning-fill"></i>
+                        <i class="bi bi-speedometer2"></i>
                     </div>
                     <div class="quick-stat-content">
-                        {% set total_sp = 0 %}
-                        {% for s in active_sprints %}{% set total_sp = total_sp + s.total_points %}{% endfor %}
-                        <div class="quick-stat-value">{{ total_sp }}</div>
-                        <div class="quick-stat-label">{{ 'Story Points aktiv' if lang == 'de' else 'Active SP' }}</div>
+                        <div class="quick-stat-value">{{ average_velocity }}</div>
+                        <div class="quick-stat-label">{{ 'Ø Velocity' if lang == 'de' else 'Avg Velocity' }}</div>
                     </div>
                 </div>
             </div>
@@ -167,6 +165,10 @@
                         <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-deloitte-green">
                             <i class="bi bi-kanban me-1"></i>
                             Sprint Board
+                        </a>
+                        <a href="{{ url_for('projects.sprint_report', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-graph-up me-1"></i>
+                            {{ 'Report' if lang == 'de' else 'Report' }}
                         </a>
                         <a href="{{ url_for('projects.sprint_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-outline-secondary">
                             <i class="bi bi-pencil me-1"></i>
@@ -310,6 +312,9 @@
                             </td>
                             <td>
                                 <div class="d-flex gap-1 justify-content-end">
+                                    <a href="{{ url_for('projects.sprint_report', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-primary" title="{{ 'Report' if lang == 'de' else 'Report' }}">
+                                        <i class="bi bi-graph-up"></i>
+                                    </a>
                                     <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary" title="{{ 'Ansehen' if lang == 'de' else 'View' }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
