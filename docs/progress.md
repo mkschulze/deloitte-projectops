@@ -2,10 +2,23 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0/PM-1/PM-2/PM-3/PM-4 (Project Management)
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-7 + UI Redesign
 
-**Last Updated:** 2026-01-02 (Session 9)  
-**Version:** 1.5.0
+**Last Updated:** 2026-01-02 (Session 10)  
+**Version:** 1.6.0
+
+---
+
+## Recent Releases
+
+### v1.6.0 - UI Redesign: Deloitte Design System
+
+- **Projekt Detail Seite**: Hero-Header, Stat-Cards, Action-Cards, Team-Sidebar
+- **Issue-Liste**: Blauer Gradient-Hero, Quick-Stats, gestylte Tabelle
+- **Sprint-Übersicht**: Teal Gradient-Hero, aktiver Sprint als große Card
+- **Backlog**: Grüner Gradient-Hero, schwebende Bulk-Actions-Leiste
+- **Kanban Board**: Light-Blue Gradient-Hero, moderne Spalten, Hover-Animationen
+- **Bug-Fix**: Backlog Links (`issue.key` statt `issue.issue_key`)
 
 ---
 

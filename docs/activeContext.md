@@ -8,96 +8,60 @@
 
 ## Session Information
 
-**Date:** 2026-01-02 (Session 9)  
-**Last Action:** Completed Phase PM-3 — Kanban Board  
-**Status:** MVP Complete + Phase A-J + PM-0/PM-1/PM-2/PM-3 — Vollständiges Kanban Board mit Drag & Drop
-**Version:** 1.5.0
+**Date:** 2026-01-02 (Session 10)  
+**Last Action:** Completed UI Redesign aller Projekt-Modul-Seiten im Deloitte Design System  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-7 + UI Redesign
+**Version:** 1.6.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 9)
+### ✅ What Was Accomplished (Session 10)
 
-1. **Phase PM-3: Kanban Board** (Complete)
+1. **UI Redesign: Deloitte Design System** (Complete)
 
-   #### Kanban Board Routes (modules/projects/routes.py)
-   - `kanban_board(project_id)` — Hauptansicht mit Status-Spalten
-   - `kanban_move_issue(project_id)` — JSON API für Drag & Drop
-   - `kanban_quick_create(project_id)` — JSON API für Inline-Erstellung
+   #### Projekt Detail Seite (`/projects/<id>`)
+   - Hero-Header mit schwarzem/grünem Gradient
+   - 4 Statistik-Karten (Issues, Sprints, Team, Offene Issues)
+   - 6 Action-Karten (Issue List, Kanban Board, Sprints, Backlog, Einstellungen, Archiv)
+   - Team-Sidebar mit Avatar-Initialen und Rollen
+   - Responsive Grid-Layout
    
-   #### Board Template (board.html)
-   - Responsive Spalten-Layout (min/max 300px pro Spalte)
-   - Horizontales Scrollen für viele Spalten
-   - Status-Farben als Spalten-Header-Border
-   - Issue-Count Badge pro Spalte
+   #### Issue-Liste (`/projects/<id>/issues`)
+   - Blauer Gradient-Hero (#0076A8 → #004165 → #000)
+   - Quick-Stats (Offen, In Bearbeitung, Erledigt, Überfällig)
+   - Moderne Filter-Card mit Type/Status/Priority/Assignee/Sprint
+   - Gestylte Tabelle mit Type-Icons und Priority-Badges
+   - View-Switcher (Liste/Board)
    
-   #### Issue Cards
-   - Type-Icon mit Farbe
-   - Issue-Key (z.B. TAX-1)
-   - Summary als Link zur Detail-Seite
-   - Priorität als farbiger Streifen links
-   - Bearbeiter-Avatar (Initialen)
+   #### Sprint-Übersicht (`/projects/<id>/sprints`)
+   - Teal Gradient-Hero (#00A3E0 → #0076A8 → #000)
+   - Stat-Cards für alle Sprint-Metriken
+   - Aktiver Sprint als große Card mit Fortschrittsbalken
+   - Geplante Sprints als Grid mit Grün-Buttons
+   - Abgeschlossene Sprints als kompakte Tabelle
    
-   #### Drag & Drop (SortableJS)
-   - CDN-Integration
-   - Gruppe "issues" für Spalten-übergreifendes Ziehen
-   - Ghost/Chosen/Drag Styles
-   - Position-Tracking bei Move
-   - Toast-Feedback für erfolgreiche Moves
-   - Fehlerbehandlung mit Auto-Reload
+   #### Backlog (`/projects/<id>/backlog`)
+   - Grüner Gradient-Hero (#26890D → #86BC25 → #000)
+   - Schwebende Bulk-Actions-Leiste (fixed bottom)
+   - Drag & Drop Neuordnung (SortableJS)
+   - Issue-Cards mit Type-Icons und Priority-Streifen
+   - Bug-Fix: `issue.issue_key` → `issue.key`
    
-   #### Filter & Suche
-   - Typ-Filter (Dropdown)
-   - Bearbeiter-Filter
-   - Priorität-Filter
-   - Freitext-Suche (Key + Summary)
-   - Client-seitige Filterung ohne Reload
-   
-   #### Quick Create
-   - Input-Feld am Ende jeder Spalte
-   - Enter zum Erstellen
-   - Automatisch in der jeweiligen Spalte
-   - Toast-Feedback + Reload
-   
-   #### Navigation
-   - View-Switcher (Liste/Board) in Issue-List
-   - View-Switcher (Liste/Board) in Board
-   - Kanban Board Button in Project Detail aktiviert
-   
-   #### Zusätzliche Dateien
-   - `_macros.html` — Wiederverwendbare Template-Makros
-     - render_issue_type_icon(issue_type)
-     - render_issue_priority_badge(priority)
-     - render_issue_status_badge(status)
-     - render_user_avatar(user, size)
-     - render_project_icon(project, size)
+   #### Kanban Board (`/projects/<id>/board`)
+   - Light-Blue Gradient-Hero (#62B5E5 → #0076A8 → #000)
+   - Moderne Spalten mit farbigen Status-Punkten
+   - Issue-Cards mit Hover-Animationen (scale, shadow)
+   - Quick-Create Input am Ende jeder Spalte
+   - Responsive horizontales Scrollen
 
-2. **Phase PM-2: Flexibles Issue-Management** (Complete)
-
-   #### Flexible Architektur (statt fest kodierter Enums)
-   - `ProjectMethodology` enum: scrum, kanban, waterfall, custom
-   - `StatusCategory` enum für Metriken: todo, in_progress, done
-   - Project erweitert mit `methodology` und `terminology` (JSON)
-   - `Project.get_term()` für anpassbare Terminologie pro Projekt
-   
-   #### Konfigurierbare Issue-Typen (IssueType Model)
-   - Pro Projekt konfigurierbar (nicht global)
-   - name, name_en, icon, color, hierarchy_level
-   - can_have_children, is_subtask, is_default, sort_order
-   - Default-Sets pro Methodologie (Scrum: Epic/Story/Task/Bug/SubTask)
-   
-   #### Konfigurierbare Workflows (IssueStatus Model)
-   - Pro Projekt konfigurierbar
-   - name, name_en, category, color
-   - is_initial (Startstatus), is_final (Endstatus)
-   - allowed_transitions für Workflow-Einschränkungen
-   - Default-Sets pro Methodologie
-   
-   #### Issue Model (Vollständig)
-   - Auto-Key Generation (TAX-1, TAX-2, etc.)
-   - Hierarchie via parent_id (für Sub-Tasks)
-   - Priority (1-5 mit Icons)
+2. **Design Patterns etabliert**
+   - Einheitliches Hero-Header Pattern mit Farbvarianten
+   - Stat-Card Pattern für Metriken
+   - Action-Card Pattern für Navigation
+   - Floating Action Bar für Bulk-Operations
+   - Deloitte Farbpalette konsistent angewendet
    - Time Tracking (original_estimate, time_spent, remaining_estimate)
    - Story Points für Scrum
    - Sprint-Zuordnung

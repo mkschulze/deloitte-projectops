@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-01-02
+
+### Changed - UI Redesign: Deloitte Design System
+
+- **Projekt Detail Seite** (`/projects/<id>`): Komplett neu gestaltet mit schwarzem/grünem Gradient-Hero, 4 Statistik-Karten, 6 Action-Karten und Team-Sidebar mit Avataren
+- **Issue-Liste** (`/projects/<id>/issues`): Modernes Design mit blauem Gradient-Hero (#0076A8 → #004165), Quick-Stats und gestylter Tabelle mit Type-Badges
+- **Sprint-Übersicht** (`/projects/<id>/sprints`): Teal Gradient-Hero (#00A3E0 → #0076A8), aktiver Sprint als große Karte mit Fortschrittsbalken
+- **Backlog** (`/projects/<id>/backlog`): Grüner Gradient-Hero (#26890D → #86BC25), schwebende Bulk-Actions-Leiste, Drag-Drop
+- **Kanban Board** (`/projects/<id>/board`): Light-Blue Gradient-Hero (#62B5E5 → #0076A8), moderne Spalten mit Status-Punkten, Karten-Animationen
+
+### Fixed
+
+- **Backlog Links**: Issue-Links verwenden jetzt `issue.key` statt `issue.issue_key` (Property-Name korrigiert)
+
+---
+
 ## [1.5.0] - 2026-01-02
 
 ### ✅ PM-7: Issue Approval Workflow
