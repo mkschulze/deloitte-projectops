@@ -3,31 +3,33 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+            <li class="breadcrumb-item active">Issues</li>
+        </ol>
+    </nav>
+
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
-                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
-                    <li class="breadcrumb-item active">Issues</li>
-                </ol>
-            </nav>
-            <h2 class="mb-0">
-                <i class="bi bi-list-task me-2"></i>
-                {{ 'Issues' if lang == 'en' else 'Issues' }}
+            <h2 class="mb-1">
+                <i class="bi bi-list-task me-2"></i>{{ project.get_name(lang) }} - Issues
                 <small class="text-muted">({{ issues|length }})</small>
             </h2>
+            <p class="text-muted mb-0">{{ 'Alle Projekt-Issues' if lang == 'de' else 'All project issues' }}</p>
         </div>
         <div class="d-flex gap-2">
             <!-- View Switcher -->
-            <div class="btn-group" role="group">
+            <div class="btn-group view-switcher" role="group">
                 <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
-                   class="btn btn-outline-secondary active" title="{{ 'List View' if lang == 'en' else 'Listenansicht' }}">
+                   class="btn btn-outline-secondary active" title="{{ 'Listenansicht' if lang == 'de' else 'List View' }}">
                     <i class="bi bi-list-ul"></i>
                 </a>
                 <a href="{{ url_for('projects.kanban_board', project_id=project.id) }}" 
-                   class="btn btn-outline-secondary" title="{{ 'Board View' if lang == 'en' else 'Board-Ansicht' }}">
+                   class="btn btn-outline-secondary" title="{{ 'Board-Ansicht' if lang == 'de' else 'Board View' }}">
                     <i class="bi bi-kanban"></i>
                 </a>
                 <a href="{{ url_for('projects.backlog', project_id=project.id) }}" 
@@ -36,9 +38,9 @@
                 </a>
             </div>
             
+            <!-- Create Issue -->
             <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-success">
-                <i class="bi bi-plus-lg me-1"></i>
-                {{ 'New Issue' if lang == 'en' else 'Neues Issue' }}
+                <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
             </a>
         </div>
     </div>

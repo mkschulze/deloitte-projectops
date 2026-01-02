@@ -116,17 +116,282 @@
             </div>
             {% endif %}
 
-            <!-- Activity / Comments (placeholder for future) -->
-            <div class="card">
-                <div class="card-header bg-white">
+            <!-- Activity / Comments -->
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="bi bi-chat-dots me-2"></i>
-                        {{ 'Activity' if lang == 'en' else 'Aktivität' }}
+                        {{ 'Comments' if lang == 'en' else 'Kommentare' }}
+                        <span class="badge bg-secondary ms-2">{{ issue.comments.count() }}</span>
                     </h5>
                 </div>
-                <div class="card-body text-muted text-center py-5">
-                    <i class="bi bi-clock-history display-4 d-block mb-2"></i>
-                    {{ 'Activity feed coming soon...' if lang == 'en' else 'Aktivitäts-Feed kommt bald...' }}
+                <div class="card-body">
+                    <!-- Add Comment Form -->
+                    <form method="post" action="{{ url_for('projects.comment_add', project_id=project.id, issue_key=issue.key) }}" class="mb-4">
+                        <div class="d-flex gap-2">
+                            <span class="avatar-circle flex-shrink-0" style="background-color: #86BC25;">
+                                {{ current_user.name[:1].upper() }}
+                            </span>
+                            <div class="flex-grow-1">
+                                <textarea name="content" class="form-control" rows="2" placeholder="{{ 'Add a comment...' if lang == 'en' else 'Kommentar hinzufügen...' }}" required></textarea>
+                                <div class="mt-2">
+                                    <button type="submit" class="btn btn-sm btn-deloitte-green">
+                                        <i class="bi bi-send me-1"></i>{{ 'Send' if lang == 'en' else 'Senden' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Comments List -->
+                    {% for comment in issue.comments.order_by(db.desc('created_at')).all() %}
+                    <div class="d-flex gap-2 mb-3 pb-3 {{ 'border-bottom' if not loop.last else '' }}">
+                        <span class="avatar-circle flex-shrink-0" style="background-color: #0076A8;">
+                            {{ comment.author.name[:1].upper() if comment.author else '?' }}
+                        </span>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ comment.author.name if comment.author else 'Unbekannt' }}</strong>
+                                    <span class="text-muted small ms-2">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                                    {% if comment.updated_at and comment.updated_at != comment.created_at %}
+                                    <span class="text-muted small">({{ 'edited' if lang == 'en' else 'bearbeitet' }})</span>
+                                    {% endif %}
+                                </div>
+                                {% if comment.author_id == current_user.id or project.is_admin(current_user) %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <button type="button" class="dropdown-item" onclick="editComment({{ comment.id }})">
+                                                <i class="bi bi-pencil me-2"></i>{{ 'Edit' if lang == 'en' else 'Bearbeiten' }}
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <form method="post" action="{{ url_for('projects.comment_delete', project_id=project.id, issue_key=issue.key, comment_id=comment.id) }}" onsubmit="return confirm('{{ 'Delete comment?' if lang == 'en' else 'Kommentar löschen?' }}')">
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i class="bi bi-trash me-2"></i>{{ 'Delete' if lang == 'en' else 'Löschen' }}
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="comment-content mt-1" id="comment-{{ comment.id }}">{{ comment.content }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-chat-left-text d-block mb-2" style="font-size: 2rem;"></i>
+                        {{ 'No comments yet' if lang == 'en' else 'Noch keine Kommentare' }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Issue Links -->
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-link-45deg me-2"></i>
+                        {{ 'Linked Issues' if lang == 'en' else 'Verknüpfte Issues' }}
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#addLinkForm">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Add Link Form (collapsed) -->
+                    <div class="collapse mb-3" id="addLinkForm">
+                        <form method="post" action="{{ url_for('projects.link_add', project_id=project.id, issue_key=issue.key) }}" class="row g-2 align-items-end">
+                            <div class="col-auto">
+                                <select name="link_type" class="form-select form-select-sm" required>
+                                    <option value="blocks">{{ 'blocks' if lang == 'en' else 'blockiert' }}</option>
+                                    <option value="is_blocked_by">{{ 'is blocked by' if lang == 'en' else 'wird blockiert von' }}</option>
+                                    <option value="relates_to">{{ 'relates to' if lang == 'en' else 'bezieht sich auf' }}</option>
+                                    <option value="duplicates">{{ 'duplicates' if lang == 'en' else 'dupliziert' }}</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <input type="text" name="target_key" class="form-control form-control-sm" placeholder="{{ project.key }}-..." required style="width: 120px;">
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-deloitte-green">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Links List -->
+                    {% set outward_links = issue.outward_links.all() %}
+                    {% set inward_links = issue.inward_links.all() %}
+                    {% if outward_links or inward_links %}
+                        {% for link in outward_links %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="text-muted small">{{ link.get_link_display(lang) }}</span>
+                                <a href="{{ url_for('projects.issue_detail', project_id=link.target_issue.project_id, issue_key=link.target_issue.key) }}" class="ms-2">
+                                    <i class="{{ link.target_issue.issue_type.icon }}" style="color: {{ link.target_issue.issue_type.color }};"></i>
+                                    {{ link.target_issue.key }}
+                                </a>
+                                <span class="text-muted small">{{ link.target_issue.summary[:30] }}{% if link.target_issue.summary|length > 30 %}...{% endif %}</span>
+                            </div>
+                            <form method="post" action="{{ url_for('projects.link_delete', project_id=project.id, issue_key=issue.key, link_id=link.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ 'Remove' if lang == 'en' else 'Entfernen' }}">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                        {% for link in inward_links %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="text-muted small">{{ 'is ' + link.get_link_display(lang) if lang == 'en' else 'wird ' + link.get_link_display(lang) }}</span>
+                                <a href="{{ url_for('projects.issue_detail', project_id=link.source_issue.project_id, issue_key=link.source_issue.key) }}" class="ms-2">
+                                    <i class="{{ link.source_issue.issue_type.icon }}" style="color: {{ link.source_issue.issue_type.color }};"></i>
+                                    {{ link.source_issue.key }}
+                                </a>
+                                <span class="text-muted small">{{ link.source_issue.summary[:30] }}{% if link.source_issue.summary|length > 30 %}...{% endif %}</span>
+                            </div>
+                            <form method="post" action="{{ url_for('projects.link_delete', project_id=project.id, issue_key=issue.key, link_id=link.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ 'Remove' if lang == 'en' else 'Entfernen' }}">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-2">
+                        <small>{{ 'No linked issues' if lang == 'en' else 'Keine verknüpften Issues' }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Attachments -->
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-paperclip me-2"></i>
+                        {{ 'Attachments' if lang == 'en' else 'Anhänge' }}
+                        <span class="badge bg-secondary ms-2">{{ issue.attachments.count() }}</span>
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#uploadForm">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Upload Form (collapsed) -->
+                    <div class="collapse mb-3" id="uploadForm">
+                        <form method="post" action="{{ url_for('projects.attachment_upload', project_id=project.id, issue_key=issue.key) }}" enctype="multipart/form-data">
+                            <div class="input-group input-group-sm">
+                                <input type="file" name="file" class="form-control" required>
+                                <button type="submit" class="btn btn-deloitte-green">
+                                    <i class="bi bi-upload"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Max. 10 MB. Erlaubt: PDF, Bilder, Office, ZIP</div>
+                        </form>
+                    </div>
+                    
+                    <!-- Attachments List -->
+                    {% for att in issue.attachments.all() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 {{ 'pb-2 border-bottom' if not loop.last else '' }}">
+                        <div class="d-flex align-items-center">
+                            <i class="{{ att.icon }} me-2 text-muted"></i>
+                            <div>
+                                <a href="{{ url_for('projects.attachment_download', project_id=project.id, issue_key=issue.key, attachment_id=att.id) }}" class="text-decoration-none">
+                                    {{ att.filename }}
+                                </a>
+                                <div class="text-muted small">
+                                    {{ att.filesize_display }} • {{ att.uploaded_by.name if att.uploaded_by else 'Unbekannt' }} • {{ att.uploaded_at.strftime('%d.%m.%Y') }}
+                                </div>
+                            </div>
+                        </div>
+                        {% if att.uploaded_by_id == current_user.id or project.is_admin(current_user) %}
+                        <form method="post" action="{{ url_for('projects.attachment_delete', project_id=project.id, issue_key=issue.key, attachment_id=att.id) }}" onsubmit="return confirm('{{ 'Delete file?' if lang == 'en' else 'Datei löschen?' }}')">
+                            <button type="submit" class="btn btn-sm btn-link text-danger p-0">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-2">
+                        <small>{{ 'No attachments' if lang == 'en' else 'Keine Anhänge' }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Worklog / Time Tracking -->
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        {{ 'Work Log' if lang == 'en' else 'Arbeitsprotokoll' }}
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#logTimeForm">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Log Time Form (collapsed) -->
+                    <div class="collapse mb-3" id="logTimeForm">
+                        <form method="post" action="{{ url_for('projects.worklog_add', project_id=project.id, issue_key=issue.key) }}">
+                            <div class="row g-2 mb-2">
+                                <div class="col-4">
+                                    <input type="text" name="time_spent" class="form-control form-control-sm" placeholder="2h 30m" required>
+                                </div>
+                                <div class="col-5">
+                                    <input type="date" name="work_date" class="form-control form-control-sm" value="{{ now.strftime('%Y-%m-%d') if now else '' }}">
+                                </div>
+                                <div class="col-3">
+                                    <button type="submit" class="btn btn-sm btn-deloitte-green w-100">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea name="description" class="form-control form-control-sm" rows="2" placeholder="{{ 'What did you work on?' if lang == 'en' else 'Woran haben Sie gearbeitet?' }}"></textarea>
+                        </form>
+                    </div>
+                    
+                    <!-- Worklog Entries -->
+                    {% for wl in issue.worklogs.order_by(db.desc('work_date')).limit(5).all() %}
+                    <div class="d-flex justify-content-between align-items-start mb-2 {{ 'pb-2 border-bottom' if not loop.last else '' }}">
+                        <div>
+                            <strong>{{ wl.time_spent_display }}</strong>
+                            <span class="text-muted small ms-2">{{ wl.author.name if wl.author else 'Unbekannt' }} • {{ wl.work_date.strftime('%d.%m.%Y') }}</span>
+                            {% if wl.description %}
+                            <div class="text-muted small">{{ wl.description[:100] }}{% if wl.description|length > 100 %}...{% endif %}</div>
+                            {% endif %}
+                        </div>
+                        {% if wl.author_id == current_user.id or project.is_admin(current_user) %}
+                        <form method="post" action="{{ url_for('projects.worklog_delete', project_id=project.id, issue_key=issue.key, worklog_id=wl.id) }}" onsubmit="return confirm('{{ 'Delete entry?' if lang == 'en' else 'Eintrag löschen?' }}')">
+                            <button type="submit" class="btn btn-sm btn-link text-danger p-0">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-2">
+                        <small>{{ 'No time logged' if lang == 'en' else 'Keine Zeit erfasst' }}</small>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if issue.time_spent %}
+                    <div class="mt-3 pt-2 border-top">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">{{ 'Total logged' if lang == 'en' else 'Gesamt erfasst' }}:</span>
+                            <strong>{{ issue.time_spent_display }}</strong>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -150,6 +415,141 @@
                         </form>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+
+            <!-- Reviewers / Approval Workflow -->
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check2-square me-2"></i>
+                        {{ 'Reviewers' if lang == 'en' else 'Freigabe' }}
+                    </h5>
+                    {% if project.is_admin(current_user) or issue.reporter_id == current_user.id %}
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#addReviewerForm">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <!-- Add Reviewer Form (collapsed) -->
+                    {% if project.is_admin(current_user) or issue.reporter_id == current_user.id %}
+                    {% set existing_reviewer_ids = issue.reviewers.all()|map(attribute='user_id')|list %}
+                    <div class="collapse mb-3" id="addReviewerForm">
+                        <form method="post" action="{{ url_for('projects.issue_reviewer_add', project_id=project.id, issue_key=issue.key) }}" class="row g-2 align-items-end">
+                            <div class="col">
+                                <select name="user_id" class="form-select form-select-sm" required>
+                                    <option value="">{{ 'Select reviewer...' if lang == 'en' else 'Reviewer wählen...' }}</option>
+                                    {% for member in project.members %}
+                                    {% if member.user_id not in existing_reviewer_ids %}
+                                    <option value="{{ member.user_id }}">{{ member.user.name if member.user else 'Unknown' }}</option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-deloitte-green">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                    
+                    {% set approval_status = issue.get_approval_status() %}
+                    
+                    <!-- Approval Progress Bar -->
+                    {% if approval_status.total > 0 %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>{{ 'Approval Progress' if lang == 'en' else 'Freigabefortschritt' }}</span>
+                            <span>{{ approval_status.approved_count }}/{{ approval_status.total }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            {% if approval_status.is_rejected %}
+                            <div class="progress-bar bg-danger" style="width: 100%;"></div>
+                            {% else %}
+                            <div class="progress-bar bg-success" style="width: {{ approval_status.progress_percent }}%;"></div>
+                            {% endif %}
+                        </div>
+                        {% if approval_status.is_complete %}
+                        <div class="text-success small mt-1">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {{ 'All reviewers approved' if lang == 'en' else 'Alle Reviewer haben genehmigt' }}
+                        </div>
+                        {% elif approval_status.is_rejected %}
+                        <div class="text-danger small mt-1">
+                            <i class="bi bi-x-circle me-1"></i>
+                            {{ 'Issue was rejected' if lang == 'en' else 'Issue wurde abgelehnt' }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Reviewer List -->
+                    {% for reviewer in issue.reviewers.order_by('order').all() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 {{ 'border-bottom' if not loop.last else '' }}">
+                        <div class="d-flex align-items-center">
+                            <span class="me-2">
+                                {% if reviewer.has_approved %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                {% elif reviewer.has_rejected %}
+                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                {% else %}
+                                <i class="bi bi-circle text-secondary"></i>
+                                {% endif %}
+                            </span>
+                            <span class="avatar-circle me-2" style="background-color: #0076A8; width: 24px; height: 24px; font-size: 0.7rem;">
+                                {{ reviewer.user.name[:1].upper() if reviewer.user else '?' }}
+                            </span>
+                            <span class="{{ 'text-decoration-line-through text-muted' if reviewer.has_rejected else '' }}">
+                                {{ reviewer.user.name if reviewer.user else 'Unbekannt' }}
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <!-- Show approval/rejection timestamp if available -->
+                            {% if reviewer.has_approved %}
+                            <small class="text-muted" title="{{ reviewer.approved_at.strftime('%d.%m.%Y %H:%M') if reviewer.approved_at else '' }}">
+                                <i class="bi bi-check"></i>
+                            </small>
+                            {% elif reviewer.has_rejected %}
+                            <small class="text-danger" title="{{ reviewer.rejection_note }}" data-bs-toggle="tooltip">
+                                <i class="bi bi-info-circle"></i>
+                            </small>
+                            {% endif %}
+                            
+                            <!-- Remove button for admins/reporter -->
+                            {% if project.is_admin(current_user) or issue.reporter_id == current_user.id %}
+                            <form method="post" action="{{ url_for('projects.issue_reviewer_remove', project_id=project.id, issue_key=issue.key, reviewer_id=reviewer.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ 'Remove' if lang == 'en' else 'Entfernen' }}">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-2">
+                        <small>{{ 'No reviewers assigned' if lang == 'en' else 'Keine Reviewer zugewiesen' }}</small>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Approval Actions for Current User -->
+                    {% set review_check = issue.can_user_review(current_user) %}
+                    {% if review_check[0] %}
+                    <hr class="my-3">
+                    <div class="d-flex gap-2">
+                        <form method="post" action="{{ url_for('projects.issue_approve', project_id=project.id, issue_key=issue.key) }}" class="flex-grow-1">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {{ 'Approve' if lang == 'en' else 'Genehmigen' }}
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -372,4 +772,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for('projects.issue_reject', project_id=project.id, issue_key=issue.key) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectModalLabel">
+                        <i class="bi bi-x-circle text-danger me-2"></i>
+                        {{ 'Reject Issue' if lang == 'en' else 'Issue ablehnen' }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejection_note" class="form-label">
+                            {{ 'Reason for rejection' if lang == 'en' else 'Ablehnungsgrund' }} <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="note" id="rejection_note" class="form-control" rows="3" required 
+                            placeholder="{{ 'Please explain why you are rejecting this issue...' if lang == 'en' else 'Bitte erklären Sie, warum Sie dieses Issue ablehnen...' }}"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ 'Cancel' if lang == 'en' else 'Abbrechen' }}
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-lg me-1"></i>
+                        {{ 'Reject' if lang == 'en' else 'Ablehnen' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

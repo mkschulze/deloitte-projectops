@@ -134,6 +134,11 @@ class Project(db.Model):
         role = self.get_member_role(user)
         return role in ['admin', 'lead']
     
+    def is_admin(self, user):
+        """Check if user is admin/lead for this project"""
+        role = self.get_member_role(user)
+        return role in ['admin', 'lead']
+    
     def can_user_manage_issues(self, user):
         """Check if user can create/edit issues"""
         role = self.get_member_role(user)
@@ -438,7 +443,56 @@ class Issue(db.Model):
     parent = db.relationship('Issue', remote_side=[id], backref='children')
     assignee = db.relationship('User', foreign_keys=[assignee_id], backref='assigned_issues')
     reporter = db.relationship('User', foreign_keys=[reporter_id], backref='reported_issues')
+    reviewers = db.relationship('IssueReviewer', back_populates='issue', lazy='dynamic', cascade='all, delete-orphan')
     # sprint relationship will be added when Sprint model is created
+    
+    def get_approval_count(self):
+        """Get approval count tuple (approved, total)"""
+        total = self.reviewers.count()
+        approved = self.reviewers.filter_by(has_approved=True).count()
+        return (approved, total)
+    
+    def get_approval_status(self):
+        """Get detailed approval status"""
+        reviewers_list = self.reviewers.all()
+        total = len(reviewers_list)
+        approved = [r for r in reviewers_list if r.has_approved]
+        rejected = [r for r in reviewers_list if r.has_rejected]
+        pending = [r for r in reviewers_list if not r.has_approved and not r.has_rejected]
+        
+        return {
+            'total': total,
+            'approved_count': len(approved),
+            'rejected_count': len(rejected),
+            'pending_count': len(pending),
+            'is_complete': len(approved) == total and total > 0,
+            'is_rejected': len(rejected) > 0,
+            'progress_percent': int((len(approved) / total * 100)) if total > 0 else 0,
+            'pending_reviewers': [r.user for r in pending],
+            'approved_reviewers': [r.user for r in approved],
+            'rejected_reviewers': [r.user for r in rejected]
+        }
+    
+    def requires_review(self):
+        """Check if this issue requires review (has reviewers assigned)"""
+        return self.reviewers.count() > 0
+    
+    def can_user_review(self, user):
+        """Check if user can review this issue"""
+        if not self.status:
+            return False, "No status set"
+        
+        # Check if user is a reviewer
+        reviewer = self.reviewers.filter_by(user_id=user.id).first()
+        if not reviewer:
+            return False, "You are not a reviewer for this issue"
+        
+        if reviewer.has_approved:
+            return False, "You have already approved this issue"
+        if reviewer.has_rejected:
+            return False, "You have already rejected this issue"
+        
+        return True, "Can review"
     
     def get_priority_display(self, lang='de'):
         """Get priority display name"""
@@ -506,6 +560,297 @@ class Issue(db.Model):
     
     def __repr__(self):
         return f'<Issue {self.key}: {self.summary[:30]}>'
+
+
+# =============================================================================
+# ISSUE COMMENT MODEL
+# =============================================================================
+
+class IssueComment(db.Model):
+    """Comments on issues"""
+    __tablename__ = 'issue_comment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Content (Markdown supported)
+    content = db.Column(db.Text, nullable=False)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    issue = db.relationship('Issue', backref=db.backref('comments', lazy='dynamic', order_by='IssueComment.created_at.desc()'))
+    author = db.relationship('User', backref='issue_comments')
+    
+    def __repr__(self):
+        return f'<IssueComment {self.id} on {self.issue_id} by User {self.author_id}>'
+
+
+# =============================================================================
+# ISSUE ATTACHMENT MODEL
+# =============================================================================
+
+class IssueAttachment(db.Model):
+    """File attachments on issues"""
+    __tablename__ = 'issue_attachment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # File info
+    filename = db.Column(db.String(255), nullable=False)  # Original filename
+    filepath = db.Column(db.String(500), nullable=False)  # Server path
+    filesize = db.Column(db.Integer)  # Size in bytes
+    mimetype = db.Column(db.String(100))  # MIME type
+    
+    # Timestamps
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    issue = db.relationship('Issue', backref=db.backref('attachments', lazy='dynamic', order_by='IssueAttachment.uploaded_at.desc()'))
+    uploaded_by = db.relationship('User', backref='uploaded_attachments')
+    
+    @property
+    def filesize_display(self):
+        """Format file size for display"""
+        if not self.filesize:
+            return '-'
+        if self.filesize < 1024:
+            return f'{self.filesize} B'
+        elif self.filesize < 1024 * 1024:
+            return f'{self.filesize / 1024:.1f} KB'
+        else:
+            return f'{self.filesize / (1024 * 1024):.1f} MB'
+    
+    @property
+    def is_image(self):
+        """Check if attachment is an image"""
+        return self.mimetype and self.mimetype.startswith('image/')
+    
+    @property
+    def icon(self):
+        """Get icon class based on file type"""
+        if not self.mimetype:
+            return 'bi-file-earmark'
+        if self.mimetype.startswith('image/'):
+            return 'bi-file-earmark-image'
+        elif self.mimetype.startswith('video/'):
+            return 'bi-file-earmark-play'
+        elif self.mimetype == 'application/pdf':
+            return 'bi-file-earmark-pdf'
+        elif 'spreadsheet' in self.mimetype or 'excel' in self.mimetype:
+            return 'bi-file-earmark-excel'
+        elif 'document' in self.mimetype or 'word' in self.mimetype:
+            return 'bi-file-earmark-word'
+        elif 'zip' in self.mimetype or 'compressed' in self.mimetype:
+            return 'bi-file-earmark-zip'
+        elif self.mimetype.startswith('text/'):
+            return 'bi-file-earmark-text'
+        return 'bi-file-earmark'
+    
+    def __repr__(self):
+        return f'<IssueAttachment {self.filename} on Issue {self.issue_id}>'
+
+
+# =============================================================================
+# ISSUE REVIEWER MODEL - Multi-Stage Approval Workflow
+# =============================================================================
+
+class IssueReviewer(db.Model):
+    """Association table for Issue-Reviewer many-to-many with approval tracking"""
+    __tablename__ = 'issue_reviewer'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    order = db.Column(db.Integer, default=1)  # Order in approval chain
+    
+    # Approval tracking
+    has_approved = db.Column(db.Boolean, default=False)
+    approved_at = db.Column(db.DateTime)
+    approval_note = db.Column(db.Text)
+    
+    # Rejection tracking
+    has_rejected = db.Column(db.Boolean, default=False)
+    rejected_at = db.Column(db.DateTime)
+    rejection_note = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    issue = db.relationship('Issue', back_populates='reviewers')
+    user = db.relationship('User', backref='issue_reviewer_assignments')
+    
+    __table_args__ = (
+        db.UniqueConstraint('issue_id', 'user_id', name='unique_issue_reviewer'),
+    )
+    
+    def approve(self, note=None):
+        """Mark this reviewer's approval"""
+        self.has_approved = True
+        self.approved_at = datetime.utcnow()
+        self.approval_note = note
+        self.has_rejected = False
+        self.rejected_at = None
+        self.rejection_note = None
+    
+    def reject(self, note=None):
+        """Mark this reviewer's rejection"""
+        self.has_rejected = True
+        self.rejected_at = datetime.utcnow()
+        self.rejection_note = note
+        self.has_approved = False
+        self.approved_at = None
+        self.approval_note = None
+    
+    def reset(self):
+        """Reset approval/rejection status"""
+        self.has_approved = False
+        self.approved_at = None
+        self.approval_note = None
+        self.has_rejected = False
+        self.rejected_at = None
+        self.rejection_note = None
+    
+    @property
+    def status_display(self):
+        """Get status display"""
+        if self.has_approved:
+            return 'approved'
+        elif self.has_rejected:
+            return 'rejected'
+        return 'pending'
+    
+    def __repr__(self):
+        return f'<IssueReviewer User {self.user_id} on Issue {self.issue_id}>'
+
+
+# =============================================================================
+# ISSUE LINK MODEL
+# =============================================================================
+
+class IssueLinkType(Enum):
+    """Types of issue links"""
+    BLOCKS = 'blocks'           # This issue blocks another
+    IS_BLOCKED_BY = 'is_blocked_by'  # This issue is blocked by another
+    RELATES_TO = 'relates_to'   # Related issues
+    DUPLICATES = 'duplicates'   # This duplicates another
+    IS_DUPLICATED_BY = 'is_duplicated_by'  # Another duplicates this
+    CAUSES = 'causes'           # This issue causes another
+    IS_CAUSED_BY = 'is_caused_by'  # This is caused by another
+    
+    @classmethod
+    def choices(cls):
+        return [(lt.value, lt.name.replace('_', ' ').title()) for lt in cls]
+    
+    @classmethod
+    def get_inverse(cls, link_type):
+        """Get the inverse link type"""
+        inverses = {
+            'blocks': 'is_blocked_by',
+            'is_blocked_by': 'blocks',
+            'duplicates': 'is_duplicated_by',
+            'is_duplicated_by': 'duplicates',
+            'causes': 'is_caused_by',
+            'is_caused_by': 'causes',
+            'relates_to': 'relates_to',  # Symmetric
+        }
+        return inverses.get(link_type, link_type)
+
+
+class IssueLink(db.Model):
+    """Links between issues"""
+    __tablename__ = 'issue_link'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Source issue (the "from" side of the link)
+    source_issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    
+    # Target issue (the "to" side of the link)
+    target_issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    
+    # Link type
+    link_type = db.Column(db.String(50), nullable=False)  # blocks, is_blocked_by, relates_to, duplicates
+    
+    # Who created the link
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    source_issue = db.relationship('Issue', foreign_keys=[source_issue_id], 
+                                    backref=db.backref('outward_links', lazy='dynamic'))
+    target_issue = db.relationship('Issue', foreign_keys=[target_issue_id], 
+                                    backref=db.backref('inward_links', lazy='dynamic'))
+    created_by = db.relationship('User', backref='created_issue_links')
+    
+    def get_link_display(self, lang='de'):
+        """Get display text for link type"""
+        labels = {
+            'blocks': ('blockiert', 'blocks'),
+            'is_blocked_by': ('wird blockiert von', 'is blocked by'),
+            'relates_to': ('bezieht sich auf', 'relates to'),
+            'duplicates': ('dupliziert', 'duplicates'),
+            'is_duplicated_by': ('wird dupliziert von', 'is duplicated by'),
+            'causes': ('verursacht', 'causes'),
+            'is_caused_by': ('wird verursacht von', 'is caused by'),
+        }
+        idx = 0 if lang == 'de' else 1
+        return labels.get(self.link_type, (self.link_type, self.link_type))[idx]
+    
+    def __repr__(self):
+        return f'<IssueLink {self.source_issue_id} {self.link_type} {self.target_issue_id}>'
+
+
+# =============================================================================
+# WORKLOG MODEL (Time tracking)
+# =============================================================================
+
+class Worklog(db.Model):
+    """Time tracking entries for issues"""
+    __tablename__ = 'worklog'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Time logged (in minutes)
+    time_spent = db.Column(db.Integer, nullable=False)
+    
+    # When the work was done
+    work_date = db.Column(db.Date, default=datetime.utcnow)
+    
+    # Description of work done
+    description = db.Column(db.Text)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    issue = db.relationship('Issue', backref=db.backref('worklogs', lazy='dynamic', order_by='Worklog.work_date.desc()'))
+    author = db.relationship('User', backref='worklogs')
+    
+    @property
+    def time_spent_display(self):
+        """Format time spent for display"""
+        if not self.time_spent:
+            return '-'
+        hours = self.time_spent // 60
+        mins = self.time_spent % 60
+        if hours and mins:
+            return f'{hours}h {mins}m'
+        elif hours:
+            return f'{hours}h'
+        else:
+            return f'{mins}m'
+    
+    def __repr__(self):
+        return f'<Worklog {self.time_spent}m on Issue {self.issue_id} by User {self.author_id}>'
 
 
 # =============================================================================

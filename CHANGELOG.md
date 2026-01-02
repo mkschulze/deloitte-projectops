@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-01-02
+
+### ✅ PM-7: Issue Approval Workflow
+
+#### Added
+- **IssueReviewer Model**: Multi-stage approval tracking for project issues
+  - `issue_id`, `user_id`, `order`: Reviewer assignment
+  - `has_approved`, `approved_at`, `approval_note`: Approval tracking
+  - `has_rejected`, `rejected_at`, `rejection_note`: Rejection tracking
+  - `approve()`, `reject()`, `reset()` methods
+
+- **Issue Approval Routes**:
+  - `issue_reviewer_add`: Add reviewer to an issue
+  - `issue_reviewer_remove`: Remove reviewer from an issue
+  - `issue_approve`: Approve an issue (for reviewers)
+  - `issue_reject`: Reject an issue with reason (for reviewers)
+
+- **Issue Model Extensions**:
+  - `reviewers` relationship to IssueReviewer
+  - `get_approval_count()`: Count approved reviewers
+  - `get_approval_status()`: Get detailed approval status (total, approved, rejected, pending)
+  - `can_user_review()`: Check if user can approve/reject
+
+- **Project Model Extensions**:
+  - `is_admin()`: Check if user is admin/lead for project
+
+- **Issue Detail UI** (`detail.html`):
+  - "Freigabe" card in sidebar with approval progress bar
+  - Reviewer list with status icons (approved/rejected/pending)
+  - Add reviewer dropdown (for admins/reporters)
+  - "Genehmigen" and "Ablehnen" buttons for active reviewers
+  - Rejection modal with required reason field
+
+#### Fixed
+- Template variable naming consistency (`total` vs `total_count`)
+- Removed invalid enum `.value` access on string category
+
+---
+
 ## [1.4.0] - 2025-01-07
 
 ### 🏃 PM-5: Sprint Management

@@ -277,36 +277,40 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-        <div class="card-body py-2">
-            <form method="get" class="row g-2 align-items-center">
-                <div class="col-auto">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Typ' if lang == 'de' else 'Type' }}</label>
                     <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">{{ 'Alle Typen' if lang == 'de' else 'All Types' }}</option>
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         {% for type in issue_types %}
                         <option value="{{ type.id }}" {{ 'selected' if filters.type == type.id }}>{{ type.get_name(lang) }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-auto">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Status</label>
                     <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">{{ 'Alle Status' if lang == 'de' else 'All Statuses' }}</option>
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         {% for status in statuses %}
                         <option value="{{ status.id }}" {{ 'selected' if filters.status == status.id }}>{{ status.get_name(lang) }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-auto">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Bearbeiter' if lang == 'de' else 'Assignee' }}</label>
                     <select name="assignee" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">{{ 'Alle Bearbeiter' if lang == 'de' else 'All Assignees' }}</option>
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         <option value="-1" {{ 'selected' if filters.assignee == -1 }}>{{ 'Nicht zugewiesen' if lang == 'de' else 'Unassigned' }}</option>
                         {% for member in members %}
                         <option value="{{ member.user.id }}" {{ 'selected' if filters.assignee == member.user.id }}>{{ member.user.name or member.user.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-auto">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Priorität' if lang == 'de' else 'Priority' }}</label>
                     <select name="priority" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">{{ 'Alle Prioritäten' if lang == 'de' else 'All Priorities' }}</option>
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         <option value="1" {{ 'selected' if filters.priority == 1 }}>{{ 'Höchste' if lang == 'de' else 'Highest' }}</option>
                         <option value="2" {{ 'selected' if filters.priority == 2 }}>{{ 'Hoch' if lang == 'de' else 'High' }}</option>
                         <option value="3" {{ 'selected' if filters.priority == 3 }}>{{ 'Mittel' if lang == 'de' else 'Medium' }}</option>
@@ -314,18 +318,19 @@
                         <option value="5" {{ 'selected' if filters.priority == 5 }}>{{ 'Niedrigste' if lang == 'de' else 'Lowest' }}</option>
                     </select>
                 </div>
-                <div class="col">
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="search" class="form-control" 
-                               value="{{ filters.search }}"
-                               placeholder="{{ 'Suchen...' if lang == 'de' else 'Search...' }}">
-                        <button type="submit" class="btn btn-outline-secondary">
-                            <i class="bi bi-search"></i>
-                        </button>
-                    </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">{{ 'Suche' if lang == 'de' else 'Search' }}</label>
+                    <input type="text" name="search" class="form-control form-control-sm" 
+                           value="{{ filters.search }}"
+                           placeholder="{{ 'Key oder Zusammenfassung...' if lang == 'de' else 'Key or summary...' }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
                 </div>
                 {% if filters.type or filters.status or filters.assignee or filters.priority or filters.search %}
-                <div class="col-auto">
+                <div class="col-12 col-md-auto d-flex align-items-end">
                     <a href="{{ url_for('projects.backlog', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-x-lg me-1"></i>{{ 'Filter zurücksetzen' if lang == 'de' else 'Clear filters' }}
                     </a>

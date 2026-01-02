@@ -11,6 +11,7 @@ from translations import get_translation as t
 from .models import (
     Project, ProjectMember, ProjectRole,
     IssueType, IssueStatus, Issue, Sprint,
+    IssueComment, IssueAttachment, IssueLink, IssueLinkType, Worklog, IssueReviewer,
     create_default_issue_types, create_default_issue_statuses
 )
 
@@ -581,12 +582,17 @@ def issue_detail(project_id, issue_key, project=None):
     # Get child issues (sub-tasks)
     children = Issue.query.filter_by(parent_id=issue.id, is_archived=False).all()
     
+    from datetime import datetime
+    from extensions import db
+    
     return render_template('projects/issues/detail.html',
         project=project,
         issue=issue,
         available_statuses=available_statuses,
         children=children,
-        lang=lang
+        lang=lang,
+        db=db,
+        now=datetime.now()
     )
 
 
@@ -1696,6 +1702,670 @@ def sprint_remove_issue(project_id, sprint_id, project=None):
         'success': True,
         'message': 'Issue aus Sprint entfernt' if lang == 'de' else 'Issue removed from sprint'
     })
+
+
+# ============================================================================
+# ISSUE COMMENTS
+# ============================================================================
+
+@bp.route('/<int:project_id>/issues/<issue_key>/comments', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def comment_add(project_id, issue_key, project=None):
+    """Add a comment to an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Kommentar darf nicht leer sein.' if lang == 'de' else 'Comment cannot be empty.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    comment = IssueComment(
+        issue_id=issue.id,
+        author_id=current_user.id,
+        content=content
+    )
+    db.session.add(comment)
+    
+    # Update issue updated_at
+    issue.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash('Kommentar hinzugefügt.' if lang == 'de' else 'Comment added.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/comments/<int:comment_id>/edit', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def comment_edit(project_id, issue_key, comment_id, project=None):
+    """Edit a comment"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    comment = IssueComment.query.filter_by(id=comment_id, issue_id=issue.id).first_or_404()
+    
+    # Only author or admin can edit
+    if comment.author_id != current_user.id and not project.is_admin(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    content = request.form.get('content', '').strip()
+    if not content:
+        flash('Kommentar darf nicht leer sein.' if lang == 'de' else 'Comment cannot be empty.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    comment.content = content
+    comment.updated_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash('Kommentar aktualisiert.' if lang == 'de' else 'Comment updated.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/comments/<int:comment_id>/delete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def comment_delete(project_id, issue_key, comment_id, project=None):
+    """Delete a comment"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    comment = IssueComment.query.filter_by(id=comment_id, issue_id=issue.id).first_or_404()
+    
+    # Only author or admin can delete
+    if comment.author_id != current_user.id and not project.is_admin(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    db.session.delete(comment)
+    db.session.commit()
+    
+    flash('Kommentar gelöscht.' if lang == 'de' else 'Comment deleted.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+# ============================================================================
+# ISSUE ATTACHMENTS
+# ============================================================================
+
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = 'uploads/issues'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar'}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/attachments', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def attachment_upload(project_id, issue_key, project=None):
+    """Upload an attachment to an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    if 'file' not in request.files:
+        flash('Keine Datei ausgewählt.' if lang == 'de' else 'No file selected.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        flash('Keine Datei ausgewählt.' if lang == 'de' else 'No file selected.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    if not allowed_file(file.filename):
+        flash('Dateityp nicht erlaubt.' if lang == 'de' else 'File type not allowed.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    
+    if size > MAX_FILE_SIZE:
+        flash('Datei zu groß (max. 10 MB).' if lang == 'de' else 'File too large (max. 10 MB).', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Create upload directory
+    upload_dir = os.path.join(UPLOAD_FOLDER, f'project_{project_id}', issue_key)
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Secure filename with timestamp
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    filename = f'{timestamp}_{original_filename}'
+    filepath = os.path.join(upload_dir, filename)
+    
+    # Save file
+    file.save(filepath)
+    
+    # Get MIME type
+    import mimetypes
+    mimetype = mimetypes.guess_type(filepath)[0] or 'application/octet-stream'
+    
+    # Create attachment record
+    attachment = IssueAttachment(
+        issue_id=issue.id,
+        uploaded_by_id=current_user.id,
+        filename=original_filename,
+        filepath=filepath,
+        filesize=size,
+        mimetype=mimetype
+    )
+    db.session.add(attachment)
+    
+    # Update issue
+    issue.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash('Datei hochgeladen.' if lang == 'de' else 'File uploaded.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/attachments/<int:attachment_id>/download')
+@login_required
+@projects_module_required
+@project_access_required
+def attachment_download(project_id, issue_key, attachment_id, project=None):
+    """Download an attachment"""
+    from flask import send_file
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    attachment = IssueAttachment.query.filter_by(id=attachment_id, issue_id=issue.id).first_or_404()
+    
+    if not os.path.exists(attachment.filepath):
+        flash('Datei nicht gefunden.' if session.get('lang', 'de') == 'de' else 'File not found.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    return send_file(
+        attachment.filepath,
+        download_name=attachment.filename,
+        as_attachment=True
+    )
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/attachments/<int:attachment_id>/delete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def attachment_delete(project_id, issue_key, attachment_id, project=None):
+    """Delete an attachment"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    attachment = IssueAttachment.query.filter_by(id=attachment_id, issue_id=issue.id).first_or_404()
+    
+    # Only uploader or admin can delete
+    if attachment.uploaded_by_id != current_user.id and not project.is_admin(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Delete file from disk
+    if os.path.exists(attachment.filepath):
+        os.remove(attachment.filepath)
+    
+    db.session.delete(attachment)
+    db.session.commit()
+    
+    flash('Datei gelöscht.' if lang == 'de' else 'File deleted.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+# ============================================================================
+# ISSUE LINKS
+# ============================================================================
+
+@bp.route('/<int:project_id>/issues/<issue_key>/links', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def link_add(project_id, issue_key, project=None):
+    """Add a link between issues"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    link_type = request.form.get('link_type')
+    target_key = request.form.get('target_key', '').strip().upper()
+    
+    if not link_type or not target_key:
+        flash('Bitte Linktyp und Ziel-Issue angeben.' if lang == 'de' else 'Please specify link type and target issue.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Find target issue
+    target_issue = Issue.query.filter_by(key=target_key).first()
+    if not target_issue:
+        flash(f'Issue {target_key} nicht gefunden.' if lang == 'de' else f'Issue {target_key} not found.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    if target_issue.id == issue.id:
+        flash('Issue kann nicht mit sich selbst verknüpft werden.' if lang == 'de' else 'Issue cannot be linked to itself.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Check if link already exists
+    existing = IssueLink.query.filter_by(
+        source_issue_id=issue.id,
+        target_issue_id=target_issue.id,
+        link_type=link_type
+    ).first()
+    
+    if existing:
+        flash('Link existiert bereits.' if lang == 'de' else 'Link already exists.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Create link
+    link = IssueLink(
+        source_issue_id=issue.id,
+        target_issue_id=target_issue.id,
+        link_type=link_type,
+        created_by_id=current_user.id
+    )
+    db.session.add(link)
+    
+    # Update issue
+    issue.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash('Link hinzugefügt.' if lang == 'de' else 'Link added.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/links/<int:link_id>/delete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def link_delete(project_id, issue_key, link_id, project=None):
+    """Delete an issue link"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Link can be on either side
+    link = IssueLink.query.filter(
+        IssueLink.id == link_id,
+        db.or_(
+            IssueLink.source_issue_id == issue.id,
+            IssueLink.target_issue_id == issue.id
+        )
+    ).first_or_404()
+    
+    db.session.delete(link)
+    db.session.commit()
+    
+    flash('Link entfernt.' if lang == 'de' else 'Link removed.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+# ============================================================================
+# WORKLOG (Time Tracking)
+# ============================================================================
+
+@bp.route('/<int:project_id>/issues/<issue_key>/worklog', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def worklog_add(project_id, issue_key, project=None):
+    """Log time on an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    time_input = request.form.get('time_spent', '').strip()
+    description = request.form.get('description', '').strip()
+    work_date_str = request.form.get('work_date')
+    
+    if not time_input:
+        flash('Bitte Zeit angeben.' if lang == 'de' else 'Please specify time.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Parse time input (e.g., "2h", "30m", "1h 30m", "90")
+    minutes = parse_time_input(time_input)
+    if minutes <= 0:
+        flash('Ungültige Zeitangabe. Verwende z.B. "2h", "30m", "1h 30m".' if lang == 'de' else 'Invalid time format. Use e.g. "2h", "30m", "1h 30m".', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Parse work date
+    work_date = datetime.utcnow().date()
+    if work_date_str:
+        try:
+            work_date = datetime.strptime(work_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
+    # Create worklog entry
+    worklog = Worklog(
+        issue_id=issue.id,
+        author_id=current_user.id,
+        time_spent=minutes,
+        work_date=work_date,
+        description=description
+    )
+    db.session.add(worklog)
+    
+    # Update issue time tracking
+    issue.time_spent = (issue.time_spent or 0) + minutes
+    issue.updated_at = datetime.utcnow()
+    
+    # Update remaining estimate if set
+    if issue.remaining_estimate:
+        issue.remaining_estimate = max(0, issue.remaining_estimate - minutes)
+    
+    db.session.commit()
+    
+    flash(f'{worklog.time_spent_display} protokolliert.' if lang == 'de' else f'{worklog.time_spent_display} logged.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/worklog/<int:worklog_id>/delete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def worklog_delete(project_id, issue_key, worklog_id, project=None):
+    """Delete a worklog entry"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    worklog = Worklog.query.filter_by(id=worklog_id, issue_id=issue.id).first_or_404()
+    
+    # Only author or admin can delete
+    if worklog.author_id != current_user.id and not project.is_admin(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Subtract time from issue
+    issue.time_spent = max(0, (issue.time_spent or 0) - worklog.time_spent)
+    
+    db.session.delete(worklog)
+    db.session.commit()
+    
+    flash('Arbeitsprotokoll gelöscht.' if lang == 'de' else 'Worklog deleted.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+def parse_time_input(time_str):
+    """Parse time input like '2h', '30m', '1h 30m', '90' (minutes)"""
+    import re
+    
+    time_str = time_str.strip().lower()
+    
+    # Try hours and minutes pattern (1h 30m, 1h30m)
+    match = re.match(r'(\d+)\s*h\s*(\d+)\s*m?', time_str)
+    if match:
+        return int(match.group(1)) * 60 + int(match.group(2))
+    
+    # Try hours only (2h)
+    match = re.match(r'(\d+)\s*h', time_str)
+    if match:
+        return int(match.group(1)) * 60
+    
+    # Try minutes only (30m)
+    match = re.match(r'(\d+)\s*m', time_str)
+    if match:
+        return int(match.group(1))
+    
+    # Try plain number (minutes)
+    match = re.match(r'^(\d+)$', time_str)
+    if match:
+        return int(match.group(1))
+    
+    return 0
+
+
+# =============================================================================
+# ISSUE APPROVAL WORKFLOW ROUTES
+# =============================================================================
+
+@bp.route('/<int:project_id>/issues/<issue_key>/reviewers', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_reviewers(project_id, issue_key, project=None):
+    """Manage reviewers for an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check permission - only project admins/leads or issue reporter can add reviewers
+    if not project.is_admin(current_user) and issue.reporter_id != current_user.id:
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    if request.method == 'POST':
+        reviewer_ids = request.form.getlist('reviewer_ids')
+        
+        # Remove existing reviewers not in new list
+        existing_reviewers = {r.user_id for r in issue.reviewers}
+        new_reviewers = {int(id) for id in reviewer_ids if id}
+        
+        # Remove deselected reviewers
+        for reviewer in issue.reviewers.all():
+            if reviewer.user_id not in new_reviewers:
+                db.session.delete(reviewer)
+        
+        # Add new reviewers
+        order = issue.reviewers.count() + 1
+        for user_id in new_reviewers:
+            if user_id not in existing_reviewers:
+                reviewer = IssueReviewer(
+                    issue_id=issue.id,
+                    user_id=user_id,
+                    order=order
+                )
+                db.session.add(reviewer)
+                order += 1
+        
+        db.session.commit()
+        flash('Reviewer aktualisiert.' if lang == 'de' else 'Reviewers updated.', 'success')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Get project members for selection
+    members = ProjectMember.query.filter_by(project_id=project_id).all()
+    current_reviewer_ids = [r.user_id for r in issue.reviewers]
+    
+    return render_template('projects/issues/reviewers.html',
+        project=project,
+        issue=issue,
+        members=members,
+        current_reviewer_ids=current_reviewer_ids,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/approve', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_approve(project_id, issue_key, project=None):
+    """Approve an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check if user can review
+    can_review, reason = issue.can_user_review(current_user)
+    if not can_review:
+        flash(reason, 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Get or create reviewer record
+    reviewer = issue.reviewers.filter_by(user_id=current_user.id).first()
+    if not reviewer:
+        flash('Sie sind kein Reviewer für dieses Issue.' if lang == 'de' else 'You are not a reviewer for this issue.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    note = request.form.get('note', '')
+    reviewer.approve(note)
+    db.session.commit()
+    
+    # Check if all reviewers have approved
+    status = issue.get_approval_status()
+    if status['is_complete']:
+        flash('Alle Reviewer haben genehmigt! Issue wurde freigegeben.' if lang == 'de' else 'All reviewers approved! Issue has been released.', 'success')
+    else:
+        flash(f"Ihre Genehmigung wurde gespeichert. Noch {status['pending_count']} Reviewer ausstehend." if lang == 'de' else f"Your approval was recorded. {status['pending_count']} reviewer(s) still pending.", 'success')
+    
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/reject', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_reject(project_id, issue_key, project=None):
+    """Reject an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check if user can review
+    can_review, reason = issue.can_user_review(current_user)
+    if not can_review:
+        flash(reason, 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Get reviewer record
+    reviewer = issue.reviewers.filter_by(user_id=current_user.id).first()
+    if not reviewer:
+        flash('Sie sind kein Reviewer für dieses Issue.' if lang == 'de' else 'You are not a reviewer for this issue.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    note = request.form.get('note', '')
+    if not note:
+        flash('Bitte geben Sie einen Ablehnungsgrund an.' if lang == 'de' else 'Please provide a rejection reason.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    reviewer.reject(note)
+    db.session.commit()
+    
+    flash('Issue wurde abgelehnt.' if lang == 'de' else 'Issue has been rejected.', 'warning')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/reviewer/<int:reviewer_id>/remove', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_reviewer_remove(project_id, issue_key, reviewer_id, project=None):
+    """Remove a reviewer from an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check permission
+    if not project.is_admin(current_user) and issue.reporter_id != current_user.id:
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    reviewer = IssueReviewer.query.get_or_404(reviewer_id)
+    if reviewer.issue_id != issue.id:
+        flash('Ungültiger Reviewer.' if lang == 'de' else 'Invalid reviewer.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    db.session.delete(reviewer)
+    db.session.commit()
+    
+    flash('Reviewer entfernt.' if lang == 'de' else 'Reviewer removed.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/reviewer/add', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_reviewer_add(project_id, issue_key, project=None):
+    """Add a reviewer to an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check permission
+    if not project.is_admin(current_user) and issue.reporter_id != current_user.id:
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    user_id = request.form.get('user_id')
+    if not user_id:
+        flash('Bitte wählen Sie einen Benutzer.' if lang == 'de' else 'Please select a user.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Check if already a reviewer
+    existing = issue.reviewers.filter_by(user_id=user_id).first()
+    if existing:
+        flash('Dieser Benutzer ist bereits Reviewer.' if lang == 'de' else 'This user is already a reviewer.', 'info')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    # Add reviewer
+    order = issue.reviewers.count() + 1
+    reviewer = IssueReviewer(
+        issue_id=issue.id,
+        user_id=int(user_id),
+        order=order
+    )
+    db.session.add(reviewer)
+    db.session.commit()
+    
+    flash('Reviewer hinzugefügt.' if lang == 'de' else 'Reviewer added.', 'success')
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
 
 
 def register_routes(blueprint):

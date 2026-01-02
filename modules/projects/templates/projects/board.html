@@ -228,7 +228,7 @@
             <h2 class="mb-1">
                 <i class="bi bi-kanban me-2"></i>{{ project.get_name(lang) }} - Board
             </h2>
-            <p class="text-muted mb-0">{{ 'Issues' }}</p>
+            <p class="text-muted mb-0">{{ 'Kanban-Board zur Issue-Verwaltung' if lang == 'de' else 'Kanban board for issue management' }}</p>
         </div>
         <div class="d-flex gap-2">
             <!-- View Switcher -->
@@ -241,6 +241,10 @@
                    class="btn btn-outline-secondary active" title="{{ 'Board-Ansicht' if lang == 'de' else 'Board View' }}">
                     <i class="bi bi-kanban"></i>
                 </a>
+                <a href="{{ url_for('projects.backlog', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary" title="Backlog">
+                    <i class="bi bi-list-ol"></i>
+                </a>
             </div>
             
             <!-- Create Issue -->
@@ -252,37 +256,41 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-        <div class="card-body py-2">
-            <div class="row align-items-center">
-                <div class="col-auto">
-                    <select id="filterType" class="form-select form-select-sm" style="width: auto;">
-                        <option value="">{{ 'Alle Typen' if lang == 'de' else 'All Types' }}</option>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Typ' if lang == 'de' else 'Type' }}</label>
+                    <select id="filterType" class="form-select form-select-sm">
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         {% for type in issue_types %}
                         <option value="{{ type.id }}">{{ type.get_name(lang) }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-auto">
-                    <select id="filterAssignee" class="form-select form-select-sm" style="width: auto;">
-                        <option value="">{{ 'Alle Bearbeiter' if lang == 'de' else 'All Assignees' }}</option>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Bearbeiter' if lang == 'de' else 'Assignee' }}</label>
+                    <select id="filterAssignee" class="form-select form-select-sm">
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         <option value="unassigned">{{ 'Nicht zugewiesen' if lang == 'de' else 'Unassigned' }}</option>
                         {% for member in members %}
                         <option value="{{ member.user.id }}">{{ member.user.name or member.user.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-auto">
-                    <select id="filterPriority" class="form-select form-select-sm" style="width: auto;">
-                        <option value="">{{ 'Alle Prioritäten' if lang == 'de' else 'All Priorities' }}</option>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Priorität' if lang == 'de' else 'Priority' }}</label>
+                    <select id="filterPriority" class="form-select form-select-sm">
+                        <option value="">{{ 'Alle' if lang == 'de' else 'All' }}</option>
                         <option value="critical">{{ 'Kritisch' if lang == 'de' else 'Critical' }}</option>
                         <option value="high">{{ 'Hoch' if lang == 'de' else 'High' }}</option>
                         <option value="medium">{{ 'Mittel' if lang == 'de' else 'Medium' }}</option>
                         <option value="low">{{ 'Niedrig' if lang == 'de' else 'Low' }}</option>
                     </select>
                 </div>
-                <div class="col">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">{{ 'Suche' if lang == 'de' else 'Search' }}</label>
                     <input type="text" id="searchIssues" class="form-control form-control-sm" 
-                           placeholder="{{ 'Issues suchen...' if lang == 'de' else 'Search issues...' }}" style="max-width: 250px;">
+                           placeholder="{{ 'Key oder Zusammenfassung...' if lang == 'de' else 'Key or summary...' }}">
                 </div>
             </div>
         </div>
@@ -304,7 +312,9 @@
                 <div class="issue-card" data-issue-id="{{ issue.id }}" 
                      data-type="{{ issue.type_id }}" 
                      data-assignee="{{ issue.assignee_id or 'unassigned' }}"
-                     data-priority="{{ issue.priority }}">
+                     data-priority="{{ issue.priority }}"
+                     data-href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}"
+                     style="cursor: pointer;">
                     <div class="priority-indicator priority-{{ issue.priority }}"></div>
                     <div class="issue-card-header">
                         {% if issue.issue_type %}
@@ -313,12 +323,10 @@
                                style="color: {{ issue.issue_type.color or '#666' }};"></i>
                         </span>
                         {% endif %}
-                        <span class="issue-card-key">{{ issue.issue_key }}</span>
+                        <span class="issue-card-key">{{ issue.key }}</span>
                     </div>
                     <div class="issue-card-summary">
-                        <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.issue_key) }}">
-                            {{ issue.summary }}
-                        </a>
+                        {{ issue.summary }}
                     </div>
                     <div class="issue-card-footer">
                         <span>
@@ -577,6 +585,29 @@ document.addEventListener('DOMContentLoaded', function() {
         const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
         bsToast.show();
     }
+    
+    // Click handler for issue cards (navigate to detail page)
+    let isDragging = false;
+    
+    document.querySelectorAll('.issue-card').forEach(function(card) {
+        card.addEventListener('mousedown', function() {
+            isDragging = false;
+        });
+        
+        card.addEventListener('mousemove', function() {
+            isDragging = true;
+        });
+        
+        card.addEventListener('click', function(e) {
+            // Only navigate if not dragging and not clicking on a link
+            if (!isDragging && !e.target.closest('a')) {
+                const href = this.dataset.href;
+                if (href) {
+                    window.location.href = href;
+                }
+            }
+        });
+    });
 });
 </script>
 {% endblock %}
