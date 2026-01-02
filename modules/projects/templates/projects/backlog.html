@@ -1,0 +1,703 @@
+{% extends "base.html" %}
+
+{% block title %}Backlog - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .backlog-table {
+        width: 100%;
+    }
+    
+    .backlog-row {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-bottom: none;
+        transition: background-color 0.15s;
+    }
+    
+    .backlog-row:first-child {
+        border-radius: 6px 6px 0 0;
+    }
+    
+    .backlog-row:last-child {
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 0 0 6px 6px;
+    }
+    
+    .backlog-row:only-child {
+        border-radius: 6px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .backlog-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .backlog-row.selected {
+        background-color: #e8f5e9;
+    }
+    
+    .backlog-row.sortable-ghost {
+        opacity: 0.4;
+        background: #e3f2fd;
+    }
+    
+    .backlog-row.sortable-chosen {
+        background: #e3f2fd;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .drag-handle {
+        cursor: grab;
+        color: #999;
+        padding: 0.5rem;
+        margin-right: 0.5rem;
+    }
+    
+    .drag-handle:hover {
+        color: #666;
+    }
+    
+    .issue-checkbox {
+        margin-right: 1rem;
+    }
+    
+    .issue-type-icon {
+        margin-right: 0.75rem;
+    }
+    
+    .issue-key {
+        font-family: monospace;
+        font-size: 0.875rem;
+        color: #666;
+        min-width: 80px;
+        margin-right: 1rem;
+    }
+    
+    .issue-key a {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .issue-key a:hover {
+        color: #86bc25;
+    }
+    
+    .issue-summary {
+        flex: 1;
+        font-weight: 500;
+        margin-right: 1rem;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .issue-summary a {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .issue-summary a:hover {
+        color: #86bc25;
+    }
+    
+    .issue-status {
+        min-width: 100px;
+        margin-right: 1rem;
+    }
+    
+    .issue-priority {
+        min-width: 40px;
+        margin-right: 1rem;
+        text-align: center;
+    }
+    
+    .issue-assignee {
+        min-width: 100px;
+    }
+    
+    .issue-story-points {
+        min-width: 50px;
+        text-align: center;
+        margin-right: 1rem;
+    }
+    
+    .story-points-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #e3f2fd;
+        color: #1976d2;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        min-width: 28px;
+    }
+    
+    /* Priority badges */
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    .priority-1 { background: #dc3545; color: white; }
+    .priority-2 { background: #fd7e14; color: white; }
+    .priority-3 { background: #ffc107; color: #000; }
+    .priority-4 { background: #20c997; color: white; }
+    .priority-5 { background: #6c757d; color: white; }
+    
+    /* Status badge */
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    /* Assignee */
+    .assignee-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #86bc25;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+    
+    /* Bulk actions bar */
+    .bulk-actions-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #343a40;
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        display: none;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .bulk-actions-bar.show {
+        display: flex;
+    }
+    
+    .bulk-actions-bar .selected-count {
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    /* View switcher */
+    .view-switcher .btn.active {
+        background-color: #86bc25;
+        border-color: #86bc25;
+        color: white;
+    }
+    
+    /* Empty state */
+    .empty-backlog {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #666;
+    }
+    
+    .empty-backlog i {
+        font-size: 4rem;
+        color: #ddd;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+            <li class="breadcrumb-item active">Backlog</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-list-ol me-2"></i>{{ project.get_name(lang) }} - Backlog
+            </h2>
+            <p class="text-muted mb-0">
+                {{ issues|length }} {{ 'offene Issues' if lang == 'de' else 'open issues' }}
+                {% if total_story_points > 0 %}
+                <span class="badge bg-primary ms-2" title="Story Points">
+                    <i class="bi bi-lightning-charge-fill me-1"></i>{{ total_story_points }} SP
+                </span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- View Switcher -->
+            <div class="btn-group view-switcher" role="group">
+                <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary" title="{{ 'Listenansicht' if lang == 'de' else 'List View' }}">
+                    <i class="bi bi-list-ul"></i>
+                </a>
+                <a href="{{ url_for('projects.kanban_board', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary" title="{{ 'Board-Ansicht' if lang == 'de' else 'Board View' }}">
+                    <i class="bi bi-kanban"></i>
+                </a>
+                <a href="{{ url_for('projects.backlog', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary active" title="Backlog">
+                    <i class="bi bi-list-ol"></i>
+                </a>
+            </div>
+            
+            <!-- Create Issue -->
+            <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-success">
+                <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-center">
+                <div class="col-auto">
+                    <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">{{ 'Alle Typen' if lang == 'de' else 'All Types' }}</option>
+                        {% for type in issue_types %}
+                        <option value="{{ type.id }}" {{ 'selected' if filters.type == type.id }}>{{ type.get_name(lang) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">{{ 'Alle Status' if lang == 'de' else 'All Statuses' }}</option>
+                        {% for status in statuses %}
+                        <option value="{{ status.id }}" {{ 'selected' if filters.status == status.id }}>{{ status.get_name(lang) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select name="assignee" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">{{ 'Alle Bearbeiter' if lang == 'de' else 'All Assignees' }}</option>
+                        <option value="-1" {{ 'selected' if filters.assignee == -1 }}>{{ 'Nicht zugewiesen' if lang == 'de' else 'Unassigned' }}</option>
+                        {% for member in members %}
+                        <option value="{{ member.user.id }}" {{ 'selected' if filters.assignee == member.user.id }}>{{ member.user.name or member.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select name="priority" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">{{ 'Alle Prioritäten' if lang == 'de' else 'All Priorities' }}</option>
+                        <option value="1" {{ 'selected' if filters.priority == 1 }}>{{ 'Höchste' if lang == 'de' else 'Highest' }}</option>
+                        <option value="2" {{ 'selected' if filters.priority == 2 }}>{{ 'Hoch' if lang == 'de' else 'High' }}</option>
+                        <option value="3" {{ 'selected' if filters.priority == 3 }}>{{ 'Mittel' if lang == 'de' else 'Medium' }}</option>
+                        <option value="4" {{ 'selected' if filters.priority == 4 }}>{{ 'Niedrig' if lang == 'de' else 'Low' }}</option>
+                        <option value="5" {{ 'selected' if filters.priority == 5 }}>{{ 'Niedrigste' if lang == 'de' else 'Lowest' }}</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="search" class="form-control" 
+                               value="{{ filters.search }}"
+                               placeholder="{{ 'Suchen...' if lang == 'de' else 'Search...' }}">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                {% if filters.type or filters.status or filters.assignee or filters.priority or filters.search %}
+                <div class="col-auto">
+                    <a href="{{ url_for('projects.backlog', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i>{{ 'Filter zurücksetzen' if lang == 'de' else 'Clear filters' }}
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div class="bulk-actions-bar" id="bulkActionsBar">
+        <span class="selected-count"><span id="selectedCount">0</span> {{ 'ausgewählt' if lang == 'de' else 'selected' }}</span>
+        
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-arrow-left-right me-1"></i>{{ 'Status ändern' if lang == 'de' else 'Change Status' }}
+            </button>
+            <ul class="dropdown-menu">
+                {% for status in statuses %}
+                <li><a class="dropdown-item bulk-status" href="#" data-status-id="{{ status.id }}">{{ status.get_name(lang) }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person me-1"></i>{{ 'Zuweisen' if lang == 'de' else 'Assign' }}
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item bulk-assign" href="#" data-user-id="">{{ 'Nicht zugewiesen' if lang == 'de' else 'Unassigned' }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                {% for member in members %}
+                <li><a class="dropdown-item bulk-assign" href="#" data-user-id="{{ member.user.id }}">{{ member.user.name or member.user.username }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-flag me-1"></i>{{ 'Priorität' if lang == 'de' else 'Priority' }}
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item bulk-priority" href="#" data-priority="1">{{ 'Höchste' if lang == 'de' else 'Highest' }}</a></li>
+                <li><a class="dropdown-item bulk-priority" href="#" data-priority="2">{{ 'Hoch' if lang == 'de' else 'High' }}</a></li>
+                <li><a class="dropdown-item bulk-priority" href="#" data-priority="3">{{ 'Mittel' if lang == 'de' else 'Medium' }}</a></li>
+                <li><a class="dropdown-item bulk-priority" href="#" data-priority="4">{{ 'Niedrig' if lang == 'de' else 'Low' }}</a></li>
+                <li><a class="dropdown-item bulk-priority" href="#" data-priority="5">{{ 'Niedrigste' if lang == 'de' else 'Lowest' }}</a></li>
+            </ul>
+        </div>
+        
+        <button class="btn btn-sm btn-warning" id="bulkArchiveBtn">
+            <i class="bi bi-archive me-1"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
+        </button>
+        
+        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn">
+            <i class="bi bi-trash me-1"></i>{{ 'Löschen' if lang == 'de' else 'Delete' }}
+        </button>
+        
+        <button class="btn btn-sm btn-outline-light ms-auto" id="clearSelectionBtn">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <!-- Backlog List -->
+    {% if issues %}
+    <div class="mb-3">
+        <label class="form-check">
+            <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
+            <span class="form-check-label text-muted small">{{ 'Alle auswählen' if lang == 'de' else 'Select all' }}</span>
+        </label>
+    </div>
+    
+    <div class="backlog-list" id="backlogList">
+        {% for issue in issues %}
+        <div class="backlog-row" data-issue-id="{{ issue.id }}">
+            <span class="drag-handle">
+                <i class="bi bi-grip-vertical"></i>
+            </span>
+            
+            <input type="checkbox" class="form-check-input issue-checkbox" data-issue-id="{{ issue.id }}">
+            
+            <span class="issue-type-icon" title="{{ issue.issue_type.get_name(lang) if issue.issue_type else '' }}">
+                <i class="bi {{ issue.issue_type.icon or 'bi-circle' if issue.issue_type else 'bi-circle' }}" 
+                   style="color: {{ issue.issue_type.color or '#666' if issue.issue_type else '#666' }};"></i>
+            </span>
+            
+            <span class="issue-key">
+                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.issue_key) }}">{{ issue.issue_key }}</a>
+            </span>
+            
+            <span class="issue-summary">
+                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.issue_key) }}">{{ issue.summary }}</a>
+            </span>
+            
+            <span class="issue-status">
+                {% if issue.status %}
+                <span class="status-badge" style="background-color: {{ issue.status.color or '#6c757d' }}; color: white;">
+                    {{ issue.status.get_name(lang) }}
+                </span>
+                {% endif %}
+            </span>
+            
+            <span class="issue-priority">
+                <span class="priority-badge priority-{{ issue.priority }}" title="{{ 'Priorität' if lang == 'de' else 'Priority' }}: {{ issue.priority }}">
+                    {% if issue.priority == 1 %}<i class="bi bi-chevron-double-up"></i>
+                    {% elif issue.priority == 2 %}<i class="bi bi-chevron-up"></i>
+                    {% elif issue.priority == 3 %}<i class="bi bi-dash"></i>
+                    {% elif issue.priority == 4 %}<i class="bi bi-chevron-down"></i>
+                    {% else %}<i class="bi bi-chevron-double-down"></i>{% endif %}
+                </span>
+            </span>
+            
+            <span class="issue-assignee">
+                {% if issue.assignee %}
+                <span class="assignee-avatar">{{ (issue.assignee.name or issue.assignee.username)[:2]|upper }}</span>
+                <span class="small">{{ issue.assignee.name or issue.assignee.username }}</span>
+                {% else %}
+                <span class="text-muted small">-</span>
+                {% endif %}
+            </span>
+            
+            <span class="issue-story-points" title="Story Points">
+                {% if issue.story_points %}
+                <span class="story-points-badge">{{ issue.story_points|int if issue.story_points == issue.story_points|int else issue.story_points }}</span>
+                {% else %}
+                <span class="text-muted small">-</span>
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-backlog">
+        <i class="bi bi-inbox"></i>
+        <h4>{{ 'Keine Issues im Backlog' if lang == 'de' else 'No issues in backlog' }}</h4>
+        <p class="text-muted">{{ 'Erstellen Sie ein neues Issue um zu beginnen.' if lang == 'de' else 'Create a new issue to get started.' }}</p>
+        <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-success">
+            <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+    <div id="backlogToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto">Backlog</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ 'Issues löschen?' if lang == 'de' else 'Delete issues?' }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ 'Möchten Sie die ausgewählten Issues wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.' if lang == 'de' else 'Are you sure you want to delete the selected issues? This action cannot be undone.' }}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">{{ 'Löschen' if lang == 'de' else 'Delete' }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectId = {{ project.id }};
+    const reorderUrl = "{{ url_for('projects.backlog_reorder', project_id=project.id) }}";
+    const bulkUrl = "{{ url_for('projects.backlog_bulk_action', project_id=project.id) }}";
+    
+    const MSG_REORDER_SUCCESS = "{{ 'Reihenfolge gespeichert' if lang == 'de' else 'Order saved' }}";
+    const MSG_REORDER_FAILED = "{{ 'Fehler beim Speichern' if lang == 'de' else 'Failed to save order' }}";
+    
+    // Initialize SortableJS for backlog
+    const backlogList = document.getElementById('backlogList');
+    if (backlogList) {
+        new Sortable(backlogList, {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            
+            onEnd: function(evt) {
+                // Collect all issue IDs in new order
+                const issueIds = Array.from(backlogList.querySelectorAll('.backlog-row'))
+                    .map(row => parseInt(row.dataset.issueId));
+                
+                // Send to server
+                fetch(reorderUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ issue_ids: issueIds })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(MSG_REORDER_SUCCESS, 'success');
+                    } else {
+                        showToast(data.error || MSG_REORDER_FAILED, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast(MSG_REORDER_FAILED, 'danger');
+                });
+            }
+        });
+    }
+    
+    // Selection management
+    const checkboxes = document.querySelectorAll('.issue-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    function getSelectedIds() {
+        return Array.from(document.querySelectorAll('.issue-checkbox:checked'))
+            .map(cb => parseInt(cb.dataset.issueId));
+    }
+    
+    function updateBulkActionsBar() {
+        const selected = getSelectedIds();
+        selectedCountSpan.textContent = selected.length;
+        
+        if (selected.length > 0) {
+            bulkActionsBar.classList.add('show');
+        } else {
+            bulkActionsBar.classList.remove('show');
+        }
+        
+        // Update row highlighting
+        document.querySelectorAll('.backlog-row').forEach(row => {
+            const checkbox = row.querySelector('.issue-checkbox');
+            if (checkbox && checkbox.checked) {
+                row.classList.add('selected');
+            } else {
+                row.classList.remove('selected');
+            }
+        });
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            const allChecked = checkboxes.length > 0 && 
+                Array.from(checkboxes).every(cb => cb.checked);
+            const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+            
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        }
+    }
+    
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActionsBar);
+    });
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            checkboxes.forEach(cb => { cb.checked = this.checked; });
+            updateBulkActionsBar();
+        });
+    }
+    
+    document.getElementById('clearSelectionBtn')?.addEventListener('click', function() {
+        checkboxes.forEach(cb => { cb.checked = false; });
+        updateBulkActionsBar();
+    });
+    
+    // Bulk actions
+    function performBulkAction(action, extraData = {}) {
+        const issueIds = getSelectedIds();
+        if (issueIds.length === 0) return;
+        
+        const payload = {
+            action: action,
+            issue_ids: issueIds,
+            ...extraData
+        };
+        
+        fetch(bulkUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.error || 'Error', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error', 'danger');
+        });
+    }
+    
+    // Status change
+    document.querySelectorAll('.bulk-status').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            performBulkAction('change_status', { status_id: parseInt(this.dataset.statusId) });
+        });
+    });
+    
+    // Assign
+    document.querySelectorAll('.bulk-assign').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            const userId = this.dataset.userId;
+            performBulkAction('assign', { assignee_id: userId ? parseInt(userId) : null });
+        });
+    });
+    
+    // Priority
+    document.querySelectorAll('.bulk-priority').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            performBulkAction('change_priority', { priority: parseInt(this.dataset.priority) });
+        });
+    });
+    
+    // Archive
+    document.getElementById('bulkArchiveBtn')?.addEventListener('click', function() {
+        performBulkAction('archive');
+    });
+    
+    // Delete with confirmation
+    const deleteModal = document.getElementById('deleteModal');
+    const bsDeleteModal = deleteModal ? new bootstrap.Modal(deleteModal) : null;
+    
+    document.getElementById('bulkDeleteBtn')?.addEventListener('click', function() {
+        if (bsDeleteModal) bsDeleteModal.show();
+    });
+    
+    document.getElementById('confirmDeleteBtn')?.addEventListener('click', function() {
+        if (bsDeleteModal) bsDeleteModal.hide();
+        performBulkAction('delete');
+    });
+    
+    // Toast helper
+    function showToast(message, type) {
+        const toast = document.getElementById('backlogToast');
+        const toastBody = toast.querySelector('.toast-body');
+        toastBody.textContent = message;
+        
+        toast.className = 'toast';
+        if (type === 'success') {
+            toast.classList.add('bg-success', 'text-white');
+        } else if (type === 'danger') {
+            toast.classList.add('bg-danger', 'text-white');
+        }
+        
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+    }
+});
+</script>
+{% endblock %}

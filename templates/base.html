@@ -305,7 +305,7 @@
                         </a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if 'task' in request.endpoint %}active{% endif %}" href="#" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.endpoint and 'task' in request.endpoint %}active{% endif %}" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-list-task"></i> {{ t('nav_tasks') }}
                         </a>
                         <ul class="dropdown-menu">
@@ -328,7 +328,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'projects' in request.endpoint %}active{% endif %}" href="{{ url_for('projects.project_list') }}">
+                        <a class="nav-link {% if request.endpoint and 'projects' in request.endpoint %}active{% endif %}" href="{{ url_for('projects.project_list') }}">
                             <i class="bi bi-kanban"></i> {{ 'Projekte' if lang == 'de' else 'Projects' }}
                         </a>
                     </li>

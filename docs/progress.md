@@ -2,10 +2,10 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0/PM-1 (Project Management)
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0/PM-1/PM-2/PM-3/PM-4 (Project Management)
 
-**Last Updated:** 2025-12-31 (Session 8)  
-**Version:** 1.3.2
+**Last Updated:** 2026-01-02 (Session 9)  
+**Version:** 1.5.0
 
 ---
 
@@ -259,22 +259,59 @@
 - [x] Sample Projects Script (scripts/create_sample_projects.py)
 - [x] 3 Demo-Projekte: TAX, AUD, INT
 
-#### Phase PM-2: Issue-Management
-- [ ] Issue Model mit Auto-Key (TAX-1, TAX-2)
-- [ ] IssueType: Epic, Story, Task, Bug, Sub-Task
-- [ ] IssueStatus: Open, In Progress, In Test, Done
-- [ ] Issue-CRUD mit Markdown-Editor
+#### Phase PM-2: Issue-Management ✅ (Flexibler Ansatz)
+- [x] **Flexible Architektur** für verschiedene Methodologien
+- [x] ProjectMethodology enum (scrum, kanban, waterfall, custom)
+- [x] StatusCategory enum (todo, in_progress, done)
+- [x] Project.methodology und Project.terminology Felder
+- [x] Project.get_term() für lokalisierte/überschriebene Terminologie
+- [x] **IssueType Model** (konfigurierbar pro Projekt)
+  - name, name_en, icon, color
+  - hierarchy_level (0=Epic, 1=Story, 2=Task, 3=SubTask)
+  - can_have_children, is_subtask, is_default
+- [x] **IssueStatus Model** (konfigurierbar pro Projekt)
+  - name, name_en, category, color
+  - is_initial, is_final, allowed_transitions
+- [x] **Issue Model** mit Auto-Key (TAX-1, TAX-2)
+  - Vollständige Jira-ähnliche Felder
+  - priority, story_points, time_tracking
+  - parent_id für Hierarchie
+  - labels, custom_fields (JSON)
+- [x] **Sprint Model** für Scrum-Projekte
+- [x] create_default_issue_types() pro Methodologie
+- [x] create_default_issue_statuses() pro Methodologie
+- [x] Issue-CRUD Routes (list, new, edit, detail, delete)
+- [x] Status-Transition Route
+- [x] Issue Types & Statuses Admin-Seiten
+- [x] Templates: list.html, form.html, detail.html
+- [x] Settings: issue_types.html, issue_statuses.html
+- [x] Alembic Migration (pm2_issue_system)
 
-#### Phase PM-3: Kanban Board
-- [ ] Board & BoardColumn Models
-- [ ] SortableJS Drag & Drop
-- [ ] Move-API für Status-Änderungen
-- [ ] WebSocket Real-time Updates
+#### Phase PM-3: Kanban Board ✅
+- [x] Kanban Board Route (kanban_board) mit Status als Spalten
+- [x] Move-API (kanban_move_issue) für Status-Änderungen
+- [x] Quick-Create API (kanban_quick_create) für Inline-Erstellung
+- [x] board.html Template mit responsivem Spalten-Layout
+- [x] SortableJS Drag & Drop zwischen Spalten
+- [x] Issue-Cards mit Typ-Icon, Key, Summary, Priorität, Bearbeiter
+- [x] Priorität-Indikatoren (farbige Leiste links)
+- [x] Filter (Typ, Bearbeiter, Priorität, Suche)
+- [x] View-Switcher (Liste/Board) in beiden Views
+- [x] _macros.html für wiederverwendbare Template-Komponenten
+- [x] Toast-Benachrichtigungen für Move/Create-Aktionen
+- [x] Leere-Spalten-Placeholder
 
-#### Phase PM-4: Backlog
-- [ ] Priorisierte Issue-Liste
-- [ ] Drag & Drop Ranking
-- [ ] Bulk-Aktionen
+#### Phase PM-4: Backlog ✅
+- [x] Backlog Route mit Filter (Typ, Status, Bearbeiter, Priorität, Suche)
+- [x] Reorder-API für Drag & Drop Reihenfolge
+- [x] Bulk-Action-API (Status, Zuweisung, Priorität, Archivieren, Löschen)
+- [x] backlog.html Template mit SortableJS Drag & Drop
+- [x] Checkbox-Selection für Bulk-Aktionen
+- [x] Bulk-Actions-Toolbar (sticky am oberen Rand)
+- [x] View-Switcher (Liste/Board/Backlog) in allen Views
+- [x] Navigation Links in Project Detail
+- [x] Delete-Bestätigungs-Modal
+- [x] Toast-Benachrichtigungen für Aktionen
 
 #### Phase PM-5: Sprint-Management
 - [ ] Sprint Model (name, goal, dates)

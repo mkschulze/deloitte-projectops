@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2025-01-07
+
+### 🏃 PM-5: Sprint Management
+
+#### Added
+- **Sprint CRUD Routes**: Complete sprint lifecycle management
+  - `sprint_list`: Sprint overview with active/future/closed sections
+  - `sprint_create`: Create new sprints with name, goal, dates
+  - `sprint_edit`: Edit existing sprint details
+  - `sprint_start`: Activate a planned sprint
+  - `sprint_complete`: Close an active sprint
+  - `sprint_delete`: Remove sprints (with confirmation)
+  - `sprint_board`: Kanban board for sprint issues
+  - `sprint_add_issues`: Add issues from backlog to sprint
+  - `sprint_remove_issue`: Remove issues from sprint
+
+- **Sprint Templates**: Full UI for sprint management
+  - `sprints/list.html`: Sprint overview with status badges, progress bars, quick actions
+  - `sprints/form.html`: Create/edit form with tips sidebar, issue preview
+  - `sprints/board.html`: Kanban board with drag & drop (SortableJS)
+
+- **Sprint Board Features**:
+  - Drag & drop issue status transitions
+  - Sprint progress visualization (Story Points)
+  - Sprint goal and date display
+  - Priority indicators on issue cards
+  - Assignee avatars
+
+- **Sample Data Script**: `scripts/create_sample_sprints.py`
+  - Creates 4 sample sprints (1 closed, 1 active, 2 future)
+  - Assigns 15 issues to sprints with realistic distribution
+
+#### Updated
+- **Project Detail Page**: Added "Sprints" quick action button
+- **Issue Form**: Sprint selection dropdown already existed
+
+---
+
 ## [1.3.2] - 2025-12-31
 
 ### 📁 PM-1: Sample Data

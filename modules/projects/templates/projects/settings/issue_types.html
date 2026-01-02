@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Issue Types' if lang == 'en' else 'Issue-Typen' }} - {{ project.key }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'Issue Types' if lang == 'en' else 'Issue-Typen' }}</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">
+                <i class="bi bi-collection me-2"></i>
+                {{ 'Issue Types' if lang == 'en' else 'Issue-Typen' }}
+            </h2>
+            <p class="text-muted mb-0">{{ 'Configure the types of issues for this project' if lang == 'en' else 'Konfigurieren Sie die Issue-Typen für dieses Projekt' }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                {{ 'Back' if lang == 'en' else 'Zurück' }}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Existing Types -->
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ 'Configured Types' if lang == 'en' else 'Konfigurierte Typen' }}</h5>
+                    <span class="badge bg-secondary">{{ issue_types|length }}</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;"></th>
+                                <th>Name</th>
+                                <th>{{ 'Name (EN)' if lang == 'en' else 'Name (EN)' }}</th>
+                                <th style="width: 80px;">{{ 'Level' if lang == 'en' else 'Ebene' }}</th>
+                                <th style="width: 100px;">{{ 'Properties' if lang == 'en' else 'Eigenschaften' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in issue_types %}
+                            <tr>
+                                <td>
+                                    <i class="{{ t.icon }} fs-5" style="color: {{ t.color }};"></i>
+                                </td>
+                                <td>
+                                    <strong>{{ t.name }}</strong>
+                                    {% if t.is_default %}
+                                        <span class="badge bg-primary ms-1">{{ 'Default' if lang == 'en' else 'Standard' }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ t.name_en or '-' }}</td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ t.hierarchy_level }}</span>
+                                </td>
+                                <td>
+                                    {% if t.can_have_children %}
+                                        <i class="bi bi-diagram-3 text-success" title="{{ 'Can have children' if lang == 'en' else 'Kann Unteraufgaben haben' }}"></i>
+                                    {% endif %}
+                                    {% if t.is_subtask %}
+                                        <i class="bi bi-box-arrow-in-down-right text-info ms-1" title="{{ 'Sub-Task type' if lang == 'en' else 'Unteraufgaben-Typ' }}"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Add New Type -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        {{ 'Add Type' if lang == 'en' else 'Typ hinzufügen' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('projects.project_issue_type_add', project_id=project.id) }}">
+                        <div class="mb-3">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" required placeholder="z.B. Feature, Improvement">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Name (EN)</label>
+                            <input type="text" class="form-control" name="name_en" placeholder="e.g. Feature, Improvement">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Icon</label>
+                                <select name="icon" class="form-select">
+                                    <option value="bi-lightning-charge">⚡ Lightning</option>
+                                    <option value="bi-bookmark">🔖 Bookmark</option>
+                                    <option value="bi-check2-square" selected>☑️ Task</option>
+                                    <option value="bi-bug">🐛 Bug</option>
+                                    <option value="bi-card-list">📋 List</option>
+                                    <option value="bi-star">⭐ Star</option>
+                                    <option value="bi-flag">🚩 Flag</option>
+                                    <option value="bi-gear">⚙️ Gear</option>
+                                    <option value="bi-lightbulb">💡 Idea</option>
+                                    <option value="bi-rocket">🚀 Rocket</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">{{ 'Color' if lang == 'en' else 'Farbe' }}</label>
+                                <input type="color" class="form-control form-control-color w-100" name="color" value="#86BC25">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'Hierarchy Level' if lang == 'en' else 'Hierarchie-Ebene' }}</label>
+                            <select name="hierarchy_level" class="form-select">
+                                <option value="0">0 - {{ 'Top Level (Epic)' if lang == 'en' else 'Oberste Ebene (Epic)' }}</option>
+                                <option value="1" selected>1 - {{ 'Standard (Story)' if lang == 'en' else 'Standard (Story)' }}</option>
+                                <option value="2">2 - {{ 'Detail (Task)' if lang == 'en' else 'Detail (Task)' }}</option>
+                                <option value="3">3 - {{ 'Sub-Task' if lang == 'en' else 'Unteraufgabe' }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="can_have_children" id="can_have_children" checked>
+                                <label class="form-check-label" for="can_have_children">
+                                    {{ 'Can have child issues' if lang == 'en' else 'Kann Unter-Issues haben' }}
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_subtask" id="is_subtask">
+                                <label class="form-check-label" for="is_subtask">
+                                    {{ 'Is a sub-task type' if lang == 'en' else 'Ist ein Unteraufgaben-Typ' }}
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-plus-lg me-1"></i>
+                            {{ 'Add Type' if lang == 'en' else 'Typ hinzufügen' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card mt-4 border-info">
+                <div class="card-body">
+                    <h6 class="text-info"><i class="bi bi-info-circle me-1"></i> {{ 'About Hierarchy Levels' if lang == 'en' else 'Über Hierarchie-Ebenen' }}</h6>
+                    <p class="small mb-0 text-muted">
+                        {{ 'Level 0 is for high-level items like Epics. Level 1 for Stories, Level 2 for Tasks, and Level 3 for Sub-Tasks. Issues can only have children with a higher level number.' if lang == 'en' else 'Ebene 0 ist für übergeordnete Elemente wie Epics. Ebene 1 für Stories, Ebene 2 für Tasks und Ebene 3 für Unteraufgaben. Issues können nur untergeordnete Issues mit einer höheren Ebenennummer haben.' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

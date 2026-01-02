@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}Board - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .board-container {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+        min-height: calc(100vh - 250px);
+    }
+    
+    .board-column {
+        min-width: 300px;
+        max-width: 300px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .board-column-header {
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        border-bottom: 3px solid;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .board-column-header .issue-count {
+        background: rgba(0,0,0,0.1);
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+    }
+    
+    .board-column-body {
+        flex: 1;
+        padding: 0.5rem;
+        overflow-y: auto;
+        min-height: 200px;
+    }
+    
+    .issue-card {
+        background: white;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        cursor: grab;
+        transition: box-shadow 0.2s, transform 0.2s;
+        position: relative;
+        padding-left: 1rem;
+    }
+    
+    .issue-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .issue-card.sortable-ghost {
+        opacity: 0.4;
+    }
+    
+    .issue-card.sortable-chosen {
+        transform: rotate(3deg);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    
+    .issue-card.sortable-drag {
+        opacity: 0.9;
+    }
+    
+    .issue-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .issue-card-key {
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    .issue-card-summary {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+    }
+    
+    .issue-card-summary a {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .issue-card-summary a:hover {
+        color: #86bc25;
+    }
+    
+    .issue-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    .issue-card-assignee {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .issue-card-assignee img {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+    }
+    
+    .issue-card-assignee-initials {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #86bc25;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    
+    .quick-create-form {
+        padding: 0.5rem;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .quick-create-input {
+        width: 100%;
+        border: 1px dashed #ccc;
+        border-radius: 4px;
+        padding: 0.5rem;
+        background: transparent;
+        cursor: text;
+    }
+    
+    .quick-create-input:focus {
+        border-style: solid;
+        border-color: #86bc25;
+        outline: none;
+        background: white;
+    }
+    
+    /* Status category colors */
+    .status-todo { border-color: #6c757d !important; }
+    .status-in_progress { border-color: #0d6efd !important; }
+    .status-done { border-color: #198754 !important; }
+    
+    /* Priority indicators */
+    .priority-indicator {
+        width: 4px;
+        height: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+        border-radius: 6px 0 0 6px;
+    }
+    
+    .priority-critical { background: #dc3545; }
+    .priority-high { background: #fd7e14; }
+    .priority-medium { background: #ffc107; }
+    .priority-low { background: #20c997; }
+    
+    /* Empty column placeholder */
+    .empty-column-placeholder {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #999;
+        border: 2px dashed #ddd;
+        border-radius: 6px;
+        margin: 0.5rem;
+    }
+    
+    /* View switcher */
+    .view-switcher .btn {
+        padding: 0.375rem 0.75rem;
+    }
+    
+    .view-switcher .btn.active {
+        background-color: #86bc25;
+        border-color: #86bc25;
+        color: white;
+    }
+    
+    /* Priority badge */
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.75rem;
+    }
+    .priority-badge.critical { background: #dc3545; color: white; }
+    .priority-badge.high { background: #fd7e14; color: white; }
+    .priority-badge.medium { background: #ffc107; color: #000; }
+    .priority-badge.low { background: #20c997; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+            <li class="breadcrumb-item active">Board</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-kanban me-2"></i>{{ project.get_name(lang) }} - Board
+            </h2>
+            <p class="text-muted mb-0">{{ 'Issues' }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- View Switcher -->
+            <div class="btn-group view-switcher" role="group">
+                <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary" title="{{ 'Listenansicht' if lang == 'de' else 'List View' }}">
+                    <i class="bi bi-list-ul"></i>
+                </a>
+                <a href="{{ url_for('projects.kanban_board', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary active" title="{{ 'Board-Ansicht' if lang == 'de' else 'Board View' }}">
+                    <i class="bi bi-kanban"></i>
+                </a>
+            </div>
+            
+            <!-- Create Issue -->
+            <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-success">
+                <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <select id="filterType" class="form-select form-select-sm" style="width: auto;">
+                        <option value="">{{ 'Alle Typen' if lang == 'de' else 'All Types' }}</option>
+                        {% for type in issue_types %}
+                        <option value="{{ type.id }}">{{ type.get_name(lang) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select id="filterAssignee" class="form-select form-select-sm" style="width: auto;">
+                        <option value="">{{ 'Alle Bearbeiter' if lang == 'de' else 'All Assignees' }}</option>
+                        <option value="unassigned">{{ 'Nicht zugewiesen' if lang == 'de' else 'Unassigned' }}</option>
+                        {% for member in members %}
+                        <option value="{{ member.user.id }}">{{ member.user.name or member.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select id="filterPriority" class="form-select form-select-sm" style="width: auto;">
+                        <option value="">{{ 'Alle Prioritäten' if lang == 'de' else 'All Priorities' }}</option>
+                        <option value="critical">{{ 'Kritisch' if lang == 'de' else 'Critical' }}</option>
+                        <option value="high">{{ 'Hoch' if lang == 'de' else 'High' }}</option>
+                        <option value="medium">{{ 'Mittel' if lang == 'de' else 'Medium' }}</option>
+                        <option value="low">{{ 'Niedrig' if lang == 'de' else 'Low' }}</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <input type="text" id="searchIssues" class="form-control form-control-sm" 
+                           placeholder="{{ 'Issues suchen...' if lang == 'de' else 'Search issues...' }}" style="max-width: 250px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Board -->
+    <div class="board-container">
+        {% for status in statuses %}
+        <div class="board-column" data-status-id="{{ status.id }}">
+            <div class="board-column-header status-{{ status.category.value if status.category else 'todo' }}">
+                <span>
+                    <i class="bi bi-circle-fill me-1" style="color: {{ status.color or '#6c757d' }}; font-size: 0.6rem;"></i>
+                    {{ status.get_name(lang) }}
+                </span>
+                <span class="issue-count">{{ issues_by_status.get(status.id, [])|length }}</span>
+            </div>
+            <div class="board-column-body sortable-column" data-status-id="{{ status.id }}">
+                {% for issue in issues_by_status.get(status.id, []) %}
+                <div class="issue-card" data-issue-id="{{ issue.id }}" 
+                     data-type="{{ issue.type_id }}" 
+                     data-assignee="{{ issue.assignee_id or 'unassigned' }}"
+                     data-priority="{{ issue.priority }}">
+                    <div class="priority-indicator priority-{{ issue.priority }}"></div>
+                    <div class="issue-card-header">
+                        {% if issue.issue_type %}
+                        <span title="{{ issue.issue_type.get_name(lang) }}">
+                            <i class="bi {{ issue.issue_type.icon or 'bi-circle' }}" 
+                               style="color: {{ issue.issue_type.color or '#666' }};"></i>
+                        </span>
+                        {% endif %}
+                        <span class="issue-card-key">{{ issue.issue_key }}</span>
+                    </div>
+                    <div class="issue-card-summary">
+                        <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.issue_key) }}">
+                            {{ issue.summary }}
+                        </a>
+                    </div>
+                    <div class="issue-card-footer">
+                        <span>
+                            {% if issue.priority == 'critical' %}
+                            <span class="priority-badge critical"><i class="bi bi-chevron-double-up"></i></span>
+                            {% elif issue.priority == 'high' %}
+                            <span class="priority-badge high"><i class="bi bi-chevron-up"></i></span>
+                            {% elif issue.priority == 'medium' %}
+                            <span class="priority-badge medium"><i class="bi bi-dash"></i></span>
+                            {% elif issue.priority == 'low' %}
+                            <span class="priority-badge low"><i class="bi bi-chevron-down"></i></span>
+                            {% endif %}
+                        </span>
+                        <span class="issue-card-assignee">
+                            {% if issue.assignee %}
+                            <span class="issue-card-assignee-initials" 
+                                  title="{{ issue.assignee.name or issue.assignee.username }}">
+                                {{ (issue.assignee.name or issue.assignee.username)[:2]|upper }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted"><i class="bi bi-person-dash"></i></span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-column-placeholder">
+                    {{ 'Keine Issues' if lang == 'de' else 'No issues' }}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="quick-create-form">
+                <input type="text" class="quick-create-input" 
+                       data-status-id="{{ status.id }}"
+                       placeholder="{{ '+ Issue erstellen' if lang == 'de' else '+ Create issue' }}">
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Toast for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+    <div id="boardToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong class="me-auto">Board</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectId = {{ project.id }};
+    const moveUrl = "{{ url_for('projects.kanban_move_issue', project_id=project.id) }}";
+    const quickCreateUrl = "{{ url_for('projects.kanban_quick_create', project_id=project.id) }}";
+    
+    const MSG_NO_ISSUES = "{{ 'Keine Issues' if lang == 'de' else 'No issues' }}";
+    const MSG_ISSUE_MOVED = "{{ 'Issue verschoben' if lang == 'de' else 'Issue moved successfully' }}";
+    const MSG_MOVE_FAILED = "{{ 'Verschieben fehlgeschlagen' if lang == 'de' else 'Failed to move issue' }}";
+    const MSG_ISSUE_CREATED = "{{ 'Issue erstellt' if lang == 'de' else 'Issue created' }}";
+    const MSG_CREATE_FAILED = "{{ 'Erstellen fehlgeschlagen' if lang == 'de' else 'Failed to create issue' }}";
+    
+    // Initialize SortableJS for each column
+    document.querySelectorAll('.sortable-column').forEach(function(column) {
+        new Sortable(column, {
+            group: 'issues',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            filter: '.empty-column-placeholder',
+            
+            onEnd: function(evt) {
+                const issueId = evt.item.dataset.issueId;
+                const newStatusId = evt.to.dataset.statusId;
+                const oldStatusId = evt.from.dataset.statusId;
+                
+                // Get new position (index in the column)
+                const newPosition = Array.from(evt.to.children)
+                    .filter(el => el.classList.contains('issue-card'))
+                    .indexOf(evt.item);
+                
+                // Only update if actually moved
+                if (newStatusId !== oldStatusId || evt.oldIndex !== evt.newIndex) {
+                    // Remove empty placeholder if exists
+                    const placeholder = evt.to.querySelector('.empty-column-placeholder');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
+                    
+                    // Add placeholder to old column if empty
+                    if (evt.from.querySelectorAll('.issue-card').length === 0) {
+                        const newPlaceholder = document.createElement('div');
+                        newPlaceholder.className = 'empty-column-placeholder';
+                        newPlaceholder.textContent = MSG_NO_ISSUES;
+                        evt.from.appendChild(newPlaceholder);
+                    }
+                    
+                    // Send move request
+                    fetch(moveUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            issue_id: parseInt(issueId),
+                            status_id: parseInt(newStatusId),
+                            position: newPosition
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(MSG_ISSUE_MOVED, 'success');
+                            updateColumnCounts();
+                        } else {
+                            showToast(data.error || MSG_MOVE_FAILED, 'danger');
+                            // Revert the move
+                            location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showToast(MSG_MOVE_FAILED, 'danger');
+                        location.reload();
+                    });
+                }
+            }
+        });
+    });
+    
+    // Quick create functionality
+    document.querySelectorAll('.quick-create-input').forEach(function(input) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                const statusId = this.dataset.statusId;
+                const summary = this.value.trim();
+                
+                fetch(quickCreateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        summary: summary,
+                        status_id: parseInt(statusId)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(MSG_ISSUE_CREATED + ': ' + data.issue_key, 'success');
+                        // Reload to show new issue
+                        location.reload();
+                    } else {
+                        showToast(data.error || MSG_CREATE_FAILED, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast(MSG_CREATE_FAILED, 'danger');
+                });
+                
+                this.value = '';
+            }
+        });
+    });
+    
+    // Filter functionality
+    function applyFilters() {
+        const typeFilter = document.getElementById('filterType').value;
+        const assigneeFilter = document.getElementById('filterAssignee').value;
+        const priorityFilter = document.getElementById('filterPriority').value;
+        const searchText = document.getElementById('searchIssues').value.toLowerCase();
+        
+        document.querySelectorAll('.issue-card').forEach(function(card) {
+            let show = true;
+            
+            if (typeFilter && card.dataset.type !== typeFilter) {
+                show = false;
+            }
+            
+            if (assigneeFilter && card.dataset.assignee !== assigneeFilter) {
+                show = false;
+            }
+            
+            if (priorityFilter && card.dataset.priority !== priorityFilter) {
+                show = false;
+            }
+            
+            if (searchText) {
+                const summary = card.querySelector('.issue-card-summary').textContent.toLowerCase();
+                const key = card.querySelector('.issue-card-key').textContent.toLowerCase();
+                if (!summary.includes(searchText) && !key.includes(searchText)) {
+                    show = false;
+                }
+            }
+            
+            card.style.display = show ? '' : 'none';
+        });
+        
+        // Show/hide empty placeholders based on visible issues
+        document.querySelectorAll('.sortable-column').forEach(function(column) {
+            const visibleCards = column.querySelectorAll('.issue-card:not([style*="display: none"])');
+            let placeholder = column.querySelector('.empty-column-placeholder');
+            
+            if (visibleCards.length === 0) {
+                if (!placeholder) {
+                    placeholder = document.createElement('div');
+                    placeholder.className = 'empty-column-placeholder';
+                    placeholder.textContent = MSG_NO_ISSUES;
+                    column.appendChild(placeholder);
+                }
+                placeholder.style.display = '';
+            } else if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+        });
+    }
+    
+    document.getElementById('filterType').addEventListener('change', applyFilters);
+    document.getElementById('filterAssignee').addEventListener('change', applyFilters);
+    document.getElementById('filterPriority').addEventListener('change', applyFilters);
+    document.getElementById('searchIssues').addEventListener('input', applyFilters);
+    
+    // Update column counts
+    function updateColumnCounts() {
+        document.querySelectorAll('.board-column').forEach(function(column) {
+            const count = column.querySelectorAll('.issue-card').length;
+            column.querySelector('.issue-count').textContent = count;
+        });
+    }
+    
+    // Toast helper
+    function showToast(message, type) {
+        const toast = document.getElementById('boardToast');
+        const toastBody = toast.querySelector('.toast-body');
+        toastBody.textContent = message;
+        
+        // Update toast style based on type
+        toast.className = 'toast';
+        if (type === 'success') {
+            toast.classList.add('bg-success', 'text-white');
+        } else if (type === 'danger') {
+            toast.classList.add('bg-danger', 'text-white');
+        }
+        
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+    }
+});
+</script>
+{% endblock %}

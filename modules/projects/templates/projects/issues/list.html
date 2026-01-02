@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Issues' if lang == 'en' else 'Issues' }} - {{ project.key }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+                    <li class="breadcrumb-item active">Issues</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0">
+                <i class="bi bi-list-task me-2"></i>
+                {{ 'Issues' if lang == 'en' else 'Issues' }}
+                <small class="text-muted">({{ issues|length }})</small>
+            </h2>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- View Switcher -->
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary active" title="{{ 'List View' if lang == 'en' else 'Listenansicht' }}">
+                    <i class="bi bi-list-ul"></i>
+                </a>
+                <a href="{{ url_for('projects.kanban_board', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary" title="{{ 'Board View' if lang == 'en' else 'Board-Ansicht' }}">
+                    <i class="bi bi-kanban"></i>
+                </a>
+                <a href="{{ url_for('projects.backlog', project_id=project.id) }}" 
+                   class="btn btn-outline-secondary" title="Backlog">
+                    <i class="bi bi-list-ol"></i>
+                </a>
+            </div>
+            
+            <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-success">
+                <i class="bi bi-plus-lg me-1"></i>
+                {{ 'New Issue' if lang == 'en' else 'Neues Issue' }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Type' if lang == 'en' else 'Typ' }}</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">{{ 'All' if lang == 'en' else 'Alle' }}</option>
+                        {% for t in issue_types %}
+                        <option value="{{ t.id }}" {{ 'selected' if filters.type == t.id }}>{{ t.get_name(lang) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">{{ 'All' if lang == 'en' else 'Alle' }}</option>
+                        {% for s in issue_statuses %}
+                        <option value="{{ s.id }}" {{ 'selected' if filters.status == s.id }}>{{ s.get_name(lang) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Assignee' if lang == 'en' else 'Bearbeiter' }}</label>
+                    <select name="assignee" class="form-select form-select-sm">
+                        <option value="">{{ 'All' if lang == 'en' else 'Alle' }}</option>
+                        {% for m in members %}
+                        <option value="{{ m.user.id }}" {{ 'selected' if filters.assignee == m.user.id }}>{{ m.user.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">{{ 'Priority' if lang == 'en' else 'Priorität' }}</label>
+                    <select name="priority" class="form-select form-select-sm">
+                        <option value="">{{ 'All' if lang == 'en' else 'Alle' }}</option>
+                        <option value="1" {{ 'selected' if filters.priority == 1 }}>{{ 'Highest' if lang == 'en' else 'Höchste' }}</option>
+                        <option value="2" {{ 'selected' if filters.priority == 2 }}>{{ 'High' if lang == 'en' else 'Hoch' }}</option>
+                        <option value="3" {{ 'selected' if filters.priority == 3 }}>{{ 'Medium' if lang == 'en' else 'Mittel' }}</option>
+                        <option value="4" {{ 'selected' if filters.priority == 4 }}>{{ 'Low' if lang == 'en' else 'Niedrig' }}</option>
+                        <option value="5" {{ 'selected' if filters.priority == 5 }}>{{ 'Lowest' if lang == 'en' else 'Niedrigste' }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">{{ 'Search' if lang == 'en' else 'Suche' }}</label>
+                    <input type="text" name="search" class="form-control form-control-sm" value="{{ filters.search }}" placeholder="{{ 'Key or summary...' if lang == 'en' else 'Key oder Zusammenfassung...' }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Issue List -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;">{{ 'Type' if lang == 'en' else 'Typ' }}</th>
+                        <th style="width: 100px;">Key</th>
+                        <th>{{ 'Summary' if lang == 'en' else 'Zusammenfassung' }}</th>
+                        <th style="width: 130px;">Status</th>
+                        <th style="width: 50px;"><i class="bi bi-arrow-up-down" title="{{ 'Priority' if lang == 'en' else 'Priorität' }}"></i></th>
+                        <th style="width: 60px;" title="Story Points"><i class="bi bi-lightning-charge"></i></th>
+                        <th style="width: 130px;">{{ 'Assignee' if lang == 'en' else 'Bearbeiter' }}</th>
+                        <th style="width: 95px;">{{ 'Due' if lang == 'en' else 'Fällig' }}</th>
+                        <th style="width: 95px;">{{ 'Created' if lang == 'en' else 'Erstellt' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if issues %}
+                        {% for issue in issues %}
+                        <tr class="cursor-pointer" onclick="window.location='{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}'">
+                            <td>
+                                <i class="{{ issue.issue_type.icon }}" style="color: {{ issue.issue_type.color }};" title="{{ issue.issue_type.get_name(lang) }}"></i>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}" class="text-decoration-none fw-medium">
+                                    {{ issue.key }}
+                                </a>
+                            </td>
+                            <td>
+                                {{ issue.summary }}
+                                {% if issue.labels %}
+                                    {% for label in issue.labels[:3] %}
+                                    <span class="badge bg-secondary ms-1">{{ label }}</span>
+                                    {% endfor %}
+                                    {% if issue.labels|length > 3 %}
+                                    <span class="badge bg-light text-dark">+{{ issue.labels|length - 3 }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge" style="background-color: {{ issue.status.color }};">
+                                    {{ issue.status.get_name(lang) }}
+                                </span>
+                            </td>
+                            <td>
+                                <i class="{{ issue.get_priority_icon() }}" title="{{ issue.get_priority_display(lang) }}"></i>
+                            </td>
+                            <td>
+                                {% if issue.story_points %}
+                                <span class="badge bg-primary bg-opacity-25 text-primary">{{ issue.story_points|int if issue.story_points == issue.story_points|int else issue.story_points }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if issue.assignee %}
+                                    <span class="d-flex align-items-center">
+                                        <span class="avatar-circle avatar-sm me-2" style="background-color: #86BC25;">
+                                            {{ issue.assignee.name[:1].upper() }}
+                                        </span>
+                                        {{ issue.assignee.name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">{{ 'Unassigned' if lang == 'en' else 'Nicht zugewiesen' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if issue.due_date %}
+                                    <span class="{{ 'text-danger' if issue.is_overdue else '' }}">
+                                        {{ issue.due_date.strftime('%d.%m.%y') }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="text-muted small">{{ issue.created_at.strftime('%d.%m.%y') }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                                {{ 'No issues found' if lang == 'en' else 'Keine Issues gefunden' }}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.cursor-pointer { cursor: pointer; }
+.cursor-pointer:hover { background-color: rgba(134, 188, 37, 0.05); }
+.avatar-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+}
+.avatar-sm {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+}
+</style>
+{% endblock %}

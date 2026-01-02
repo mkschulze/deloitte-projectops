@@ -8,63 +8,127 @@
 
 ## Session Information
 
-**Date:** 2025-12-31 (Session 7)  
-**Last Action:** Completed Phase J — Template Builder UI (Full Form Builder)  
-**Status:** MVP Complete + Phase A-J — All core features + notifications, bulk ops, exports, calendar sync, email, charts, entity scoping, recurring tasks, archival, template builder UI
-**Version:** 1.2.0
+**Date:** 2026-01-02 (Session 9)  
+**Last Action:** Completed Phase PM-3 — Kanban Board  
+**Status:** MVP Complete + Phase A-J + PM-0/PM-1/PM-2/PM-3 — Vollständiges Kanban Board mit Drag & Drop
+**Version:** 1.5.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 7)
+### ✅ What Was Accomplished (Session 9)
 
-1. **Phase J: Template Builder UI** (Complete)
+1. **Phase PM-3: Kanban Board** (Complete)
 
-   #### C1: Enhanced Preset Form
-   - Live preview panel showing task card with current form values
-   - Recurrence wizard with visual calendar date preview
-   - Tax type search dropdown with filtering
-   - Due date calculator showing next occurrences
+   #### Kanban Board Routes (modules/projects/routes.py)
+   - `kanban_board(project_id)` — Hauptansicht mit Status-Spalten
+   - `kanban_move_issue(project_id)` — JSON API für Drag & Drop
+   - `kanban_quick_create(project_id)` — JSON API für Inline-Erstellung
+   
+   #### Board Template (board.html)
+   - Responsive Spalten-Layout (min/max 300px pro Spalte)
+   - Horizontales Scrollen für viele Spalten
+   - Status-Farben als Spalten-Header-Border
+   - Issue-Count Badge pro Spalte
+   
+   #### Issue Cards
+   - Type-Icon mit Farbe
+   - Issue-Key (z.B. TAX-1)
+   - Summary als Link zur Detail-Seite
+   - Priorität als farbiger Streifen links
+   - Bearbeiter-Avatar (Initialen)
+   
+   #### Drag & Drop (SortableJS)
+   - CDN-Integration
+   - Gruppe "issues" für Spalten-übergreifendes Ziehen
+   - Ghost/Chosen/Drag Styles
+   - Position-Tracking bei Move
+   - Toast-Feedback für erfolgreiche Moves
+   - Fehlerbehandlung mit Auto-Reload
+   
+   #### Filter & Suche
+   - Typ-Filter (Dropdown)
+   - Bearbeiter-Filter
+   - Priorität-Filter
+   - Freitext-Suche (Key + Summary)
+   - Client-seitige Filterung ohne Reload
+   
+   #### Quick Create
+   - Input-Feld am Ende jeder Spalte
+   - Enter zum Erstellen
+   - Automatisch in der jeweiligen Spalte
+   - Toast-Feedback + Reload
+   
+   #### Navigation
+   - View-Switcher (Liste/Board) in Issue-List
+   - View-Switcher (Liste/Board) in Board
+   - Kanban Board Button in Project Detail aktiviert
+   
+   #### Zusätzliche Dateien
+   - `_macros.html` — Wiederverwendbare Template-Makros
+     - render_issue_type_icon(issue_type)
+     - render_issue_priority_badge(priority)
+     - render_issue_status_badge(status)
+     - render_user_avatar(user, size)
+     - render_project_icon(project, size)
 
-   #### C2: Visual Category Tree
-   - 3 views: Tree (grouped by tax type), Card (grid), Table (classic)
-   - Drag & drop reordering with SortableJS
-   - Bulk selection with floating action bar
-   - Quick edit slide-out panel
-   - View toggle with persistence in localStorage
+2. **Phase PM-2: Flexibles Issue-Management** (Complete)
 
-   #### C3: Custom Fields
-   - `PresetCustomField` model (name, labels, type, required, options, conditions)
-   - `TaskCustomFieldValue` model for storing field values on tasks
-   - `CustomFieldType` enum (text, textarea, number, date, select, checkbox)
-   - Custom Fields UI section in preset form
-   - Modal dialog for field creation/editing
-   - API endpoints: `GET/POST /api/preset-fields`, `PUT/DELETE /api/preset-fields/<id>`
-   - Template variables support: `{{year}}`, `{{entity}}`, `{{quarter}}`, etc.
-   - Conditional visibility (show field based on other field values)
+   #### Flexible Architektur (statt fest kodierter Enums)
+   - `ProjectMethodology` enum: scrum, kanban, waterfall, custom
+   - `StatusCategory` enum für Metriken: todo, in_progress, done
+   - Project erweitert mit `methodology` und `terminology` (JSON)
+   - `Project.get_term()` für anpassbare Terminologie pro Projekt
+   
+   #### Konfigurierbare Issue-Typen (IssueType Model)
+   - Pro Projekt konfigurierbar (nicht global)
+   - name, name_en, icon, color, hierarchy_level
+   - can_have_children, is_subtask, is_default, sort_order
+   - Default-Sets pro Methodologie (Scrum: Epic/Story/Task/Bug/SubTask)
+   
+   #### Konfigurierbare Workflows (IssueStatus Model)
+   - Pro Projekt konfigurierbar
+   - name, name_en, category, color
+   - is_initial (Startstatus), is_final (Endstatus)
+   - allowed_transitions für Workflow-Einschränkungen
+   - Default-Sets pro Methodologie
+   
+   #### Issue Model (Vollständig)
+   - Auto-Key Generation (TAX-1, TAX-2, etc.)
+   - Hierarchie via parent_id (für Sub-Tasks)
+   - Priority (1-5 mit Icons)
+   - Time Tracking (original_estimate, time_spent, remaining_estimate)
+   - Story Points für Scrum
+   - Sprint-Zuordnung
+   - Labels (JSON Array)
+   - Custom Fields (JSON Object)
+   - board_position, backlog_position für Sortierung
+   - Archivierung
+   
+   #### Sprint Model
+   - name, goal, start_date, end_date
+   - state: future, active, closed
+   - total_points, completed_points Properties
+   
+   #### Routes & Templates
+   - Issue List mit Filtern (Status, Type, Assignee, Priority, Search)
+   - Issue Create/Edit Form mit Type-Buttons und Priority-Select
+   - Issue Detail mit Status-Transition-Buttons
+   - Child Issues Anzeige
+   - Settings: Issue Types Verwaltung
+   - Settings: Workflow Status Verwaltung
+   
+   #### Helper Functions
+   - `create_default_issue_types(project)` - Erstellt Defaults basierend auf Methodologie
+   - `create_default_issue_statuses(project)` - Erstellt Workflow-Defaults
+   
+   #### Migration
+   - pm2_add_flexible_issue_system.py
+   - Neue Tabellen: issue_type, issue_status, issue, sprint
+   - Project erweitert: methodology, terminology
 
-   #### C4: Import/Export Enhancement
-   - Enhanced JSON export includes custom fields
-   - JSON import handles enhanced format with custom fields
-   - Import counts imported fields in success message
-
-   #### Deloitte Color Scheme Enhancement
-   - Page headers with Deloitte gradient
-   - View toggle buttons with proper colors
-   - Filter cards with styled inputs
-   - Enhanced table view with dark green header
-   - Action buttons with hover states
-
-   #### Bug Fixes
-   - Added missing `make_response` import for export route
-   - Fixed `User.display_name` to `User.name` in preset routes
-   - Fixed checkbox styling in preset list
-   - Fixed search input minimum width
-   - Fixed card text overflow handling
-   - Fixed view toggle icon visibility when active
-
-### ✅ Previously Completed (Sessions 1-6)
+### ✅ Previously Completed (Sessions 1-8)
 
 - **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
 - **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)
@@ -284,20 +348,26 @@ deloitte-taxops-calendar/
 
 ## Next Steps (If Continuing Development)
 
-### Remaining Phases
-1. **Phase I:** Archival & Soft-Delete (is_archived flag, archive view, retention)
+### Remaining Project Management Phases
+1. **Phase PM-4:** Backlog (Priorisierte Issue-Liste, Drag & Drop Ranking)
+2. **Phase PM-5:** Sprint-Management (Sprint starten/beenden, Sprint-Board)
+3. **Phase PM-6:** Kommentare, Attachments, Links
+4. **Phase PM-7:** Epics & Progress-Tracking
+5. **Phase PM-8:** Suche & Filter (erweitert)
+6. **Phase PM-9:** Charts (Burndown, Velocity, Cumulative Flow)
+7. **Phase PM-10:** Konfigurierbare Workflows (Workflow-Designer)
 
 ### Future Considerations
 1. OIDC/Entra ID SSO integration
 2. MS Teams notifications via webhooks
 3. Virus scanning for uploads
-4. Template builder UI
+4. WebSocket Real-time Updates für Board
 
 ---
 
 ## Blockers
 
-None currently. All Phase A-H features are complete and functional.
+None currently. All Phase A-J + PM-0/PM-1/PM-2/PM-3 features are complete and functional.
 
 ---
 
@@ -307,7 +377,9 @@ None currently. All Phase A-H features are complete and functional.
 - **Jinja2 Limitation:** `startswith()` doesn't work in templates, use string slicing: `mime[:6] == 'image/'`
 - **SQLite FK Constraints:** Must provide constraint names explicitly in migrations
 - **Multi-Reviewer Query:** For SQL queries checking reviewer access, need subquery join on `task_reviewer` table
+- **SortableJS:** CDN für Kanban Board Drag & Drop (Version 1.15.0)
+- **marked.js:** CDN für Markdown-Rendering in Issue-Beschreibungen
 
 ---
 
-*Last updated: 2025-12-28 Session 4*
+*Last updated: 2026-01-02 Session 9*

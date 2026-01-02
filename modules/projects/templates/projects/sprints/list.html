@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Sprints - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sprint-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    
+    .sprint-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .sprint-card.active {
+        border-color: #86bc25;
+        border-width: 2px;
+        background: linear-gradient(135deg, #f8fff8 0%, white 100%);
+    }
+    
+    .sprint-card.closed {
+        opacity: 0.8;
+        background: #f8f9fa;
+    }
+    
+    .sprint-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+    
+    .sprint-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+    
+    .sprint-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .sprint-badge.future {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+    
+    .sprint-badge.active {
+        background: #86bc25;
+        color: white;
+    }
+    
+    .sprint-badge.closed {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .sprint-goal {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .sprint-meta {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 0.75rem;
+    }
+    
+    .sprint-meta i {
+        margin-right: 0.25rem;
+        color: #999;
+    }
+    
+    .sprint-progress {
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+    
+    .sprint-progress-bar {
+        height: 100%;
+        background: #86bc25;
+        transition: width 0.3s;
+    }
+    
+    .sprint-stats {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #666;
+    }
+    
+    .sprint-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+    }
+    
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #666;
+        margin: 1.5rem 0 0.75rem 0;
+        letter-spacing: 0.5px;
+    }
+    
+    .section-title:first-child {
+        margin-top: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
+                    <li class="breadcrumb-item active">Sprints</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-lightning me-2"></i>
+                Sprints
+            </h1>
+        </div>
+        <div>
+            <a href="{{ url_for('projects.sprint_create', project_id=project.id) }}" class="btn btn-deloitte-green">
+                <i class="bi bi-plus-lg me-1"></i>
+                {{ 'Neuer Sprint' if lang == 'de' else 'New Sprint' }}
+            </a>
+        </div>
+    </div>
+    
+    {% if sprints %}
+        {% set active_sprints = sprints|selectattr('state', 'equalto', 'active')|list %}
+        {% set future_sprints = sprints|selectattr('state', 'equalto', 'future')|list %}
+        {% set closed_sprints = sprints|selectattr('state', 'equalto', 'closed')|list %}
+        
+        <!-- Active Sprints -->
+        {% if active_sprints %}
+        <div class="section-title">
+            <i class="bi bi-play-circle me-1"></i>
+            {{ 'Aktiver Sprint' if lang == 'de' else 'Active Sprint' }}
+        </div>
+        {% for sprint in active_sprints %}
+            {% set total_points = sprint.total_points %}
+            {% set completed_points = sprint.completed_points %}
+            {% set progress = (completed_points / total_points * 100) if total_points > 0 else 0 %}
+            
+            <div class="sprint-card active">
+                <div class="sprint-header">
+                    <h3 class="sprint-title">{{ sprint.name }}</h3>
+                    <span class="sprint-badge active">{{ 'Aktiv' if lang == 'de' else 'Active' }}</span>
+                </div>
+                
+                {% if sprint.goal %}
+                <p class="sprint-goal">
+                    <i class="bi bi-flag"></i> {{ sprint.goal }}
+                </p>
+                {% endif %}
+                
+                <div class="sprint-meta">
+                    {% if sprint.start_date %}
+                    <span><i class="bi bi-calendar-event"></i> {{ sprint.start_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    {% if sprint.end_date %}
+                    <span><i class="bi bi-calendar-check"></i> {{ sprint.end_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    <span><i class="bi bi-list-task"></i> {{ sprint.issues|length }} {{ 'Issues' if lang == 'en' else 'Issues' }}</span>
+                </div>
+                
+                <div class="sprint-progress">
+                    <div class="sprint-progress-bar" style="width: {{ progress }}%"></div>
+                </div>
+                <div class="sprint-stats">
+                    <span>{{ completed_points }} / {{ total_points }} {{ 'Story Points' if lang == 'en' else 'Story Points' }}</span>
+                    <span>{{ progress|int }}% {{ 'abgeschlossen' if lang == 'de' else 'complete' }}</span>
+                </div>
+                
+                <div class="sprint-actions">
+                    <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-deloitte-green">
+                        <i class="bi bi-kanban me-1"></i>
+                        {{ 'Sprint Board' if lang == 'de' else 'Sprint Board' }}
+                    </a>
+                    <a href="{{ url_for('projects.sprint_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form action="{{ url_for('projects.sprint_complete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline" 
+                          onsubmit="return confirm('{{ 'Sprint wirklich abschließen?' if lang == 'de' else 'Really complete this sprint?' }}')">
+                        <button type="submit" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-check-circle me-1"></i>
+                            {{ 'Abschließen' if lang == 'de' else 'Complete' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+        {% endif %}
+        
+        <!-- Future Sprints -->
+        {% if future_sprints %}
+        <div class="section-title">
+            <i class="bi bi-hourglass me-1"></i>
+            {{ 'Geplante Sprints' if lang == 'de' else 'Planned Sprints' }} ({{ future_sprints|length }})
+        </div>
+        {% for sprint in future_sprints %}
+            <div class="sprint-card">
+                <div class="sprint-header">
+                    <h3 class="sprint-title">{{ sprint.name }}</h3>
+                    <span class="sprint-badge future">{{ 'Geplant' if lang == 'de' else 'Planned' }}</span>
+                </div>
+                
+                {% if sprint.goal %}
+                <p class="sprint-goal">
+                    <i class="bi bi-flag"></i> {{ sprint.goal }}
+                </p>
+                {% endif %}
+                
+                <div class="sprint-meta">
+                    {% if sprint.start_date %}
+                    <span><i class="bi bi-calendar-event"></i> {{ sprint.start_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    {% if sprint.end_date %}
+                    <span><i class="bi bi-calendar-check"></i> {{ sprint.end_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    <span><i class="bi bi-list-task"></i> {{ sprint.issues|length }} {{ 'Issues' if lang == 'en' else 'Issues' }}</span>
+                    <span><i class="bi bi-lightning"></i> {{ sprint.total_points }} {{ 'Story Points' if lang == 'en' else 'Story Points' }}</span>
+                </div>
+                
+                <div class="sprint-actions">
+                    {% if not active_sprints %}
+                    <form action="{{ url_for('projects.sprint_start', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-deloitte-green">
+                            <i class="bi bi-play-fill me-1"></i>
+                            {{ 'Sprint starten' if lang == 'de' else 'Start Sprint' }}
+                        </button>
+                    </form>
+                    {% endif %}
+                    <a href="{{ url_for('projects.sprint_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form action="{{ url_for('projects.sprint_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
+                          onsubmit="return confirm('{{ 'Sprint wirklich löschen?' if lang == 'de' else 'Really delete this sprint?' }}')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+        {% endif %}
+        
+        <!-- Closed Sprints -->
+        {% if closed_sprints %}
+        <div class="section-title">
+            <i class="bi bi-archive me-1"></i>
+            {{ 'Abgeschlossene Sprints' if lang == 'de' else 'Completed Sprints' }} ({{ closed_sprints|length }})
+        </div>
+        {% for sprint in closed_sprints %}
+            {% set total_points = sprint.total_points %}
+            {% set completed_points = sprint.completed_points %}
+            {% set progress = (completed_points / total_points * 100) if total_points > 0 else 0 %}
+            
+            <div class="sprint-card closed">
+                <div class="sprint-header">
+                    <h3 class="sprint-title">{{ sprint.name }}</h3>
+                    <span class="sprint-badge closed">{{ 'Abgeschlossen' if lang == 'de' else 'Closed' }}</span>
+                </div>
+                
+                <div class="sprint-meta">
+                    {% if sprint.start_date %}
+                    <span><i class="bi bi-calendar-event"></i> {{ sprint.start_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    {% if sprint.end_date %}
+                    <span><i class="bi bi-calendar-check"></i> {{ sprint.end_date.strftime('%d.%m.%Y') }}</span>
+                    {% endif %}
+                    <span><i class="bi bi-list-task"></i> {{ sprint.issues|length }} Issues</span>
+                    <span><i class="bi bi-check2-all"></i> {{ completed_points }} / {{ total_points }} SP ({{ progress|int }}%)</span>
+                </div>
+                
+                <div class="sprint-actions">
+                    <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-eye me-1"></i>
+                        {{ 'Ansehen' if lang == 'de' else 'View' }}
+                    </a>
+                    <form action="{{ url_for('projects.sprint_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
+                          onsubmit="return confirm('{{ 'Sprint wirklich löschen?' if lang == 'de' else 'Really delete this sprint?' }}')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-lightning d-block"></i>
+            <h4>{{ 'Keine Sprints vorhanden' if lang == 'de' else 'No sprints yet' }}</h4>
+            <p class="text-muted mb-3">
+                {{ 'Erstellen Sie Ihren ersten Sprint, um mit der agilen Arbeit zu beginnen.' if lang == 'de' else 'Create your first sprint to start working agile.' }}
+            </p>
+            <a href="{{ url_for('projects.sprint_create', project_id=project.id) }}" class="btn btn-deloitte-green">
+                <i class="bi bi-plus-lg me-1"></i>
+                {{ 'Ersten Sprint erstellen' if lang == 'de' else 'Create First Sprint' }}
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

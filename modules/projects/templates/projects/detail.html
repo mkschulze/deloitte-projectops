@@ -110,28 +110,48 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <a href="#" class="btn btn-outline-primary w-100 disabled">
+                            <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-outline-primary w-100">
                                 <i class="bi bi-plus-circle d-block fs-3 mb-2"></i>
                                 {{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="#" class="btn btn-outline-primary w-100 disabled">
+                            <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-list-task d-block fs-3 mb-2"></i>
+                                {{ 'Alle Issues' if lang == 'de' else 'All Issues' }}
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('projects.kanban_board', project_id=project.id) }}" class="btn btn-outline-primary w-100">
                                 <i class="bi bi-kanban d-block fs-3 mb-2"></i>
                                 {{ 'Kanban Board' if lang == 'de' else 'Kanban Board' }}
                             </a>
                         </div>
                         <div class="col-md-4">
-                            <a href="#" class="btn btn-outline-primary w-100 disabled">
-                                <i class="bi bi-list-task d-block fs-3 mb-2"></i>
-                                {{ 'Backlog' if lang == 'de' else 'Backlog' }}
+                            <a href="{{ url_for('projects.backlog', project_id=project.id) }}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-list-ol d-block fs-3 mb-2"></i>
+                                Backlog
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{{ url_for('projects.sprint_list', project_id=project.id) }}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-lightning d-block fs-3 mb-2"></i>
+                                Sprints
                             </a>
                         </div>
                     </div>
-                    <p class="text-center text-muted mt-3 mb-0">
-                        <i class="bi bi-info-circle me-1"></i>
-                        {{ 'Issue-Management kommt in PM-2' if lang == 'de' else 'Issue management coming in PM-2' }}
-                    </p>
+                    {% if project.can_user_edit(current_user) %}
+                    <hr>
+                    <h6 class="text-muted"><i class="bi bi-gear me-1"></i> {{ 'Konfiguration' if lang == 'de' else 'Configuration' }}</h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('projects.project_issue_types', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-collection me-1"></i>{{ 'Issue-Typen' if lang == 'de' else 'Issue Types' }}
+                        </a>
+                        <a href="{{ url_for('projects.project_issue_statuses', project_id=project.id) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-left-right me-1"></i>{{ 'Workflow' if lang == 'de' else 'Workflow' }}
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

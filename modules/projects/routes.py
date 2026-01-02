@@ -1,13 +1,18 @@
 """
 Project Management Module - Routes
 """
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import login_required, current_user
 
 from extensions import db
 from models import User
 from translations import get_translation as t
-from .models import Project, ProjectMember, ProjectRole
+from .models import (
+    Project, ProjectMember, ProjectRole,
+    IssueType, IssueStatus, Issue, Sprint,
+    create_default_issue_types, create_default_issue_statuses
+)
 
 # Create blueprint
 bp = Blueprint('projects', __name__, template_folder='templates', url_prefix='/projects')
@@ -376,6 +381,1321 @@ def project_member_role(project_id, member_id, project=None):
     
     flash('Rolle aktualisiert.' if lang == 'de' else 'Role updated.', 'success')
     return redirect(url_for('projects.project_members', project_id=project_id))
+
+
+# ============================================================================
+# ISSUE MANAGEMENT
+# ============================================================================
+
+@bp.route('/<int:project_id>/issues', strict_slashes=False)
+@login_required
+@projects_module_required
+@project_access_required
+def issue_list(project_id, project=None):
+    """List all issues in a project"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    # Get filter parameters
+    status_id = request.args.get('status', type=int)
+    type_id = request.args.get('type', type=int)
+    assignee_id = request.args.get('assignee', type=int)
+    priority = request.args.get('priority', type=int)
+    search = request.args.get('search', '').strip()
+    
+    # Build query
+    query = Issue.query.filter_by(project_id=project_id, is_archived=False)
+    
+    if status_id:
+        query = query.filter_by(status_id=status_id)
+    if type_id:
+        query = query.filter_by(type_id=type_id)
+    if assignee_id:
+        query = query.filter_by(assignee_id=assignee_id)
+    if priority:
+        query = query.filter_by(priority=priority)
+    if search:
+        query = query.filter(
+            db.or_(
+                Issue.key.ilike(f'%{search}%'),
+                Issue.summary.ilike(f'%{search}%')
+            )
+        )
+    
+    issues = query.order_by(Issue.created_at.desc()).all()
+    
+    # Get filter options
+    issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    issue_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    members = ProjectMember.query.filter_by(project_id=project_id).all()
+    
+    return render_template('projects/issues/list.html',
+        project=project,
+        issues=issues,
+        issue_types=issue_types,
+        issue_statuses=issue_statuses,
+        members=members,
+        filters={
+            'status': status_id,
+            'type': type_id,
+            'assignee': assignee_id,
+            'priority': priority,
+            'search': search
+        },
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/issues/new', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_new(project_id, project=None):
+    """Create a new issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    # Check permission
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung zum Erstellen von Issues.' if lang == 'de' else 'No permission to create issues.', 'danger')
+        return redirect(url_for('projects.issue_list', project_id=project_id))
+    
+    # Get issue types and statuses for this project
+    issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    issue_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    # If no types/statuses exist, create defaults
+    if not issue_types:
+        create_default_issue_types(project)
+        db.session.commit()
+        issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    
+    if not issue_statuses:
+        create_default_issue_statuses(project)
+        db.session.commit()
+        issue_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    members = ProjectMember.query.filter_by(project_id=project_id).all()
+    sprints = Sprint.query.filter_by(project_id=project_id).filter(Sprint.state != 'closed').all()
+    
+    # Get parent issues (for sub-tasks)
+    parent_issues = Issue.query.filter_by(project_id=project_id, is_archived=False).filter(
+        Issue.type_id.in_([t.id for t in issue_types if t.can_have_children])
+    ).all()
+    
+    if request.method == 'POST':
+        type_id = request.form.get('type_id', type=int)
+        summary = request.form.get('summary', '').strip()
+        description = request.form.get('description', '').strip()
+        assignee_id = request.form.get('assignee_id', type=int)
+        priority = request.form.get('priority', 3, type=int)
+        parent_id = request.form.get('parent_id', type=int)
+        sprint_id = request.form.get('sprint_id', type=int)
+        story_points = request.form.get('story_points', type=float)
+        due_date = request.form.get('due_date')
+        labels = request.form.get('labels', '').strip()
+        
+        # Validation
+        if not type_id or not summary:
+            flash('Typ und Zusammenfassung sind erforderlich.' if lang == 'de' else 'Type and summary are required.', 'danger')
+            return redirect(url_for('projects.issue_new', project_id=project_id))
+        
+        # Get initial status
+        initial_status = IssueStatus.query.filter_by(project_id=project_id, is_initial=True).first()
+        if not initial_status:
+            initial_status = issue_statuses[0] if issue_statuses else None
+        
+        if not initial_status:
+            flash('Keine Status konfiguriert.' if lang == 'de' else 'No statuses configured.', 'danger')
+            return redirect(url_for('projects.issue_new', project_id=project_id))
+        
+        # Generate issue key
+        issue_key = project.get_next_issue_key()
+        
+        # Parse labels
+        label_list = [l.strip() for l in labels.split(',') if l.strip()] if labels else []
+        
+        # Parse due date
+        parsed_due_date = None
+        if due_date:
+            try:
+                parsed_due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        issue = Issue(
+            project_id=project_id,
+            key=issue_key,
+            type_id=type_id,
+            status_id=initial_status.id,
+            summary=summary,
+            description=description or None,
+            assignee_id=assignee_id or None,
+            reporter_id=current_user.id,
+            priority=priority,
+            parent_id=parent_id or None,
+            sprint_id=sprint_id or None,
+            story_points=story_points,
+            due_date=parsed_due_date,
+            labels=label_list
+        )
+        db.session.add(issue)
+        db.session.commit()
+        
+        flash(f'Issue {issue.key} erstellt.' if lang == 'de' else f'Issue {issue.key} created.', 'success')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue.key))
+    
+    # GET request
+    return render_template('projects/issues/form.html',
+        project=project,
+        issue=None,
+        issue_types=issue_types,
+        issue_statuses=issue_statuses,
+        members=members,
+        sprints=sprints,
+        parent_issues=parent_issues,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>')
+@login_required
+@projects_module_required
+@project_access_required
+def issue_detail(project_id, issue_key, project=None):
+    """Issue detail view"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Get available statuses for transition
+    available_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    # Get child issues (sub-tasks)
+    children = Issue.query.filter_by(parent_id=issue.id, is_archived=False).all()
+    
+    return render_template('projects/issues/detail.html',
+        project=project,
+        issue=issue,
+        available_statuses=available_statuses,
+        children=children,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/edit', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_edit(project_id, issue_key, project=None):
+    """Edit an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check permission
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    issue_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    members = ProjectMember.query.filter_by(project_id=project_id).all()
+    sprints = Sprint.query.filter_by(project_id=project_id).filter(Sprint.state != 'closed').all()
+    parent_issues = Issue.query.filter_by(project_id=project_id, is_archived=False).filter(
+        Issue.id != issue.id,
+        Issue.type_id.in_([t.id for t in issue_types if t.can_have_children])
+    ).all()
+    
+    if request.method == 'POST':
+        issue.type_id = request.form.get('type_id', type=int)
+        issue.summary = request.form.get('summary', '').strip()
+        issue.description = request.form.get('description', '').strip() or None
+        issue.assignee_id = request.form.get('assignee_id', type=int) or None
+        issue.priority = request.form.get('priority', 3, type=int)
+        issue.parent_id = request.form.get('parent_id', type=int) or None
+        issue.sprint_id = request.form.get('sprint_id', type=int) or None
+        issue.story_points = request.form.get('story_points', type=float)
+        
+        due_date = request.form.get('due_date')
+        if due_date:
+            try:
+                issue.due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        else:
+            issue.due_date = None
+        
+        labels = request.form.get('labels', '').strip()
+        issue.labels = [l.strip() for l in labels.split(',') if l.strip()] if labels else []
+        
+        db.session.commit()
+        
+        flash('Issue aktualisiert.' if lang == 'de' else 'Issue updated.', 'success')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    return render_template('projects/issues/form.html',
+        project=project,
+        issue=issue,
+        issue_types=issue_types,
+        issue_statuses=issue_statuses,
+        members=members,
+        sprints=sprints,
+        parent_issues=parent_issues,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/transition', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_transition(project_id, issue_key, project=None):
+    """Change issue status"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    new_status_id = request.form.get('status_id', type=int)
+    if not new_status_id:
+        flash('Kein Status angegeben.' if lang == 'de' else 'No status specified.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    new_status = IssueStatus.query.get_or_404(new_status_id)
+    
+    # Check if transition is allowed
+    if issue.status and not issue.status.can_transition_to(new_status_id):
+        flash('Dieser Statusübergang ist nicht erlaubt.' if lang == 'de' else 'This status transition is not allowed.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    old_status = issue.status
+    issue.status_id = new_status_id
+    
+    # Set resolution date if moving to final status
+    if new_status.is_final and not issue.resolution_date:
+        issue.resolution_date = datetime.utcnow()
+    elif not new_status.is_final:
+        issue.resolution_date = None
+    
+    db.session.commit()
+    
+    flash(f'Status geändert: {old_status.get_name(lang)} → {new_status.get_name(lang)}' if lang == 'de' 
+          else f'Status changed: {old_status.get_name(lang)} → {new_status.get_name(lang)}', 'success')
+    
+    return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+
+
+@bp.route('/<int:project_id>/issues/<issue_key>/delete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def issue_delete(project_id, issue_key, project=None):
+    """Delete (archive) an issue"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check permission
+    if not project.can_user_edit(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    issue.is_archived = True
+    issue.archived_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash(f'Issue {issue.key} archiviert.' if lang == 'de' else f'Issue {issue.key} archived.', 'success')
+    return redirect(url_for('projects.issue_list', project_id=project_id))
+
+
+# ============================================================================
+# PROJECT CONFIGURATION (Issue Types & Statuses)
+# ============================================================================
+
+@bp.route('/<int:project_id>/settings/types')
+@login_required
+@projects_module_required
+@project_access_required
+def project_issue_types(project_id, project=None):
+    """Manage issue types for a project"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.project_detail', project_id=project_id))
+    
+    issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    
+    # Create defaults if none exist
+    if not issue_types:
+        create_default_issue_types(project)
+        db.session.commit()
+        issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    
+    return render_template('projects/settings/issue_types.html',
+        project=project,
+        issue_types=issue_types,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/settings/statuses')
+@login_required
+@projects_module_required
+@project_access_required
+def project_issue_statuses(project_id, project=None):
+    """Manage workflow statuses for a project"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.project_detail', project_id=project_id))
+    
+    issue_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    # Create defaults if none exist
+    if not issue_statuses:
+        create_default_issue_statuses(project)
+        db.session.commit()
+        issue_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    return render_template('projects/settings/issue_statuses.html',
+        project=project,
+        issue_statuses=issue_statuses,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/settings/types/add', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def project_issue_type_add(project_id, project=None):
+    """Add a new issue type"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    name = request.form.get('name', '').strip()
+    name_en = request.form.get('name_en', '').strip()
+    icon = request.form.get('icon', 'bi-card-checklist').strip()
+    color = request.form.get('color', '#86BC25').strip()
+    hierarchy_level = request.form.get('hierarchy_level', 1, type=int)
+    can_have_children = request.form.get('can_have_children') == 'on'
+    is_subtask = request.form.get('is_subtask') == 'on'
+    
+    if not name:
+        flash('Name ist erforderlich.' if lang == 'de' else 'Name is required.', 'danger')
+        return redirect(url_for('projects.project_issue_types', project_id=project_id))
+    
+    # Get max sort order
+    max_order = db.session.query(db.func.max(IssueType.sort_order)).filter_by(project_id=project_id).scalar() or 0
+    
+    issue_type = IssueType(
+        project_id=project_id,
+        name=name,
+        name_en=name_en or None,
+        icon=icon,
+        color=color,
+        hierarchy_level=hierarchy_level,
+        can_have_children=can_have_children,
+        is_subtask=is_subtask,
+        sort_order=max_order + 1
+    )
+    db.session.add(issue_type)
+    db.session.commit()
+    
+    flash('Issue-Typ hinzugefügt.' if lang == 'de' else 'Issue type added.', 'success')
+    return redirect(url_for('projects.project_issue_types', project_id=project_id))
+
+
+@bp.route('/<int:project_id>/settings/statuses/add', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def project_issue_status_add(project_id, project=None):
+    """Add a new workflow status"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    name = request.form.get('name', '').strip()
+    name_en = request.form.get('name_en', '').strip()
+    category = request.form.get('category', 'todo')
+    color = request.form.get('color', '#75787B').strip()
+    is_initial = request.form.get('is_initial') == 'on'
+    is_final = request.form.get('is_final') == 'on'
+    
+    if not name:
+        flash('Name ist erforderlich.' if lang == 'de' else 'Name is required.', 'danger')
+        return redirect(url_for('projects.project_issue_statuses', project_id=project_id))
+    
+    # If this is initial, remove initial from others
+    if is_initial:
+        IssueStatus.query.filter_by(project_id=project_id, is_initial=True).update({'is_initial': False})
+    
+    # Get max sort order
+    max_order = db.session.query(db.func.max(IssueStatus.sort_order)).filter_by(project_id=project_id).scalar() or 0
+    
+    status = IssueStatus(
+        project_id=project_id,
+        name=name,
+        name_en=name_en or None,
+        category=category,
+        color=color,
+        is_initial=is_initial,
+        is_final=is_final,
+        sort_order=max_order + 1
+    )
+    db.session.add(status)
+    db.session.commit()
+    
+    flash('Status hinzugefügt.' if lang == 'de' else 'Status added.', 'success')
+    return redirect(url_for('projects.project_issue_statuses', project_id=project_id))
+
+
+# ============================================================================
+# KANBAN BOARD
+# ============================================================================
+
+@bp.route('/<int:project_id>/board')
+@login_required
+@projects_module_required
+@project_access_required
+def kanban_board(project_id, project=None):
+    """Kanban board view for a project"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    # Get statuses (columns) ordered by sort_order
+    statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    # Create defaults if none exist
+    if not statuses:
+        create_default_issue_statuses(project)
+        db.session.commit()
+        statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    # Get all active issues grouped by status
+    issues_by_status = {}
+    for status in statuses:
+        issues_by_status[status.id] = Issue.query.filter_by(
+            project_id=project_id,
+            status_id=status.id,
+            is_archived=False
+        ).order_by(Issue.board_position, Issue.created_at.desc()).all()
+    
+    # Get issue types for quick create
+    issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    if not issue_types:
+        create_default_issue_types(project)
+        db.session.commit()
+        issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    
+    # Get members for assignment
+    members = ProjectMember.query.filter_by(project_id=project_id).all()
+    
+    return render_template('projects/board.html',
+        project=project,
+        statuses=statuses,
+        issues_by_status=issues_by_status,
+        issue_types=issue_types,
+        members=members,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/board/move', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def kanban_move_issue(project_id, project=None):
+    """API endpoint to move an issue on the board"""
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    # Check permission
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    issue_id = data.get('issue_id')
+    new_status_id = data.get('status_id')
+    new_position = data.get('position', 0)
+    
+    if not issue_id or not new_status_id:
+        return jsonify({'error': 'Missing issue_id or status_id'}), 400
+    
+    issue = Issue.query.filter_by(id=issue_id, project_id=project_id).first()
+    if not issue:
+        return jsonify({'error': 'Issue not found'}), 404
+    
+    new_status = IssueStatus.query.filter_by(id=new_status_id, project_id=project_id).first()
+    if not new_status:
+        return jsonify({'error': 'Status not found'}), 404
+    
+    old_status_id = issue.status_id
+    old_status = issue.status
+    
+    # Update status
+    issue.status_id = new_status_id
+    issue.board_position = new_position
+    
+    # Set resolution date if moving to final status
+    if new_status.is_final and not issue.resolution_date:
+        issue.resolution_date = datetime.utcnow()
+    elif not new_status.is_final:
+        issue.resolution_date = None
+    
+    # Reorder other issues in the target column
+    issues_in_column = Issue.query.filter(
+        Issue.project_id == project_id,
+        Issue.status_id == new_status_id,
+        Issue.id != issue_id,
+        Issue.is_archived == False
+    ).order_by(Issue.board_position).all()
+    
+    # Insert at new position
+    for i, other_issue in enumerate(issues_in_column):
+        if i >= new_position:
+            other_issue.board_position = i + 1
+        else:
+            other_issue.board_position = i
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'issue_key': issue.key,
+        'old_status': old_status.get_name('de') if old_status else None,
+        'new_status': new_status.get_name('de'),
+        'is_final': new_status.is_final
+    })
+
+
+@bp.route('/<int:project_id>/board/quick-create', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def kanban_quick_create(project_id, project=None):
+    """Quick create an issue from the board"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    summary = data.get('summary', '').strip()
+    type_id = data.get('type_id')
+    status_id = data.get('status_id')
+    
+    if not summary:
+        return jsonify({'error': 'Summary is required'}), 400
+    
+    # Get or default type
+    if type_id:
+        issue_type = IssueType.query.filter_by(id=type_id, project_id=project_id).first()
+    else:
+        issue_type = IssueType.query.filter_by(project_id=project_id, is_default=True).first()
+        if not issue_type:
+            issue_type = IssueType.query.filter_by(project_id=project_id).first()
+    
+    if not issue_type:
+        return jsonify({'error': 'No issue type found'}), 400
+    
+    # Get or default status
+    if status_id:
+        status = IssueStatus.query.filter_by(id=status_id, project_id=project_id).first()
+    else:
+        status = IssueStatus.query.filter_by(project_id=project_id, is_initial=True).first()
+        if not status:
+            status = IssueStatus.query.filter_by(project_id=project_id).first()
+    
+    if not status:
+        return jsonify({'error': 'No status found'}), 400
+    
+    # Generate key
+    issue_key = project.get_next_issue_key()
+    
+    # Get max position in target column
+    max_pos = db.session.query(db.func.max(Issue.board_position)).filter_by(
+        project_id=project_id,
+        status_id=status.id,
+        is_archived=False
+    ).scalar() or 0
+    
+    issue = Issue(
+        project_id=project_id,
+        key=issue_key,
+        type_id=issue_type.id,
+        status_id=status.id,
+        summary=summary,
+        reporter_id=current_user.id,
+        priority=3,
+        board_position=max_pos + 1
+    )
+    db.session.add(issue)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'issue': {
+            'id': issue.id,
+            'key': issue.key,
+            'summary': issue.summary,
+            'type': {
+                'name': issue_type.get_name(lang),
+                'icon': issue_type.icon,
+                'color': issue_type.color
+            },
+            'status_id': status.id,
+            'priority': issue.priority,
+            'url': url_for('projects.issue_detail', project_id=project_id, issue_key=issue.key)
+        }
+    })
+
+
+# ==================== PM-4: Backlog ====================
+
+@bp.route('/<int:project_id>/backlog')
+@login_required
+@projects_module_required
+@project_access_required
+def backlog(project_id, project=None):
+    """Backlog view - prioritized list of all issues"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    # Get filter parameters
+    type_filter = request.args.get('type', type=int)
+    status_filter = request.args.get('status', type=int)
+    assignee_filter = request.args.get('assignee', type=int)
+    priority_filter = request.args.get('priority', type=int)
+    search_filter = request.args.get('search', '').strip()
+    
+    # Build query - exclude completed issues (is_final status)
+    # Join with IssueStatus to filter out final statuses
+    query = Issue.query.filter_by(project_id=project_id, is_archived=False)\
+        .join(IssueStatus, Issue.status_id == IssueStatus.id)\
+        .filter(IssueStatus.is_final == False)
+    
+    if type_filter:
+        query = query.filter(Issue.type_id == type_filter)
+    if status_filter:
+        query = query.filter(Issue.status_id == status_filter)
+    if assignee_filter:
+        if assignee_filter == -1:  # Unassigned
+            query = query.filter(Issue.assignee_id.is_(None))
+        else:
+            query = query.filter(Issue.assignee_id == assignee_filter)
+    if priority_filter:
+        query = query.filter(Issue.priority == priority_filter)
+    if search_filter:
+        query = query.filter(
+            db.or_(
+                Issue.key.ilike(f'%{search_filter}%'),
+                Issue.summary.ilike(f'%{search_filter}%')
+            )
+        )
+    
+    # Order by backlog_position (null last), then by created_at desc
+    issues = query.order_by(
+        Issue.backlog_position.asc().nullslast(),
+        Issue.created_at.desc()
+    ).all()
+    
+    # Get filter options
+    issue_types = IssueType.query.filter_by(project_id=project_id).order_by(IssueType.sort_order).all()
+    statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    members = ProjectMember.query.filter_by(project_id=project_id).all()
+    
+    # Calculate total story points
+    total_story_points = sum(i.story_points or 0 for i in issues)
+    
+    return render_template('projects/backlog.html',
+        project=project,
+        issues=issues,
+        issue_types=issue_types,
+        statuses=statuses,
+        members=members,
+        total_story_points=total_story_points,
+        filters={
+            'type': type_filter,
+            'status': status_filter,
+            'assignee': assignee_filter,
+            'priority': priority_filter,
+            'search': search_filter
+        },
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/backlog/reorder', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def backlog_reorder(project_id, project=None):
+    """API endpoint to reorder issues in the backlog"""
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    issue_ids = data.get('issue_ids', [])
+    
+    if not issue_ids:
+        return jsonify({'error': 'No issue_ids provided'}), 400
+    
+    # Update positions based on array order
+    for position, issue_id in enumerate(issue_ids):
+        issue = Issue.query.filter_by(id=issue_id, project_id=project_id).first()
+        if issue:
+            issue.backlog_position = position
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'count': len(issue_ids)})
+
+
+@bp.route('/<int:project_id>/backlog/bulk', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def backlog_bulk_action(project_id, project=None):
+    """Bulk actions on issues"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    action = data.get('action')
+    issue_ids = data.get('issue_ids', [])
+    
+    if not issue_ids:
+        return jsonify({'error': 'No issues selected'}), 400
+    
+    issues = Issue.query.filter(
+        Issue.id.in_(issue_ids),
+        Issue.project_id == project_id
+    ).all()
+    
+    if not issues:
+        return jsonify({'error': 'No valid issues found'}), 404
+    
+    count = len(issues)
+    
+    if action == 'change_status':
+        new_status_id = data.get('status_id')
+        if not new_status_id:
+            return jsonify({'error': 'No status_id provided'}), 400
+        
+        new_status = IssueStatus.query.filter_by(id=new_status_id, project_id=project_id).first()
+        if not new_status:
+            return jsonify({'error': 'Status not found'}), 404
+        
+        for issue in issues:
+            issue.status_id = new_status_id
+            if new_status.is_final and not issue.resolution_date:
+                issue.resolution_date = datetime.utcnow()
+            elif not new_status.is_final:
+                issue.resolution_date = None
+        
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'{count} {"Issues aktualisiert" if lang == "de" else "issues updated"}'
+        })
+    
+    elif action == 'assign':
+        assignee_id = data.get('assignee_id')
+        # assignee_id can be None to unassign
+        
+        if assignee_id:
+            # Verify user is a member
+            member = ProjectMember.query.filter_by(
+                project_id=project_id, 
+                user_id=assignee_id
+            ).first()
+            if not member:
+                return jsonify({'error': 'User is not a project member'}), 400
+        
+        for issue in issues:
+            issue.assignee_id = assignee_id if assignee_id else None
+        
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'{count} {"Issues zugewiesen" if lang == "de" else "issues assigned"}'
+        })
+    
+    elif action == 'change_priority':
+        new_priority = data.get('priority')
+        if new_priority is None or new_priority not in [1, 2, 3, 4, 5]:
+            return jsonify({'error': 'Invalid priority'}), 400
+        
+        for issue in issues:
+            issue.priority = new_priority
+        
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'{count} {"Issues aktualisiert" if lang == "de" else "issues updated"}'
+        })
+    
+    elif action == 'archive':
+        for issue in issues:
+            issue.is_archived = True
+            issue.archived_at = datetime.utcnow()
+            issue.archived_by_id = current_user.id
+        
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'{count} {"Issues archiviert" if lang == "de" else "issues archived"}'
+        })
+    
+    elif action == 'delete':
+        for issue in issues:
+            db.session.delete(issue)
+        
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': f'{count} {"Issues gelöscht" if lang == "de" else "issues deleted"}'
+        })
+    
+    else:
+        return jsonify({'error': 'Unknown action'}), 400
+
+
+# ==================== PM-5: Sprint Management ====================
+
+@bp.route('/<int:project_id>/sprints')
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_list(project_id, project=None):
+    """List all sprints for a project"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprints = Sprint.query.filter_by(project_id=project_id).order_by(
+        db.case(
+            (Sprint.state == 'active', 0),
+            (Sprint.state == 'future', 1),
+            (Sprint.state == 'closed', 2)
+        ),
+        Sprint.start_date.desc().nullslast(),
+        Sprint.created_at.desc()
+    ).all()
+    
+    return render_template(
+        'projects/sprints/list.html',
+        project=project,
+        sprints=sprints,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/sprints/new', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_create(project_id, project=None):
+    """Create a new sprint"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        goal = request.form.get('goal', '').strip()
+        start_date_str = request.form.get('start_date', '').strip()
+        end_date_str = request.form.get('end_date', '').strip()
+        
+        if not name:
+            flash('Name ist erforderlich.' if lang == 'de' else 'Name is required.', 'danger')
+            return redirect(url_for('projects.sprint_create', project_id=project_id))
+        
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Ungültiges Startdatum.' if lang == 'de' else 'Invalid start date.', 'danger')
+                return redirect(url_for('projects.sprint_create', project_id=project_id))
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Ungültiges Enddatum.' if lang == 'de' else 'Invalid end date.', 'danger')
+                return redirect(url_for('projects.sprint_create', project_id=project_id))
+        
+        if start_date and end_date and end_date < start_date:
+            flash('Enddatum muss nach Startdatum liegen.' if lang == 'de' else 'End date must be after start date.', 'danger')
+            return redirect(url_for('projects.sprint_create', project_id=project_id))
+        
+        sprint = Sprint(
+            project_id=project_id,
+            name=name,
+            goal=goal or None,
+            start_date=start_date,
+            end_date=end_date,
+            state='future'
+        )
+        db.session.add(sprint)
+        db.session.commit()
+        
+        flash('Sprint erstellt.' if lang == 'de' else 'Sprint created.', 'success')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    return render_template(
+        'projects/sprints/form.html',
+        project=project,
+        sprint=None,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/edit', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_edit(project_id, sprint_id, project=None):
+    """Edit an existing sprint"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        goal = request.form.get('goal', '').strip()
+        start_date_str = request.form.get('start_date', '').strip()
+        end_date_str = request.form.get('end_date', '').strip()
+        
+        if not name:
+            flash('Name ist erforderlich.' if lang == 'de' else 'Name is required.', 'danger')
+            return redirect(url_for('projects.sprint_edit', project_id=project_id, sprint_id=sprint_id))
+        
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Ungültiges Startdatum.' if lang == 'de' else 'Invalid start date.', 'danger')
+                return redirect(url_for('projects.sprint_edit', project_id=project_id, sprint_id=sprint_id))
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Ungültiges Enddatum.' if lang == 'de' else 'Invalid end date.', 'danger')
+                return redirect(url_for('projects.sprint_edit', project_id=project_id, sprint_id=sprint_id))
+        
+        if start_date and end_date and end_date < start_date:
+            flash('Enddatum muss nach Startdatum liegen.' if lang == 'de' else 'End date must be after start date.', 'danger')
+            return redirect(url_for('projects.sprint_edit', project_id=project_id, sprint_id=sprint_id))
+        
+        sprint.name = name
+        sprint.goal = goal or None
+        sprint.start_date = start_date
+        sprint.end_date = end_date
+        db.session.commit()
+        
+        flash('Sprint aktualisiert.' if lang == 'de' else 'Sprint updated.', 'success')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    return render_template(
+        'projects/sprints/form.html',
+        project=project,
+        sprint=sprint,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/start', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_start(project_id, sprint_id, project=None):
+    """Start a sprint (change state from future to active)"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    if sprint.state != 'future':
+        flash('Nur zukünftige Sprints können gestartet werden.' if lang == 'de' else 'Only future sprints can be started.', 'warning')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    # Check for existing active sprint
+    active_sprint = Sprint.query.filter_by(project_id=project_id, state='active').first()
+    if active_sprint:
+        flash(f'Sprint "{active_sprint.name}" ist bereits aktiv. Bitte zuerst abschließen.' if lang == 'de' 
+              else f'Sprint "{active_sprint.name}" is already active. Please complete it first.', 'warning')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    sprint.state = 'active'
+    sprint.started_at = datetime.utcnow()
+    if not sprint.start_date:
+        sprint.start_date = datetime.utcnow().date()
+    db.session.commit()
+    
+    flash(f'Sprint "{sprint.name}" gestartet.' if lang == 'de' else f'Sprint "{sprint.name}" started.', 'success')
+    return redirect(url_for('projects.sprint_board', project_id=project_id, sprint_id=sprint_id))
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/complete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_complete(project_id, sprint_id, project=None):
+    """Complete a sprint (change state from active to closed)"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    if sprint.state != 'active':
+        flash('Nur aktive Sprints können abgeschlossen werden.' if lang == 'de' else 'Only active sprints can be completed.', 'warning')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    # Handle incomplete issues - move them back to backlog (remove sprint assignment)
+    move_to_backlog = request.form.get('move_incomplete', 'true') == 'true'
+    incomplete_count = 0
+    
+    for issue in sprint.issues:
+        if not issue.status.is_final:
+            incomplete_count += 1
+            if move_to_backlog:
+                issue.sprint_id = None
+    
+    sprint.state = 'closed'
+    sprint.completed_at = datetime.utcnow()
+    if not sprint.end_date:
+        sprint.end_date = datetime.utcnow().date()
+    db.session.commit()
+    
+    if incomplete_count > 0 and move_to_backlog:
+        flash(f'Sprint "{sprint.name}" abgeschlossen. {incomplete_count} offene Issues ins Backlog verschoben.' if lang == 'de' 
+              else f'Sprint "{sprint.name}" completed. {incomplete_count} incomplete issues moved to backlog.', 'success')
+    else:
+        flash(f'Sprint "{sprint.name}" abgeschlossen.' if lang == 'de' else f'Sprint "{sprint.name}" completed.', 'success')
+    
+    return redirect(url_for('projects.sprint_list', project_id=project_id))
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/delete', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_delete(project_id, sprint_id, project=None):
+    """Delete a sprint"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    if not project.can_user_manage_issues(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.sprint_list', project_id=project_id))
+    
+    # Move all issues back to backlog before deleting
+    for issue in sprint.issues:
+        issue.sprint_id = None
+    
+    sprint_name = sprint.name
+    db.session.delete(sprint)
+    db.session.commit()
+    
+    flash(f'Sprint "{sprint_name}" gelöscht.' if lang == 'de' else f'Sprint "{sprint_name}" deleted.', 'success')
+    return redirect(url_for('projects.sprint_list', project_id=project_id))
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/board')
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_board(project_id, sprint_id, project=None):
+    """Sprint board view - Kanban board for a specific sprint"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    # Get statuses and issues for this sprint
+    statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.order).all()
+    
+    issues_by_status = {}
+    for status in statuses:
+        issues_by_status[status.id] = Issue.query.filter_by(
+            project_id=project_id,
+            sprint_id=sprint_id,
+            status_id=status.id,
+            is_archived=False
+        ).order_by(Issue.board_position).all()
+    
+    return render_template(
+        'projects/sprints/board.html',
+        project=project,
+        sprint=sprint,
+        statuses=statuses,
+        issues_by_status=issues_by_status,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/add-issues', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_add_issues(project_id, sprint_id, project=None):
+    """Add issues to a sprint"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    if sprint.state == 'closed':
+        return jsonify({'error': 'Cannot add issues to a closed sprint'}), 400
+    
+    data = request.get_json()
+    issue_ids = data.get('issue_ids', [])
+    
+    if not issue_ids:
+        return jsonify({'error': 'No issues provided'}), 400
+    
+    count = 0
+    for issue_id in issue_ids:
+        issue = Issue.query.filter_by(id=issue_id, project_id=project_id).first()
+        if issue and issue.sprint_id != sprint_id:
+            issue.sprint_id = sprint_id
+            count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f'{count} {"Issues zum Sprint hinzugefügt" if lang == "de" else "issues added to sprint"}'
+    })
+
+
+@bp.route('/<int:project_id>/sprints/<int:sprint_id>/remove-issue', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def sprint_remove_issue(project_id, sprint_id, project=None):
+    """Remove an issue from a sprint"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    sprint = Sprint.query.filter_by(id=sprint_id, project_id=project_id).first_or_404()
+    
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    issue_id = data.get('issue_id')
+    
+    if not issue_id:
+        return jsonify({'error': 'No issue provided'}), 400
+    
+    issue = Issue.query.filter_by(id=issue_id, project_id=project_id, sprint_id=sprint_id).first()
+    if not issue:
+        return jsonify({'error': 'Issue not found in sprint'}), 404
+    
+    issue.sprint_id = None
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Issue aus Sprint entfernt' if lang == 'de' else 'Issue removed from sprint'
+    })
 
 
 def register_routes(blueprint):

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}{{ issue.key if issue else ('New Issue' if lang == 'en' else 'Neues Issue') }} - {{ project.key }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects.issue_list', project_id=project.id) }}">Issues</a></li>
+                <li class="breadcrumb-item active">{{ issue.key if issue else ('New' if lang == 'en' else 'Neu') }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0">
+            <i class="bi bi-{{ 'pencil' if issue else 'plus-circle' }} me-2"></i>
+            {{ ('Edit ' + issue.key) if issue else ('New Issue' if lang == 'en' else 'Neues Issue') }}
+        </h2>
+    </div>
+
+    <form method="post" class="needs-validation" novalidate>
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">{{ 'Details' if lang == 'en' else 'Details' }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Issue Type -->
+                        <div class="mb-3">
+                            <label class="form-label">{{ 'Issue Type' if lang == 'en' else 'Issue-Typ' }} <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for t in issue_types %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input visually-hidden" type="radio" name="type_id" id="type_{{ t.id }}" value="{{ t.id }}" {{ 'checked' if (issue and issue.type_id == t.id) or (not issue and t.is_default) }} required>
+                                    <label class="form-check-label btn btn-outline-secondary btn-sm type-btn" for="type_{{ t.id }}" data-color="{{ t.color }}">
+                                        <i class="{{ t.icon }} me-1"></i>
+                                        {{ t.get_name(lang) }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Summary -->
+                        <div class="mb-3">
+                            <label for="summary" class="form-label">{{ 'Summary' if lang == 'en' else 'Zusammenfassung' }} <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="summary" name="summary" value="{{ issue.summary if issue else '' }}" required maxlength="500" placeholder="{{ 'Brief description of the issue' if lang == 'en' else 'Kurze Beschreibung des Issues' }}">
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">{{ 'Description' if lang == 'en' else 'Beschreibung' }}</label>
+                            <textarea class="form-control" id="description" name="description" rows="8" placeholder="{{ 'Detailed description (Markdown supported)' if lang == 'en' else 'Detaillierte Beschreibung (Markdown unterstützt)' }}">{{ issue.description if issue else '' }}</textarea>
+                            <div class="form-text">
+                                <i class="bi bi-markdown me-1"></i>{{ 'Markdown formatting is supported' if lang == 'en' else 'Markdown-Formatierung wird unterstützt' }}
+                            </div>
+                        </div>
+
+                        <!-- Labels -->
+                        <div class="mb-3">
+                            <label for="labels" class="form-label">Labels</label>
+                            <input type="text" class="form-control" id="labels" name="labels" value="{{ issue.labels|join(', ') if issue and issue.labels else '' }}" placeholder="{{ 'Comma-separated labels' if lang == 'en' else 'Komma-getrennte Labels' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parent Issue (for sub-tasks) -->
+                {% if parent_issues %}
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">{{ 'Parent Issue' if lang == 'en' else 'Übergeordnetes Issue' }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <select name="parent_id" class="form-select">
+                            <option value="">{{ 'None (Top-level issue)' if lang == 'en' else 'Keines (Top-Level Issue)' }}</option>
+                            {% for p in parent_issues %}
+                            <option value="{{ p.id }}" {{ 'selected' if issue and issue.parent_id == p.id }}>
+                                {{ p.key }} - {{ p.summary[:50] }}{{ '...' if p.summary|length > 50 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Assignment -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">{{ 'Assignment' if lang == 'en' else 'Zuweisung' }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="assignee_id" class="form-label">{{ 'Assignee' if lang == 'en' else 'Bearbeiter' }}</label>
+                            <select name="assignee_id" id="assignee_id" class="form-select">
+                                <option value="">{{ 'Unassigned' if lang == 'en' else 'Nicht zugewiesen' }}</option>
+                                {% for m in members %}
+                                <option value="{{ m.user.id }}" {{ 'selected' if issue and issue.assignee_id == m.user.id }}>
+                                    {{ m.user.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="priority" class="form-label">{{ 'Priority' if lang == 'en' else 'Priorität' }}</label>
+                            <select name="priority" id="priority" class="form-select">
+                                <option value="1" {{ 'selected' if issue and issue.priority == 1 }}>
+                                    <i class="bi bi-chevron-double-up"></i> {{ 'Highest' if lang == 'en' else 'Höchste' }}
+                                </option>
+                                <option value="2" {{ 'selected' if issue and issue.priority == 2 }}>
+                                    {{ 'High' if lang == 'en' else 'Hoch' }}
+                                </option>
+                                <option value="3" {{ 'selected' if (not issue) or issue.priority == 3 }}>
+                                    {{ 'Medium' if lang == 'en' else 'Mittel' }}
+                                </option>
+                                <option value="4" {{ 'selected' if issue and issue.priority == 4 }}>
+                                    {{ 'Low' if lang == 'en' else 'Niedrig' }}
+                                </option>
+                                <option value="5" {{ 'selected' if issue and issue.priority == 5 }}>
+                                    {{ 'Lowest' if lang == 'en' else 'Niedrigste' }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planning -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">{{ 'Planning' if lang == 'en' else 'Planung' }}</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if sprints %}
+                        <div class="mb-3">
+                            <label for="sprint_id" class="form-label">Sprint</label>
+                            <select name="sprint_id" id="sprint_id" class="form-select">
+                                <option value="">{{ 'Backlog' if lang == 'en' else 'Backlog' }}</option>
+                                {% for s in sprints %}
+                                <option value="{{ s.id }}" {{ 'selected' if issue and issue.sprint_id == s.id }}>
+                                    {{ s.name }}{% if s.is_active %} ({{ 'Active' if lang == 'en' else 'Aktiv' }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="story_points" class="form-label">Story Points</label>
+                            <input type="number" class="form-control" id="story_points" name="story_points" value="{{ issue.story_points if issue and issue.story_points else '' }}" min="0" step="0.5" placeholder="0">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="due_date" class="form-label">{{ 'Due Date' if lang == 'en' else 'Fälligkeitsdatum' }}</label>
+                            <input type="date" class="form-control" id="due_date" name="due_date" value="{{ issue.due_date.strftime('%Y-%m-%d') if issue and issue.due_date else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-check-lg me-2"></i>
+                        {{ 'Save' if lang == 'en' else 'Speichern' }}
+                    </button>
+                    <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) if issue else url_for('projects.issue_list', project_id=project.id) }}" class="btn btn-outline-secondary">
+                        {{ 'Cancel' if lang == 'en' else 'Abbrechen' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+.type-btn {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.form-check-input:checked + .type-btn {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update type button colors when selected
+    document.querySelectorAll('input[name="type_id"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('.type-btn').forEach(function(btn) {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-secondary');
+                btn.style.backgroundColor = '';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            });
+            if (this.checked) {
+                const label = this.nextElementSibling;
+                const color = label.dataset.color;
+                label.style.backgroundColor = color;
+                label.style.borderColor = color;
+                label.style.color = 'white';
+                label.classList.remove('btn-outline-secondary');
+            }
+        });
+        // Trigger for initial state
+        if (radio.checked) {
+            radio.dispatchEvent(new Event('change'));
+        }
+    });
+});
+</script>
+{% endblock %}

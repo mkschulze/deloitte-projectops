@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}{{ issue.key }} - {{ project.key }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.issue_list', project_id=project.id) }}">Issues</a></li>
+                    <li class="breadcrumb-item active">{{ issue.key }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Archived Banner -->
+    {% if issue.is_archived %}
+    <div class="alert alert-warning d-flex align-items-center mb-4">
+        <i class="bi bi-archive me-2"></i>
+        <strong>{{ 'This issue is archived' if lang == 'en' else 'Dieses Issue ist archiviert' }}</strong>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Issue Header -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <span class="badge me-2 fs-6" style="background-color: {{ issue.issue_type.color }};">
+                            <i class="{{ issue.issue_type.icon }} me-1"></i>
+                            {{ issue.issue_type.get_name(lang) }}
+                        </span>
+                        <h3 class="mb-0 flex-grow-1">
+                            <span class="text-muted">{{ issue.key }}</span>
+                            {{ issue.summary }}
+                        </h3>
+                    </div>
+
+                    <!-- Quick Status Transition -->
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="text-muted me-2">Status:</span>
+                        <form method="post" action="{{ url_for('projects.issue_transition', project_id=project.id, issue_key=issue.key) }}" class="d-inline">
+                            <div class="btn-group">
+                                {% for s in available_statuses %}
+                                <button type="submit" name="status_id" value="{{ s.id }}" 
+                                    class="btn btn-sm {{ 'btn-dark' if s.id == issue.status_id else 'btn-outline-secondary' }}"
+                                    style="{{ 'background-color: ' + s.color + '; border-color: ' + s.color + ';' if s.id == issue.status_id else '' }}"
+                                    {{ 'disabled' if s.id == issue.status_id }}>
+                                    {{ s.get_name(lang) }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Description -->
+                    {% if issue.description %}
+                    <hr>
+                    <h5>{{ 'Description' if lang == 'en' else 'Beschreibung' }}</h5>
+                    <div class="description-content bg-light rounded p-3" id="description-markdown">
+                        <noscript>{{ issue.description }}</noscript>
+                    </div>
+                    <template id="description-source">{{ issue.description | e }}</template>
+                    {% endif %}
+
+                    <!-- Labels -->
+                    {% if issue.labels %}
+                    <div class="mt-3">
+                        {% for label in issue.labels %}
+                        <span class="badge bg-secondary me-1">{{ label }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Child Issues (Sub-tasks) -->
+            {% if children %}
+            <div class="card mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-diagram-3 me-2"></i>
+                        {{ 'Child Issues' if lang == 'en' else 'Untergeordnete Issues' }}
+                        <span class="badge bg-secondary ms-2">{{ children|length }}</span>
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for child in children %}
+                            <tr onclick="window.location='{{ url_for('projects.issue_detail', project_id=project.id, issue_key=child.key) }}'" style="cursor: pointer;">
+                                <td style="width: 40px;">
+                                    <i class="{{ child.issue_type.icon }}" style="color: {{ child.issue_type.color }};"></i>
+                                </td>
+                                <td style="width: 100px;">
+                                    <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=child.key) }}">{{ child.key }}</a>
+                                </td>
+                                <td>{{ child.summary }}</td>
+                                <td style="width: 120px;">
+                                    <span class="badge" style="background-color: {{ child.status.color }};">{{ child.status.get_name(lang) }}</span>
+                                </td>
+                                <td style="width: 40px;">
+                                    <i class="{{ child.get_priority_icon() }}"></i>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Activity / Comments (placeholder for future) -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        {{ 'Activity' if lang == 'en' else 'Aktivität' }}
+                    </h5>
+                </div>
+                <div class="card-body text-muted text-center py-5">
+                    <i class="bi bi-clock-history display-4 d-block mb-2"></i>
+                    {{ 'Activity feed coming soon...' if lang == 'en' else 'Aktivitäts-Feed kommt bald...' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Actions -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('projects.issue_edit', project_id=project.id, issue_key=issue.key) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil me-2"></i>
+                            {{ 'Edit' if lang == 'en' else 'Bearbeiten' }}
+                        </a>
+                        {% if not issue.is_archived %}
+                        <form method="post" action="{{ url_for('projects.issue_delete', project_id=project.id, issue_key=issue.key) }}" onsubmit="return confirm('{{ 'Archive this issue?' if lang == 'en' else 'Dieses Issue archivieren?' }}')">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-archive me-2"></i>
+                                {{ 'Archive' if lang == 'en' else 'Archivieren' }}
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">{{ 'Details' if lang == 'en' else 'Details' }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-5 text-muted">{{ 'Assignee' if lang == 'en' else 'Bearbeiter' }}</dt>
+                        <dd class="col-7">
+                            {% if issue.assignee %}
+                                <span class="d-flex align-items-center">
+                                    <span class="avatar-circle me-2" style="background-color: #86BC25;">
+                                        {{ issue.assignee.name[:1].upper() }}
+                                    </span>
+                                    {{ issue.assignee.name }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">{{ 'Unassigned' if lang == 'en' else 'Nicht zugewiesen' }}</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-5 text-muted">{{ 'Reporter' if lang == 'en' else 'Ersteller' }}</dt>
+                        <dd class="col-7">
+                            {% if issue.reporter %}
+                                {{ issue.reporter.name }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-5 text-muted">{{ 'Priority' if lang == 'en' else 'Priorität' }}</dt>
+                        <dd class="col-7">
+                            <i class="{{ issue.get_priority_icon() }} me-1"></i>
+                            {{ issue.get_priority_display(lang) }}
+                        </dd>
+
+                        {% if issue.parent %}
+                        <dt class="col-5 text-muted">{{ 'Parent' if lang == 'en' else 'Übergeordnet' }}</dt>
+                        <dd class="col-7">
+                            <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.parent.key) }}">
+                                {{ issue.parent.key }}
+                            </a>
+                        </dd>
+                        {% endif %}
+
+                        {% if issue.sprint %}
+                        <dt class="col-5 text-muted">Sprint</dt>
+                        <dd class="col-7">{{ issue.sprint.name }}</dd>
+                        {% endif %}
+
+                        {% if issue.story_points %}
+                        <dt class="col-5 text-muted">Story Points</dt>
+                        <dd class="col-7">{{ issue.story_points }}</dd>
+                        {% endif %}
+
+                        {% if issue.due_date %}
+                        <dt class="col-5 text-muted">{{ 'Due Date' if lang == 'en' else 'Fällig' }}</dt>
+                        <dd class="col-7 {{ 'text-danger fw-bold' if issue.is_overdue else '' }}">
+                            {{ issue.due_date.strftime('%d.%m.%Y') }}
+                            {% if issue.is_overdue %}
+                                <i class="bi bi-exclamation-triangle ms-1"></i>
+                            {% endif %}
+                        </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Time Tracking (if available) -->
+            {% if issue.original_estimate or issue.time_spent %}
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock me-2"></i>
+                        {{ 'Time Tracking' if lang == 'en' else 'Zeiterfassung' }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if issue.original_estimate %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>{{ 'Time Spent' if lang == 'en' else 'Aufgewendet' }}</span>
+                            <span>{{ issue.time_spent_display }} / {{ issue.original_estimate_display }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ issue.progress_percent }}%;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if issue.remaining_estimate %}
+                    <small class="text-muted">
+                        {{ 'Remaining' if lang == 'en' else 'Verbleibend' }}: {{ issue.remaining_estimate_display }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Dates -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">{{ 'Dates' if lang == 'en' else 'Daten' }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-5 text-muted">{{ 'Created' if lang == 'en' else 'Erstellt' }}</dt>
+                        <dd class="col-7">{{ issue.created_at.strftime('%d.%m.%Y %H:%M') }}</dd>
+
+                        <dt class="col-5 text-muted">{{ 'Updated' if lang == 'en' else 'Aktualisiert' }}</dt>
+                        <dd class="col-7">{{ issue.updated_at.strftime('%d.%m.%Y %H:%M') if issue.updated_at else '-' }}</dd>
+
+                        {% if issue.resolution_date %}
+                        <dt class="col-5 text-muted">{{ 'Resolved' if lang == 'en' else 'Erledigt' }}</dt>
+                        <dd class="col-7">{{ issue.resolution_date.strftime('%d.%m.%Y %H:%M') }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+}
+.description-content {
+    word-break: break-word;
+}
+.description-content h1,
+.description-content h2,
+.description-content h3,
+.description-content h4,
+.description-content h5,
+.description-content h6 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+.description-content h1 { font-size: 1.5rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem; }
+.description-content h2 { font-size: 1.3rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem; }
+.description-content h3 { font-size: 1.15rem; }
+.description-content h4 { font-size: 1rem; }
+.description-content ul, .description-content ol { padding-left: 1.5rem; }
+.description-content code { 
+    background-color: rgba(0,0,0,0.05); 
+    padding: 0.2rem 0.4rem; 
+    border-radius: 3px; 
+    font-size: 0.9em;
+}
+.description-content pre {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+.description-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+.description-content blockquote {
+    border-left: 4px solid #86BC25;
+    padding-left: 1rem;
+    margin-left: 0;
+    color: #6c757d;
+}
+.description-content table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+.description-content table th,
+.description-content table td {
+    border: 1px solid #dee2e6;
+    padding: 0.5rem;
+}
+.description-content table th {
+    background-color: #f8f9fa;
+}
+</style>
+
+<!-- Marked.js for Markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceEl = document.getElementById('description-source');
+    const targetEl = document.getElementById('description-markdown');
+    
+    if (sourceEl && targetEl) {
+        // Get content from template and decode HTML entities
+        let markdown = sourceEl.innerHTML;
+        
+        // Decode HTML entities
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = markdown;
+        markdown = textarea.value;
+        
+        // Configure marked
+        marked.setOptions({
+            breaks: true,        // Convert \n to <br>
+            gfm: true,           // GitHub Flavored Markdown
+            headerIds: false,    // Don't add IDs to headers
+            mangle: false        // Don't escape autolinks
+        });
+        
+        // Render markdown
+        targetEl.innerHTML = marked.parse(markdown);
+    }
+});
+</script>
+{% endblock %}

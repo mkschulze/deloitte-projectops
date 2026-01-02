@@ -26,7 +26,12 @@ import modules.taxops
 import modules.projects
 
 # Import project models for migrations
-from modules.projects.models import Project, ProjectMember, ProjectRole
+from modules.projects.models import (
+    Project, ProjectMember, ProjectRole,
+    IssueType, IssueStatus, Issue, Sprint,
+    StatusCategory, ProjectMethodology,
+    create_default_issue_types, create_default_issue_statuses
+)
 
 
 # ============================================================================
