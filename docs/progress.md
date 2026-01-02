@@ -4,12 +4,25 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-8 + UI Redesign
 
-**Last Updated:** 2026-01-02 (Session 11)  
-**Version:** 1.8.0
+**Last Updated:** 2026-01-03 (Session 12)  
+**Version:** 1.9.0
 
 ---
 
 ## Recent Releases
+
+### v1.9.0 - PM-8: Quick Search
+
+- **Global Quick Search** (⌘K / Ctrl+K):
+  - Globale Issue-Suche über alle zugänglichen Projekte
+  - Suche nach Issue-Key, Titel, Beschreibung
+  - Live-Typeahead ab 2 Zeichen
+  - Keyboard-Navigation (↑↓ + Enter)
+  - Recent Issues beim Öffnen
+- **Search API Endpoints**:
+  - `GET /projects/api/search?q=...` - Globale Issue-Suche
+  - `GET /projects/api/search/recent` - Zuletzt bearbeitete Issues
+- **UI Enhancements**: Search-Button in Navbar, Modal Design, Issue-Type Icons
 
 ### v1.8.0 - PM-6: Issue Details Enhancement
 

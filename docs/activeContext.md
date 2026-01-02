@@ -8,50 +8,48 @@
 
 ## Session Information
 
-**Date:** 2026-01-02 (Session 11)  
-**Last Action:** PM-6 Issue Details Enhancement - Activity Log, Approval Workflow, Module Access Control  
+**Date:** 2026-01-03 (Session 12)  
+**Last Action:** PM-8 Quick Search implementiert  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-8 + UI Redesign
-**Version:** 1.8.0
+**Version:** 1.9.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 11)
+### ✅ What Was Accomplished (Session 12)
 
-1. **PM-6: Issue Details Enhancement** (Complete)
+1. **PM-8: Quick Search** (Complete)
 
-   #### Activity Log
-   - IssueActivity Model für vollständige Aktivitätsverfolgung
-   - Activity Types: created, status_change, comment, attachment, link, worklog, reviewer_added, reviewer_removed, approved, rejected
-   - `log_activity()` Helper-Funktion in routes.py
-   - Timestamps und User für alle Aktivitäten
-   - Icons für verschiedene Aktivitätstypen (get_activity_icon)
-   - Formatierte Texte (get_activity_text)
+   #### Global Quick Search (⌘K)
+   - Globale Issue-Suche über alle zugänglichen Projekte
+   - Suche nach Issue-Key, Titel, Beschreibung
+   - Live-Typeahead ab 2 Zeichen
+   - Keyboard-Navigation (↑↓ + Enter)
+   - ESC zum Schließen
    
-   #### Approval Workflow Verbesserungen
-   - Genehmigung/Ablehnung nur im Status "In Prüfung" möglich
-   - UI-Hinweis (Info-Alert) wenn Issue nicht im Review-Status
-   - Buttons deaktiviert wenn nicht im Review-Status
-   - Automatischer Status "Done" wenn alle Reviewer genehmigt haben
-   - Ablehnungsgrund wird im Activity Log gespeichert
+   #### Search API Endpoints
+   - `GET /projects/api/search?q=...` - Globale Issue-Suche
+   - `GET /projects/api/search/recent` - Zuletzt bearbeitete Issues
+   - Respektiert Projekt-Zugriffsrechte
+   - Optional: `?project_id=X` für projektspezifische Suche
    
-   #### Projekt Activity Log
-   - Echte Aktivitäten von allen Issues auf Projektdetailseite
-   - Zeigt die 15 neuesten Aktivitäten
-   - Links zu den entsprechenden Issues
-   
-   #### Modul-Zugriffskontrolle
-   - Reviewer: Nur Benutzer mit projects-Modul im Dropdown
-   - Backend-Validierung in issue_reviewer_add
-   - Projektmitglieder: Nur Benutzer mit projects-Modul im Dropdown
-   - Backend-Validierung in project_member_add
+   #### UI
+   - Search-Button in Navbar mit ⌘K Hint
+   - Modern Modal Design
+   - Recent Issues beim Öffnen
+   - Issue-Type Icons und Status-Badges
+   - Projekt- und Assignee-Informationen
 
-2. **Bug Fixes**
-   - `user.username` → `user.name` (User Model)
-   - Activity Log zeigt Reviewer-Aktionen korrekt
+### ✅ Previously Completed (Session 11)
 
-### ✅ Previously Completed (Session 10)
+1. **PM-6: Issue Details Enhancement**
+   - Activity Log für Issues (IssueActivity Model)
+   - Approval Workflow Verbesserungen
+   - Projekt Activity Log
+   - Modul-Zugriffskontrolle
+
+### ✅ Previously Completed (Sessions 1-10)
 
 - **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
 - **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)

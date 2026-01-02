@@ -2680,6 +2680,143 @@ def issue_reviewer_add(project_id, issue_key, project=None):
     return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
 
 
+# ============================================================================
+# PM-8: Global Search API
+# ============================================================================
+
+@bp.route('/api/search')
+@login_required
+@projects_module_required
+def api_search():
+    """Global search API for issues across all accessible projects"""
+    lang = session.get('lang', 'de')
+    query = request.args.get('q', '').strip()
+    project_id = request.args.get('project_id', type=int)
+    limit = request.args.get('limit', 10, type=int)
+    
+    if len(query) < 2:
+        return jsonify({'results': [], 'total': 0})
+    
+    # Build base query - only search in projects user has access to
+    if current_user.role == 'admin':
+        accessible_projects = Project.query.filter_by(is_archived=False).all()
+    else:
+        accessible_projects = Project.query.filter(
+            Project.id.in_(
+                db.session.query(ProjectMember.project_id).filter_by(user_id=current_user.id)
+            ),
+            Project.is_archived == False
+        ).all()
+    
+    project_ids = [p.id for p in accessible_projects]
+    
+    if not project_ids:
+        return jsonify({'results': [], 'total': 0})
+    
+    # Build search query
+    search_query = Issue.query.filter(
+        Issue.project_id.in_(project_ids),
+        Issue.is_archived == False
+    )
+    
+    # Filter by specific project if provided
+    if project_id and project_id in project_ids:
+        search_query = search_query.filter(Issue.project_id == project_id)
+    
+    # Search in key, summary, description
+    search_term = f'%{query}%'
+    search_query = search_query.filter(
+        db.or_(
+            Issue.key.ilike(search_term),
+            Issue.summary.ilike(search_term),
+            Issue.description.ilike(search_term)
+        )
+    )
+    
+    # Get total count
+    total = search_query.count()
+    
+    # Get results with limit
+    issues = search_query.order_by(Issue.updated_at.desc()).limit(limit).all()
+    
+    # Format results
+    results = []
+    for issue in issues:
+        results.append({
+            'id': issue.id,
+            'key': issue.key,
+            'summary': issue.summary,
+            'project_id': issue.project_id,
+            'project_key': issue.project.key,
+            'project_name': issue.project.name,
+            'type': {
+                'name': issue.issue_type.name if issue.issue_type else 'Task',
+                'icon': issue.issue_type.icon if issue.issue_type else 'bi-check2-square',
+                'color': issue.issue_type.color if issue.issue_type else '#0076A8'
+            },
+            'status': {
+                'name': issue.status.name if issue.status else 'Open',
+                'color': issue.status.color if issue.status else '#6c757d'
+            },
+            'priority': issue.priority,
+            'assignee': {
+                'id': issue.assignee.id if issue.assignee else None,
+                'name': issue.assignee.name if issue.assignee else None
+            },
+            'url': url_for('projects.issue_detail', project_id=issue.project_id, issue_key=issue.key)
+        })
+    
+    return jsonify({
+        'results': results,
+        'total': total,
+        'query': query
+    })
+
+
+@bp.route('/api/search/recent')
+@login_required
+@projects_module_required
+def api_search_recent():
+    """Get recently viewed/updated issues for quick access"""
+    lang = session.get('lang', 'de')
+    limit = request.args.get('limit', 5, type=int)
+    
+    # Get accessible project IDs
+    if current_user.role == 'admin':
+        project_ids = [p.id for p in Project.query.filter_by(is_archived=False).all()]
+    else:
+        project_ids = [
+            m.project_id for m in ProjectMember.query.filter_by(user_id=current_user.id).all()
+        ]
+    
+    if not project_ids:
+        return jsonify({'recent': []})
+    
+    # Get issues assigned to user or recently updated
+    recent_issues = Issue.query.filter(
+        Issue.project_id.in_(project_ids),
+        Issue.is_archived == False,
+        db.or_(
+            Issue.assignee_id == current_user.id,
+            Issue.reporter_id == current_user.id
+        )
+    ).order_by(Issue.updated_at.desc()).limit(limit).all()
+    
+    results = []
+    for issue in recent_issues:
+        results.append({
+            'id': issue.id,
+            'key': issue.key,
+            'summary': issue.summary,
+            'project_key': issue.project.key,
+            'type_icon': issue.issue_type.icon if issue.issue_type else 'bi-check2-square',
+            'type_color': issue.issue_type.color if issue.issue_type else '#0076A8',
+            'url': url_for('projects.issue_detail', project_id=issue.project_id, issue_key=issue.key)
+        })
+    
+    return jsonify({'recent': results})
+
+
 def register_routes(blueprint):
     """Register all routes - called from module __init__"""
     pass  # Routes are already registered via decorators

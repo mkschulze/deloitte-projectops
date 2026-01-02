@@ -336,6 +336,18 @@
                 </ul>
                 
                 <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <!-- Quick Search Button -->
+                    <li class="nav-item me-2">
+                        <a class="nav-link d-flex align-items-center" href="#" id="quick-search-trigger" 
+                           title="{{ 'Schnellsuche' if lang == 'de' else 'Quick Search' }} (⌘K)" 
+                           data-bs-toggle="modal" data-bs-target="#quickSearchModal">
+                            <i class="bi bi-search"></i>
+                            <span class="d-none d-lg-inline ms-2 small text-muted" style="font-size: 0.75rem; opacity: 0.7;">⌘K</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
                     <!-- Language Switcher -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -658,6 +670,317 @@
             // Initial badge update
             updateNotificationBadge();
         });
+    </script>
+    {% endif %}
+    
+    <!-- Quick Search Modal -->
+    {% if current_user.is_authenticated %}
+    <div class="modal fade" id="quickSearchModal" tabindex="-1" aria-labelledby="quickSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+                <div class="modal-header border-0 pb-0">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-0" style="padding-left: 1rem;">
+                            <i class="bi bi-search text-muted fs-5"></i>
+                        </span>
+                        <input type="text" class="form-control form-control-lg border-0 shadow-none" 
+                               id="quickSearchInput" 
+                               placeholder="{{ 'Issues suchen... (z.B. TAX-1 oder Stichwort)' if lang == 'de' else 'Search issues... (e.g. TAX-1 or keyword)' }}"
+                               autocomplete="off" autofocus>
+                        <button type="button" class="btn-close me-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body pt-0" id="quickSearchResults" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Recent Issues (shown initially) -->
+                    <div id="recentIssues">
+                        <div class="px-3 py-2 text-muted small fw-semibold">
+                            <i class="bi bi-clock-history me-1"></i> {{ 'Zuletzt bearbeitet' if lang == 'de' else 'Recently Updated' }}
+                        </div>
+                        <div id="recentIssuesList" class="px-2">
+                            <div class="text-center text-muted py-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Results (shown after typing) -->
+                    <div id="searchResultsSection" style="display: none;">
+                        <div class="px-3 py-2 text-muted small fw-semibold">
+                            <i class="bi bi-search me-1"></i> <span id="searchResultsLabel">{{ 'Suchergebnisse' if lang == 'de' else 'Search Results' }}</span>
+                        </div>
+                        <div id="searchResultsList" class="px-2"></div>
+                    </div>
+                    
+                    <!-- No Results -->
+                    <div id="noResults" class="text-center py-5" style="display: none;">
+                        <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                        <span class="text-muted">{{ 'Keine Ergebnisse gefunden' if lang == 'de' else 'No results found' }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-2">
+                    <div class="d-flex justify-content-between w-100 small text-muted px-2">
+                        <div>
+                            <kbd class="bg-light text-dark border px-1">↵</kbd> {{ 'zum Öffnen' if lang == 'de' else 'to open' }}
+                            <span class="mx-2">|</span>
+                            <kbd class="bg-light text-dark border px-1">↑</kbd><kbd class="bg-light text-dark border px-1">↓</kbd> {{ 'Navigieren' if lang == 'de' else 'Navigate' }}
+                        </div>
+                        <div>
+                            <kbd class="bg-light text-dark border px-1">Esc</kbd> {{ 'Schließen' if lang == 'de' else 'Close' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        /* Quick Search Modal Styles */
+        #quickSearchModal .modal-content {
+            background: #fff;
+        }
+        
+        #quickSearchInput {
+            font-size: 1.2rem;
+        }
+        
+        #quickSearchInput::placeholder {
+            color: #adb5bd;
+        }
+        
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: background-color 0.15s ease;
+        }
+        
+        .search-result-item:hover,
+        .search-result-item.active {
+            background-color: var(--dtt-green-pale, #f1f6e4);
+        }
+        
+        .search-result-item .result-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .search-result-item .result-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .search-result-item .result-key {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--dtt-sec-blue-4, #0076A8);
+        }
+        
+        .search-result-item .result-summary {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .search-result-item .result-meta {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        
+        .search-result-item .result-status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+    </style>
+    
+    <script>
+        // Quick Search Functionality
+        (function() {
+            let searchTimeout = null;
+            let selectedIndex = -1;
+            let searchResults = [];
+            
+            // Open modal with Cmd+K or Ctrl+K
+            document.addEventListener('keydown', function(e) {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                    e.preventDefault();
+                    const modal = new bootstrap.Modal(document.getElementById('quickSearchModal'));
+                    modal.show();
+                }
+            });
+            
+            // When modal opens
+            const quickSearchModal = document.getElementById('quickSearchModal');
+            if (quickSearchModal) {
+                quickSearchModal.addEventListener('shown.bs.modal', function() {
+                    document.getElementById('quickSearchInput').focus();
+                    loadRecentIssues();
+                });
+                
+                quickSearchModal.addEventListener('hidden.bs.modal', function() {
+                    document.getElementById('quickSearchInput').value = '';
+                    resetSearch();
+                });
+            }
+            
+            // Search input handler
+            const searchInput = document.getElementById('quickSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim();
+                    
+                    if (searchTimeout) clearTimeout(searchTimeout);
+                    
+                    if (query.length < 2) {
+                        resetSearch();
+                        return;
+                    }
+                    
+                    searchTimeout = setTimeout(() => {
+                        performSearch(query);
+                    }, 200);
+                });
+                
+                // Keyboard navigation
+                searchInput.addEventListener('keydown', function(e) {
+                    const items = document.querySelectorAll('.search-result-item');
+                    
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        updateSelection(items);
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, 0);
+                        updateSelection(items);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && items[selectedIndex]) {
+                            items[selectedIndex].click();
+                        }
+                    }
+                });
+            }
+            
+            function updateSelection(items) {
+                items.forEach((item, i) => {
+                    if (i === selectedIndex) {
+                        item.classList.add('active');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+            
+            function resetSearch() {
+                selectedIndex = -1;
+                searchResults = [];
+                document.getElementById('recentIssues').style.display = 'block';
+                document.getElementById('searchResultsSection').style.display = 'none';
+                document.getElementById('noResults').style.display = 'none';
+            }
+            
+            function loadRecentIssues() {
+                fetch('/projects/api/search/recent?limit=5')
+                    .then(response => response.json())
+                    .then(data => {
+                        const list = document.getElementById('recentIssuesList');
+                        if (data.recent && data.recent.length > 0) {
+                            list.innerHTML = data.recent.map(issue => createResultItem(issue)).join('');
+                        } else {
+                            list.innerHTML = '<div class="text-center text-muted py-3 small">{{ "Keine kürzlich bearbeiteten Issues" if lang == "de" else "No recently updated issues" }}</div>';
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error loading recent issues:', err);
+                        document.getElementById('recentIssuesList').innerHTML = '';
+                    });
+            }
+            
+            function performSearch(query) {
+                fetch('/projects/api/search?q=' + encodeURIComponent(query) + '&limit=15')
+                    .then(response => response.json())
+                    .then(data => {
+                        searchResults = data.results || [];
+                        selectedIndex = searchResults.length > 0 ? 0 : -1;
+                        
+                        document.getElementById('recentIssues').style.display = 'none';
+                        
+                        if (searchResults.length > 0) {
+                            document.getElementById('searchResultsSection').style.display = 'block';
+                            document.getElementById('noResults').style.display = 'none';
+                            document.getElementById('searchResultsLabel').textContent = 
+                                data.total + ' {{ "Ergebnis" if lang == "de" else "result" }}' + (data.total !== 1 ? '{{ "se" if lang == "de" else "s" }}' : '');
+                            
+                            const list = document.getElementById('searchResultsList');
+                            list.innerHTML = searchResults.map((issue, i) => createSearchResultItem(issue, i === 0)).join('');
+                        } else {
+                            document.getElementById('searchResultsSection').style.display = 'none';
+                            document.getElementById('noResults').style.display = 'block';
+                        }
+                    })
+                    .catch(err => console.error('Search error:', err));
+            }
+            
+            function createResultItem(issue) {
+                return `
+                    <a href="${issue.url}" class="search-result-item">
+                        <div class="result-icon" style="background-color: ${issue.type_color}20;">
+                            <i class="bi ${issue.type_icon}" style="color: ${issue.type_color};"></i>
+                        </div>
+                        <div class="result-content">
+                            <span class="result-key">${issue.key}</span>
+                            <span class="result-summary ms-2">${escapeHtml(issue.summary)}</span>
+                            <div class="result-meta">${issue.project_key}</div>
+                        </div>
+                    </a>
+                `;
+            }
+            
+            function createSearchResultItem(issue, isActive) {
+                return `
+                    <a href="${issue.url}" class="search-result-item${isActive ? ' active' : ''}">
+                        <div class="result-icon" style="background-color: ${issue.type.color}20;">
+                            <i class="bi ${issue.type.icon}" style="color: ${issue.type.color};"></i>
+                        </div>
+                        <div class="result-content">
+                            <span class="result-key">${issue.key}</span>
+                            <span class="result-summary ms-2">${escapeHtml(issue.summary)}</span>
+                            <div class="result-meta">
+                                ${issue.project_name}
+                                ${issue.assignee.name ? ' • ' + escapeHtml(issue.assignee.name) : ''}
+                            </div>
+                        </div>
+                        <span class="result-status" style="background-color: ${issue.status.color}20; color: ${issue.status.color};">
+                            ${escapeHtml(issue.status.name)}
+                        </span>
+                    </a>
+                `;
+            }
+            
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        })();
     </script>
     {% endif %}
     

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.0] - 2026-01-03
+
+### 🔍 PM-8: Quick Search
+
+#### Added
+- **Global Quick Search** (⌘K / Ctrl+K):
+  - Globale Issue-Suche über alle zugänglichen Projekte
+  - Suche nach Issue-Key, Titel, Beschreibung
+  - Live-Typeahead ab 2 Zeichen
+  - Keyboard-Navigation (↑↓ + Enter)
+  - Recent Issues beim Öffnen
+  - Modern Modal Design
+
+- **Search API Endpoints**:
+  - `GET /projects/api/search?q=...` - Globale Issue-Suche
+  - `GET /projects/api/search/recent` - Zuletzt bearbeitete Issues
+  - Respektiert Projekt-Zugriffsrechte
+  - Optional: `?project_id=X` für projektspezifische Suche
+
+- **UI Enhancements**:
+  - Search-Button in Navbar mit ⌘K Hint
+  - ESC zum Schließen
+  - Issue-Type Icons und Status-Badges in Suchergebnissen
+  - Projekt- und Assignee-Informationen
+
+---
+
 ## [1.8.0] - 2026-01-02
 
 ### 📋 PM-6: Issue Details Enhancement
