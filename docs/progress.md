@@ -2,14 +2,35 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-7 + UI Redesign
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-8 + UI Redesign
 
-**Last Updated:** 2026-01-02 (Session 10)  
-**Version:** 1.6.0
+**Last Updated:** 2026-01-02 (Session 11)  
+**Version:** 1.8.0
 
 ---
 
 ## Recent Releases
+
+### v1.8.0 - PM-6: Issue Details Enhancement
+
+- **Activity Log für Issues**: Vollständige Aktivitätsverfolgung
+  - IssueActivity Model mit activity_type (created, status_change, comment, attachment, link, worklog, reviewer_added, reviewer_removed, approved, rejected)
+  - log_activity() Helper-Funktion
+  - Icons und formatierte Texte für Aktivitäten
+- **Approval Workflow Verbesserungen**:
+  - Genehmigung/Ablehnung nur im Status "In Prüfung"
+  - UI-Hinweis und deaktivierte Buttons wenn nicht im Review-Status
+  - Automatischer Status "Done" bei vollständiger Genehmigung
+  - Ablehnungsgrund im Activity Log
+- **Projekt Activity Log**: Echte Aktivitäten von allen Issues auf Projektdetailseite
+- **Modul-Zugriffskontrolle**: Nur Benutzer mit projects-Modul als Reviewer/Mitglieder
+- **Bug-Fix**: `user.username` → `user.name`
+
+### v1.7.0 - PM-5: Sprint Reports & Analytics
+
+- **Sprint Report Route** mit Burndown und Velocity Charts
+- **Velocity Calculation** für Sprint-Planung
+- **Bug-Fixes**: issue.type → issue.issue_type, resolved_at → resolution_date
 
 ### v1.6.0 - UI Redesign: Deloitte Design System
 

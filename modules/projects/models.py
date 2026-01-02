@@ -730,6 +730,85 @@ class IssueReviewer(db.Model):
 
 
 # =============================================================================
+# ISSUE ACTIVITY MODEL (Change tracking)
+# =============================================================================
+
+class IssueActivity(db.Model):
+    """Activity log for tracking all changes to issues"""
+    __tablename__ = 'issue_activity'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Activity type: status_change, assignee_change, comment, attachment, link, worklog, 
+    #                field_update, created, reviewer_added, approved, rejected
+    activity_type = db.Column(db.String(50), nullable=False)
+    
+    # Field that was changed (for field_update type)
+    field_name = db.Column(db.String(50))
+    
+    # Old and new values (JSON for complex values)
+    old_value = db.Column(db.Text)
+    new_value = db.Column(db.Text)
+    
+    # Optional details/message
+    details = db.Column(db.Text)
+    
+    # Timestamp
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationships
+    issue = db.relationship('Issue', backref=db.backref('activities', lazy='dynamic', 
+                           order_by='IssueActivity.created_at.desc()'))
+    user = db.relationship('User', backref='issue_activities')
+    
+    def get_activity_icon(self):
+        """Get icon for activity type"""
+        icons = {
+            'created': 'bi-plus-circle text-success',
+            'status_change': 'bi-arrow-right-circle text-primary',
+            'assignee_change': 'bi-person text-info',
+            'comment': 'bi-chat-dots text-secondary',
+            'attachment': 'bi-paperclip text-warning',
+            'link': 'bi-link-45deg text-muted',
+            'worklog': 'bi-clock text-info',
+            'field_update': 'bi-pencil text-muted',
+            'reviewer_added': 'bi-person-plus text-primary',
+            'reviewer_removed': 'bi-person-dash text-warning',
+            'approved': 'bi-check-circle text-success',
+            'rejected': 'bi-x-circle text-danger',
+            'priority_change': 'bi-exclamation-circle text-warning',
+            'sprint_change': 'bi-calendar-event text-info',
+        }
+        return icons.get(self.activity_type, 'bi-circle text-muted')
+    
+    def get_activity_text(self, lang='de'):
+        """Get human-readable activity text"""
+        texts = {
+            'created': ('hat das Issue erstellt', 'created this issue'),
+            'status_change': ('hat den Status geändert', 'changed status'),
+            'assignee_change': ('hat die Zuweisung geändert', 'changed assignee'),
+            'comment': ('hat kommentiert', 'commented'),
+            'attachment': ('hat eine Datei angehängt', 'attached a file'),
+            'link': ('hat eine Verknüpfung hinzugefügt', 'added a link'),
+            'worklog': ('hat Zeit protokolliert', 'logged time'),
+            'field_update': ('hat ein Feld aktualisiert', 'updated a field'),
+            'reviewer_added': ('hat einen Reviewer hinzugefügt', 'added a reviewer'),
+            'reviewer_removed': ('hat einen Reviewer entfernt', 'removed a reviewer'),
+            'approved': ('hat genehmigt', 'approved'),
+            'rejected': ('hat abgelehnt', 'rejected'),
+            'priority_change': ('hat die Priorität geändert', 'changed priority'),
+            'sprint_change': ('hat den Sprint geändert', 'changed sprint'),
+        }
+        idx = 0 if lang == 'de' else 1
+        return texts.get(self.activity_type, ('hat eine Änderung vorgenommen', 'made a change'))[idx]
+    
+    def __repr__(self):
+        return f'<IssueActivity {self.activity_type} on Issue {self.issue_id} by User {self.user_id}>'
+
+
+# =============================================================================
 # ISSUE LINK MODEL
 # =============================================================================
 

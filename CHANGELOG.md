@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-01-02
+
+### 📋 PM-6: Issue Details Enhancement
+
+#### Added
+- **Activity Log für Issues**:
+  - Vollständige Aktivitätsverfolgung (Erstellen, Status, Kommentare, Anhänge, Links, Worklogs)
+  - Reviewer-Aktionen werden protokolliert (hinzugefügt, entfernt, genehmigt, abgelehnt)
+  - Timestamps und Benutzer für alle Aktivitäten
+  - Icons für verschiedene Aktivitätstypen
+
+- **IssueActivity Model**:
+  - activity_type: created, status_change, comment, attachment, link, worklog, reviewer_added, reviewer_removed, approved, rejected
+  - Speicherung von alten/neuen Werten (old_value, new_value)
+  - Foreign Keys zu Issue und User
+
+- **Approval Workflow Verbesserungen**:
+  - Genehmigung/Ablehnung nur im Status "In Prüfung" möglich
+  - UI-Hinweis wenn Issue nicht im Review-Status ist
+  - Buttons werden deaktiviert wenn nicht im Review-Status
+  - Automatischer Status "Done" wenn alle Reviewer genehmigen
+  - Ablehnungsgrund wird im Activity Log gespeichert
+
+- **Projekt Activity Log**:
+  - Echte Aktivitäten von allen Issues auf der Projektdetailseite
+  - Zeigt die 15 neuesten Aktivitäten
+  - Links zu den entsprechenden Issues
+
+- **Modul-Zugriffskontrolle**:
+  - Nur Benutzer mit Projektmanagement-Modul können als Reviewer hinzugefügt werden
+  - Nur Benutzer mit Projektmanagement-Modul können als Projektmitglieder hinzugefügt werden
+  - Backend-Validierung zusätzlich zur Frontend-Filterung
+
+#### Fixed
+- `user.username` → `user.name` (User Model verwendet `name`)
+- Activity Log zeigt jetzt alle Reviewer-Aktionen korrekt an
+
+---
+
 ## [1.7.0] - 2026-01-02
 
 ### 📊 PM-5: Sprint Reports & Analytics

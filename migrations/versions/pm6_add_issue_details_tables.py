@@ -1,7 +1,7 @@
 """PM-6: Add Issue Details tables (comments, attachments, links, worklogs)
 
 Revision ID: pm6_issue_details
-Revises: pm2_add_flexible_issue_system
+Revises: pm2_issue_system
 Create Date: 2026-01-02
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'pm6_issue_details'
-down_revision = 'pm2_add_flexible_issue_system'
+down_revision = 'pm2_issue_system'
 branch_labels = None
 depends_on = None
 

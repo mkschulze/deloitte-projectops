@@ -656,6 +656,57 @@
                     {% endif %}
                 </div>
             </div>
+            
+            <!-- Activity Log -->
+            <div class="detail-card card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-activity me-2"></i>{{ 'Activity' if lang == 'en' else 'Aktivität' }}</span>
+                    <span class="badge bg-secondary">{{ issue.activities.count() }}</span>
+                </div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% for activity in issue.activities.order_by(db.desc('created_at')).limit(20).all() %}
+                    <div class="d-flex gap-2 py-2 {{ 'border-bottom' if not loop.last else '' }}">
+                        <div class="flex-shrink-0">
+                            <i class="{{ activity.get_activity_icon() }}" style="font-size: 1.1rem;"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="small">
+                                <strong>{{ activity.user.name if activity.user else 'System' }}</strong>
+                                <span class="text-muted">{{ activity.get_activity_text(lang) }}</span>
+                                {% if activity.old_value and activity.new_value %}
+                                <span class="text-muted">
+                                    <span class="text-decoration-line-through">{{ activity.old_value }}</span>
+                                    → <span class="fw-500">{{ activity.new_value }}</span>
+                                </span>
+                                {% elif activity.details %}
+                                {% if activity.activity_type == 'rejected' %}
+                                <div class="text-danger small mt-1 fst-italic">
+                                    <i class="bi bi-quote me-1"></i>"{{ activity.details }}"
+                                </div>
+                                {% elif activity.activity_type in ['reviewer_added', 'reviewer_removed'] %}
+                                <span class="text-muted">: <strong>{{ activity.details }}</strong></span>
+                                {% elif activity.activity_type == 'approved' and activity.details %}
+                                <div class="text-success small mt-1 fst-italic">
+                                    <i class="bi bi-quote me-1"></i>"{{ activity.details }}"
+                                </div>
+                                {% else %}
+                                <span class="text-muted">: {{ activity.details[:50] }}{% if activity.details|length > 50 %}...{% endif %}</span>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                {{ activity.created_at.strftime('%d.%m.%Y %H:%M') }}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-clock-history d-block mb-2" style="font-size: 1.5rem; opacity: 0.5;"></i>
+                        <small>{{ 'No activity yet' if lang == 'en' else 'Noch keine Aktivität' }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
 
         <!-- Sidebar -->
@@ -699,7 +750,11 @@
                                         <option value="">{{ 'Select person...' if lang == 'en' else 'Person wählen...' }}</option>
                                         {% for member in project.members %}
                                         {% if member.user_id not in existing_reviewer_ids %}
+                                        {# Only show users who have the projects module enabled #}
+                                        {% set has_projects_module = member.user.user_modules | selectattr('module.code', 'equalto', 'projects') | list | length > 0 %}
+                                        {% if has_projects_module %}
                                         <option value="{{ member.user_id }}">{{ member.user.name if member.user else 'Unknown' }}</option>
+                                        {% endif %}
                                         {% endif %}
                                         {% endfor %}
                                     </select>
@@ -780,15 +835,21 @@
                     
                     <!-- Approval Actions -->
                     {% set review_check = issue.can_user_review(current_user) %}
+                    {% set is_in_review = issue.status and (issue.status.name in ['In Prüfung', 'In Review'] or issue.status.name_en == 'In Review') %}
                     {% if review_check[0] %}
                     <hr class="my-3">
+                    {% if not is_in_review %}
+                    <div class="alert alert-info small py-2 px-3 mb-2" style="border-radius: 8px;">
+                        <i class="bi bi-info-circle me-1"></i>{{ 'Issue must be in "In Review" status before approval.' if lang == 'en' else 'Issue muss auf Status "In Prüfung" gesetzt werden, bevor genehmigt werden kann.' }}
+                    </div>
+                    {% endif %}
                     <div class="d-flex gap-2">
                         <form method="post" action="{{ url_for('projects.issue_approve', project_id=project.id, issue_key=issue.key) }}" class="flex-grow-1">
-                            <button type="submit" class="btn btn-success btn-sm w-100 action-btn">
+                            <button type="submit" class="btn btn-success btn-sm w-100 action-btn" {% if not is_in_review %}disabled{% endif %}>
                                 <i class="bi bi-check-lg me-1"></i>{{ 'Approve' if lang == 'en' else 'Genehmigen' }}
                             </button>
                         </form>
-                        <button type="button" class="btn btn-outline-danger btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <button type="button" class="btn btn-outline-danger btn-sm action-btn" data-bs-toggle="modal" data-bs-target="#rejectModal" {% if not is_in_review %}disabled{% endif %}>
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>

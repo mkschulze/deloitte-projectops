@@ -12,7 +12,7 @@ from .models import (
     Project, ProjectMember, ProjectRole,
     IssueType, IssueStatus, Issue, Sprint,
     IssueComment, IssueAttachment, IssueLink, IssueLinkType, Worklog, IssueReviewer,
-    create_default_issue_types, create_default_issue_statuses
+    IssueActivity, create_default_issue_types, create_default_issue_statuses
 )
 
 # Create blueprint
@@ -60,6 +60,39 @@ def projects_module_required(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
+
+# ============================================================================
+# ACTIVITY TRACKING HELPER
+# ============================================================================
+
+def log_activity(issue, activity_type, user=None, field_name=None, 
+                 old_value=None, new_value=None, details=None):
+    """Log an activity for an issue
+    
+    Args:
+        issue: The Issue object
+        activity_type: Type of activity (status_change, comment, etc.)
+        user: User who performed the action (defaults to current_user)
+        field_name: Name of field changed (for field_update)
+        old_value: Previous value (string)
+        new_value: New value (string)
+        details: Additional details
+    """
+    if user is None:
+        user = current_user
+    
+    activity = IssueActivity(
+        issue_id=issue.id,
+        user_id=user.id if hasattr(user, 'id') else user,
+        activity_type=activity_type,
+        field_name=field_name,
+        old_value=str(old_value) if old_value is not None else None,
+        new_value=str(new_value) if new_value is not None else None,
+        details=details
+    )
+    db.session.add(activity)
+    return activity
 
 
 # ============================================================================
@@ -186,7 +219,14 @@ def project_detail(project_id, project=None):
     # Get member list
     members = ProjectMember.query.filter_by(project_id=project_id).all()
     
-    return render_template('projects/detail.html', project=project, members=members, lang=lang)
+    # Get recent activities from all issues in this project
+    from sqlalchemy import desc
+    recent_activities = IssueActivity.query.join(Issue).filter(
+        Issue.project_id == project_id
+    ).order_by(desc(IssueActivity.created_at)).limit(20).all()
+    
+    return render_template('projects/detail.html', project=project, members=members, 
+                          recent_activities=recent_activities, lang=lang)
 
 
 @bp.route('/<int:project_id>/edit', methods=['GET', 'POST'])
@@ -266,10 +306,24 @@ def project_members(project_id, project=None):
     
     members = ProjectMember.query.filter_by(project_id=project_id).all()
     member_user_ids = [m.user_id for m in members]
-    available_users = User.query.filter(
-        User.is_active == True,
-        ~User.id.in_(member_user_ids)
-    ).order_by(User.name).all()
+    
+    # Only show users who have the projects module enabled
+    from models import UserModule, Module
+    projects_module = Module.query.filter_by(code='projects').first()
+    if projects_module:
+        users_with_module = db.session.query(UserModule.user_id).filter_by(
+            module_id=projects_module.id
+        ).subquery()
+        available_users = User.query.filter(
+            User.is_active == True,
+            ~User.id.in_(member_user_ids),
+            User.id.in_(users_with_module)
+        ).order_by(User.name).all()
+    else:
+        available_users = User.query.filter(
+            User.is_active == True,
+            ~User.id.in_(member_user_ids)
+        ).order_by(User.name).all()
     
     can_edit = project.can_user_edit(current_user)
     
@@ -302,6 +356,18 @@ def project_member_add(project_id, project=None):
     if not user_id:
         flash('Benutzer erforderlich.' if lang == 'de' else 'User required.', 'danger')
         return redirect(url_for('projects.project_members', project_id=project_id))
+    
+    # Check if user has projects module enabled
+    from models import UserModule, Module
+    projects_module = Module.query.filter_by(code='projects').first()
+    if projects_module:
+        has_access = UserModule.query.filter_by(
+            user_id=user_id, 
+            module_id=projects_module.id
+        ).first()
+        if not has_access:
+            flash('Dieser Benutzer hat keinen Zugriff auf das Projektmanagement-Modul.' if lang == 'de' else 'This user does not have access to the Project Management module.', 'warning')
+            return redirect(url_for('projects.project_members', project_id=project_id))
     
     # Check if already member
     existing = ProjectMember.query.filter_by(project_id=project_id, user_id=user_id).first()
@@ -545,6 +611,11 @@ def issue_new(project_id, project=None):
             labels=label_list
         )
         db.session.add(issue)
+        db.session.flush()  # Get issue.id before commit
+        
+        # Log activity - issue created
+        log_activity(issue, 'created')
+        
         db.session.commit()
         
         flash(f'Issue {issue.key} erstellt.' if lang == 'de' else f'Issue {issue.key} created.', 'success')
@@ -689,6 +760,11 @@ def issue_transition(project_id, issue_key, project=None):
     
     old_status = issue.status
     issue.status_id = new_status_id
+    
+    # Log activity - status change
+    log_activity(issue, 'status_change', 
+                 old_value=old_status.get_name(lang) if old_status else None,
+                 new_value=new_status.get_name(lang))
     
     # Set resolution date if moving to final status
     if new_status.is_final and not issue.resolution_date:
@@ -1901,6 +1977,9 @@ def comment_add(project_id, issue_key, project=None):
     )
     db.session.add(comment)
     
+    # Log activity - comment added
+    log_activity(issue, 'comment', details=content[:100] if len(content) > 100 else content)
+    
     # Update issue updated_at
     issue.updated_at = datetime.utcnow()
     
@@ -2047,6 +2126,9 @@ def attachment_upload(project_id, issue_key, project=None):
     )
     db.session.add(attachment)
     
+    # Log activity - attachment added
+    log_activity(issue, 'attachment', details=original_filename)
+    
     # Update issue
     issue.updated_at = datetime.utcnow()
     
@@ -2165,6 +2247,9 @@ def link_add(project_id, issue_key, project=None):
     )
     db.session.add(link)
     
+    # Log activity - link added
+    log_activity(issue, 'link', details=f'{link_type}: {target_key}')
+    
     # Update issue
     issue.updated_at = datetime.utcnow()
     
@@ -2251,6 +2336,9 @@ def worklog_add(project_id, issue_key, project=None):
         description=description
     )
     db.session.add(worklog)
+    
+    # Log activity - worklog added
+    log_activity(issue, 'worklog', details=worklog.time_spent_display)
     
     # Update issue time tracking
     issue.time_spent = (issue.time_spent or 0) + minutes
@@ -2356,6 +2444,9 @@ def issue_reviewers(project_id, issue_key, project=None):
         # Remove deselected reviewers
         for reviewer in issue.reviewers.all():
             if reviewer.user_id not in new_reviewers:
+                removed_user = User.query.get(reviewer.user_id)
+                log_activity(issue, 'reviewer_removed', 
+                             details=removed_user.name if removed_user else str(reviewer.user_id))
                 db.session.delete(reviewer)
         
         # Add new reviewers
@@ -2368,6 +2459,9 @@ def issue_reviewers(project_id, issue_key, project=None):
                     order=order
                 )
                 db.session.add(reviewer)
+                added_user = User.query.get(user_id)
+                log_activity(issue, 'reviewer_added', 
+                             details=added_user.name if added_user else str(user_id))
                 order += 1
         
         db.session.commit()
@@ -2400,6 +2494,11 @@ def issue_approve(project_id, issue_key, project=None):
     
     issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
     
+    # Check if issue is in review status
+    if issue.status and issue.status.name not in ['In Prüfung', 'In Review'] and issue.status.name_en not in ['In Review']:
+        flash('Issue muss sich im Status "In Prüfung" befinden, um genehmigt zu werden.' if lang == 'de' else 'Issue must be in "In Review" status to be approved.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
     # Check if user can review
     can_review, reason = issue.can_user_review(current_user)
     if not can_review:
@@ -2414,14 +2513,26 @@ def issue_approve(project_id, issue_key, project=None):
     
     note = request.form.get('note', '')
     reviewer.approve(note)
-    db.session.commit()
+    
+    # Log the approval activity
+    log_activity(issue, 'approved', details=note if note else None)
     
     # Check if all reviewers have approved
     status = issue.get_approval_status()
     if status['is_complete']:
-        flash('Alle Reviewer haben genehmigt! Issue wurde freigegeben.' if lang == 'de' else 'All reviewers approved! Issue has been released.', 'success')
+        # Automatically set issue to Done status
+        done_status = IssueStatus.query.filter_by(project_id=project_id, is_final=True).first()
+        if done_status and issue.status_id != done_status.id:
+            old_status_name = issue.status.get_name(lang) if issue.status else 'N/A'
+            issue.status_id = done_status.id
+            log_activity(issue, 'status_change', 
+                        old_value=old_status_name, 
+                        new_value=done_status.get_name(lang))
+        flash('Alle Reviewer haben genehmigt! Issue wurde auf "Erledigt" gesetzt.' if lang == 'de' else 'All reviewers approved! Issue has been set to "Done".', 'success')
     else:
         flash(f"Ihre Genehmigung wurde gespeichert. Noch {status['pending_count']} Reviewer ausstehend." if lang == 'de' else f"Your approval was recorded. {status['pending_count']} reviewer(s) still pending.", 'success')
+    
+    db.session.commit()
     
     return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
 
@@ -2438,6 +2549,11 @@ def issue_reject(project_id, issue_key, project=None):
         project = Project.query.get_or_404(project_id)
     
     issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
+    
+    # Check if issue is in review status
+    if issue.status and issue.status.name not in ['In Prüfung', 'In Review'] and issue.status.name_en not in ['In Review']:
+        flash('Issue muss sich im Status "In Prüfung" befinden, um abgelehnt zu werden.' if lang == 'de' else 'Issue must be in "In Review" status to be rejected.', 'warning')
+        return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
     
     # Check if user can review
     can_review, reason = issue.can_user_review(current_user)
@@ -2457,6 +2573,10 @@ def issue_reject(project_id, issue_key, project=None):
         return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
     
     reviewer.reject(note)
+    
+    # Log the rejection activity
+    log_activity(issue, 'rejected', details=note)
+    
     db.session.commit()
     
     flash('Issue wurde abgelehnt.' if lang == 'de' else 'Issue has been rejected.', 'warning')
@@ -2485,6 +2605,10 @@ def issue_reviewer_remove(project_id, issue_key, reviewer_id, project=None):
     if reviewer.issue_id != issue.id:
         flash('Ungültiger Reviewer.' if lang == 'de' else 'Invalid reviewer.', 'danger')
         return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
+    removed_user = User.query.get(reviewer.user_id)
+    log_activity(issue, 'reviewer_removed', 
+                 details=removed_user.name if removed_user else str(reviewer.user_id))
     
     db.session.delete(reviewer)
     db.session.commit()
@@ -2516,6 +2640,20 @@ def issue_reviewer_add(project_id, issue_key, project=None):
         flash('Bitte wählen Sie einen Benutzer.' if lang == 'de' else 'Please select a user.', 'warning')
         return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
     
+    # Check if user has projects module enabled
+    from models import UserModule, Module
+    user_to_add = User.query.get(int(user_id))
+    if user_to_add:
+        projects_module = Module.query.filter_by(code='projects').first()
+        if projects_module:
+            has_access = UserModule.query.filter_by(
+                user_id=int(user_id), 
+                module_id=projects_module.id
+            ).first()
+            if not has_access:
+                flash('Dieser Benutzer hat keinen Zugriff auf das Projektmanagement-Modul.' if lang == 'de' else 'This user does not have access to the Project Management module.', 'warning')
+                return redirect(url_for('projects.issue_detail', project_id=project_id, issue_key=issue_key))
+    
     # Check if already a reviewer
     existing = issue.reviewers.filter_by(user_id=user_id).first()
     if existing:
@@ -2530,6 +2668,12 @@ def issue_reviewer_add(project_id, issue_key, project=None):
         order=order
     )
     db.session.add(reviewer)
+    
+    # Log the activity
+    added_user = User.query.get(int(user_id))
+    log_activity(issue, 'reviewer_added', 
+                 details=added_user.name if added_user else str(user_id))
+    
     db.session.commit()
     
     flash('Reviewer hinzugefügt.' if lang == 'de' else 'Reviewer added.', 'success')

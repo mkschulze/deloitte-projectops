@@ -1,7 +1,7 @@
 """Add IssueReviewer table for multi-stage approval workflow
 
 Revision ID: pm6_issue_reviewer
-Revises: pm6_add_issue_details_tables
+Revises: pm6_issue_details
 Create Date: 2026-01-02
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'pm6_issue_reviewer'
-down_revision = 'pm6_add_issue_details_tables'
+down_revision = 'pm6_issue_details'
 branch_labels = None
 depends_on = None
 

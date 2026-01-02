@@ -8,91 +8,50 @@
 
 ## Session Information
 
-**Date:** 2026-01-02 (Session 10)  
-**Last Action:** Completed UI Redesign aller Projekt-Modul-Seiten im Deloitte Design System  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-7 + UI Redesign
-**Version:** 1.6.0
+**Date:** 2026-01-02 (Session 11)  
+**Last Action:** PM-6 Issue Details Enhancement - Activity Log, Approval Workflow, Module Access Control  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-8 + UI Redesign
+**Version:** 1.8.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 10)
+### ✅ What Was Accomplished (Session 11)
 
-1. **UI Redesign: Deloitte Design System** (Complete)
+1. **PM-6: Issue Details Enhancement** (Complete)
 
-   #### Projekt Detail Seite (`/projects/<id>`)
-   - Hero-Header mit schwarzem/grünem Gradient
-   - 4 Statistik-Karten (Issues, Sprints, Team, Offene Issues)
-   - 6 Action-Karten (Issue List, Kanban Board, Sprints, Backlog, Einstellungen, Archiv)
-   - Team-Sidebar mit Avatar-Initialen und Rollen
-   - Responsive Grid-Layout
+   #### Activity Log
+   - IssueActivity Model für vollständige Aktivitätsverfolgung
+   - Activity Types: created, status_change, comment, attachment, link, worklog, reviewer_added, reviewer_removed, approved, rejected
+   - `log_activity()` Helper-Funktion in routes.py
+   - Timestamps und User für alle Aktivitäten
+   - Icons für verschiedene Aktivitätstypen (get_activity_icon)
+   - Formatierte Texte (get_activity_text)
    
-   #### Issue-Liste (`/projects/<id>/issues`)
-   - Blauer Gradient-Hero (#0076A8 → #004165 → #000)
-   - Quick-Stats (Offen, In Bearbeitung, Erledigt, Überfällig)
-   - Moderne Filter-Card mit Type/Status/Priority/Assignee/Sprint
-   - Gestylte Tabelle mit Type-Icons und Priority-Badges
-   - View-Switcher (Liste/Board)
+   #### Approval Workflow Verbesserungen
+   - Genehmigung/Ablehnung nur im Status "In Prüfung" möglich
+   - UI-Hinweis (Info-Alert) wenn Issue nicht im Review-Status
+   - Buttons deaktiviert wenn nicht im Review-Status
+   - Automatischer Status "Done" wenn alle Reviewer genehmigt haben
+   - Ablehnungsgrund wird im Activity Log gespeichert
    
-   #### Sprint-Übersicht (`/projects/<id>/sprints`)
-   - Teal Gradient-Hero (#00A3E0 → #0076A8 → #000)
-   - Stat-Cards für alle Sprint-Metriken
-   - Aktiver Sprint als große Card mit Fortschrittsbalken
-   - Geplante Sprints als Grid mit Grün-Buttons
-   - Abgeschlossene Sprints als kompakte Tabelle
+   #### Projekt Activity Log
+   - Echte Aktivitäten von allen Issues auf Projektdetailseite
+   - Zeigt die 15 neuesten Aktivitäten
+   - Links zu den entsprechenden Issues
    
-   #### Backlog (`/projects/<id>/backlog`)
-   - Grüner Gradient-Hero (#26890D → #86BC25 → #000)
-   - Schwebende Bulk-Actions-Leiste (fixed bottom)
-   - Drag & Drop Neuordnung (SortableJS)
-   - Issue-Cards mit Type-Icons und Priority-Streifen
-   - Bug-Fix: `issue.issue_key` → `issue.key`
-   
-   #### Kanban Board (`/projects/<id>/board`)
-   - Light-Blue Gradient-Hero (#62B5E5 → #0076A8 → #000)
-   - Moderne Spalten mit farbigen Status-Punkten
-   - Issue-Cards mit Hover-Animationen (scale, shadow)
-   - Quick-Create Input am Ende jeder Spalte
-   - Responsive horizontales Scrollen
+   #### Modul-Zugriffskontrolle
+   - Reviewer: Nur Benutzer mit projects-Modul im Dropdown
+   - Backend-Validierung in issue_reviewer_add
+   - Projektmitglieder: Nur Benutzer mit projects-Modul im Dropdown
+   - Backend-Validierung in project_member_add
 
-2. **Design Patterns etabliert**
-   - Einheitliches Hero-Header Pattern mit Farbvarianten
-   - Stat-Card Pattern für Metriken
-   - Action-Card Pattern für Navigation
-   - Floating Action Bar für Bulk-Operations
-   - Deloitte Farbpalette konsistent angewendet
-   - Time Tracking (original_estimate, time_spent, remaining_estimate)
-   - Story Points für Scrum
-   - Sprint-Zuordnung
-   - Labels (JSON Array)
-   - Custom Fields (JSON Object)
-   - board_position, backlog_position für Sortierung
-   - Archivierung
-   
-   #### Sprint Model
-   - name, goal, start_date, end_date
-   - state: future, active, closed
-   - total_points, completed_points Properties
-   
-   #### Routes & Templates
-   - Issue List mit Filtern (Status, Type, Assignee, Priority, Search)
-   - Issue Create/Edit Form mit Type-Buttons und Priority-Select
-   - Issue Detail mit Status-Transition-Buttons
-   - Child Issues Anzeige
-   - Settings: Issue Types Verwaltung
-   - Settings: Workflow Status Verwaltung
-   
-   #### Helper Functions
-   - `create_default_issue_types(project)` - Erstellt Defaults basierend auf Methodologie
-   - `create_default_issue_statuses(project)` - Erstellt Workflow-Defaults
-   
-   #### Migration
-   - pm2_add_flexible_issue_system.py
-   - Neue Tabellen: issue_type, issue_status, issue, sprint
-   - Project erweitert: methodology, terminology
+2. **Bug Fixes**
+   - `user.username` → `user.name` (User Model)
+   - Activity Log zeigt Reviewer-Aktionen korrekt
 
-### ✅ Previously Completed (Sessions 1-8)
+### ✅ Previously Completed (Session 10)
 
 - **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
 - **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)
