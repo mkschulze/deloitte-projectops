@@ -125,7 +125,11 @@
             </div>
             <div class="board-column-body sortable-column" data-status-id="{{ status.id }}">
                 {% for issue in issues_by_status.get(status.id, []) %}
+                {% set current_status = issue.status %}
+                {% set allowed_targets = current_status.allowed_transitions if current_status and current_status.allowed_transitions else [] %}
                 <div class="issue-card" data-issue-id="{{ issue.id }}" 
+                     data-status-id="{{ issue.status_id }}"
+                     data-allowed-transitions="{{ allowed_targets|tojson|e }}"
                      data-type="{{ issue.type_id }}" 
                      data-assignee="{{ issue.assignee_id or 'unassigned' }}"
                      data-priority="{{ issue.priority }}"
@@ -331,6 +335,13 @@
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
+/* Transition blocked feedback */
+.sortable-column.transition-blocked {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    border: 2px dashed #dc3545 !important;
+    transition: all 0.3s ease;
+}
+
 .issue-card-priority {
     position: absolute;
     left: 0;
@@ -496,8 +507,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const MSG_NO_ISSUES = "{{ 'Keine Issues' if lang == 'de' else 'No issues' }}";
     const MSG_ISSUE_MOVED = "{{ 'Issue verschoben' if lang == 'de' else 'Issue moved successfully' }}";
     const MSG_MOVE_FAILED = "{{ 'Verschieben fehlgeschlagen' if lang == 'de' else 'Failed to move issue' }}";
+    const MSG_TRANSITION_BLOCKED = "{{ 'Übergang nicht erlaubt' if lang == 'de' else 'Transition not allowed' }}";
     const MSG_ISSUE_CREATED = "{{ 'Issue erstellt' if lang == 'de' else 'Issue created' }}";
     const MSG_CREATE_FAILED = "{{ 'Erstellen fehlgeschlagen' if lang == 'de' else 'Failed to create issue' }}";
+    
+    // Helper to check if transition is allowed
+    function isTransitionAllowed(card, targetStatusId) {
+        const allowedTransitions = card.dataset.allowedTransitions;
+        const currentStatusId = parseInt(card.dataset.statusId);
+        
+        // Same status = always allowed
+        if (currentStatusId === parseInt(targetStatusId)) return true;
+        
+        // Empty allowed_transitions = all transitions allowed
+        if (!allowedTransitions || allowedTransitions === '[]') return true;
+        
+        try {
+            const allowed = JSON.parse(allowedTransitions);
+            return allowed.length === 0 || allowed.includes(parseInt(targetStatusId));
+        } catch {
+            return true;
+        }
+    }
     
     // Initialize SortableJS for each column
     document.querySelectorAll('.sortable-column').forEach(function(column) {
@@ -507,6 +538,20 @@ document.addEventListener('DOMContentLoaded', function() {
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             filter: '.empty-column-placeholder',
+            
+            // Validate transition before allowing move
+            onMove: function(evt) {
+                const card = evt.dragged;
+                const targetStatusId = evt.to.dataset.statusId;
+                
+                if (!isTransitionAllowed(card, targetStatusId)) {
+                    // Visual feedback for blocked transition
+                    evt.to.classList.add('transition-blocked');
+                    setTimeout(() => evt.to.classList.remove('transition-blocked'), 500);
+                    return false; // Block the move
+                }
+                return true;
+            },
             
             onEnd: function(evt) {
                 const issueId = evt.item.dataset.issueId;

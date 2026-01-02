@@ -2,14 +2,26 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-8 + UI Redesign
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-10 + UI Redesign
 
-**Last Updated:** 2026-01-03 (Session 12)  
-**Version:** 1.9.0
+**Last Updated:** 2026-01-03 (Session 13)  
+**Version:** 1.10.0
 
 ---
 
 ## Recent Releases
+
+### v1.10.0 - PM-10: Workflow Transitions
+
+- **Konfigurierbare Status-Übergänge**:
+  - Tab-Ansicht in Workflow Settings: "Status" und "Übergänge"
+  - Interaktive Transition-Matrix zum Aktivieren/Deaktivieren
+  - Visuelle Legende (grün = erlaubt, grau = nicht erlaubt)
+- **API Endpoint**: `POST /settings/workflow/transitions`
+- **Frontend Validation**:
+  - Issue-Detail zeigt nur erlaubte Status-Transitions
+  - Kanban-Board blockiert ungültige Drops mit visuellem Feedback
+- **Backend Validation**: `can_transition_to()` Check in kanban_move_issue
 
 ### v1.9.0 - PM-8: Quick Search
 

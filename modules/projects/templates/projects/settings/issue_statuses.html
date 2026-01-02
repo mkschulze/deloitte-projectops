@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Workflow Statuses' if lang == 'en' else 'Workflow-Status' }} - {{ project.key }}{% endblock %}
+{% block title %}{{ 'Workflow Settings' if lang == 'en' else 'Workflow-Einstellungen' }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -7,6 +7,41 @@
        SETTINGS: WORKFLOW STATUS - DELOITTE DESIGN
        Color: Purple #62378a (Settings accent)
        ============================================ */
+    
+    /* Tab Navigation */
+    .workflow-tabs {
+        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .workflow-tabs .nav-link {
+        color: #666;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        position: relative;
+    }
+    
+    .workflow-tabs .nav-link:hover {
+        color: #62378a;
+    }
+    
+    .workflow-tabs .nav-link.active {
+        color: #62378a;
+        background: transparent;
+        border: none;
+    }
+    
+    .workflow-tabs .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(135deg, #62378a 0%, #4a2a6a 100%);
+        border-radius: 2px 2px 0 0;
+    }
     
     /* Compact Header Bar */
     .settings-header-bar {
@@ -289,6 +324,149 @@
         color: #333;
     }
     
+    /* Transition Matrix Styles */
+    .workflow-info-alert {
+        background: linear-gradient(135deg, #e8f4fd 0%, #d4ecfd 100%);
+        border: none;
+        border-radius: 12px;
+        border-left: 4px solid #00A3E0;
+        color: #333;
+    }
+    
+    .transition-matrix-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .transition-matrix-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .transition-matrix-header h5 {
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+    }
+    
+    .btn-save-transitions {
+        background: linear-gradient(135deg, #86bc25 0%, #6a9c1f 100%);
+        border: none;
+        color: white;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-save-transitions:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(134, 188, 37, 0.3);
+    }
+    
+    .btn-save-transitions.btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    }
+    
+    .btn-save-transitions.btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    
+    .transition-matrix {
+        padding: 1.5rem;
+        overflow-x: auto;
+    }
+    
+    .transition-matrix table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 4px;
+    }
+    
+    .transition-matrix th {
+        padding: 0.75rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+    
+    .transition-matrix th.row-header {
+        text-align: left;
+        min-width: 120px;
+    }
+    
+    .transition-matrix td {
+        padding: 0.25rem;
+        text-align: center;
+    }
+    
+    .transition-cell {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #f0f0f0;
+        color: #999;
+        margin: 0 auto;
+    }
+    
+    .transition-cell:hover:not(.same-status) {
+        transform: scale(1.1);
+    }
+    
+    .transition-cell.allowed {
+        background: linear-gradient(135deg, #86bc25 0%, #6a9c1f 100%);
+        color: white;
+    }
+    
+    .transition-cell.same-status {
+        background: #e9ecef;
+        color: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .matrix-legend {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #eee;
+        background: #f8f9fa;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .legend-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        background: #f0f0f0;
+    }
+    
+    .legend-box.allowed {
+        background: linear-gradient(135deg, #86bc25 0%, #6a9c1f 100%);
+    }
+    
+    .legend-box.not-allowed {
+        background: #f0f0f0;
+    }
+    
     /* Action Buttons */
     .action-btn {
         display: inline-flex;
@@ -323,6 +501,149 @@
         margin: 0 auto 1rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
+    
+    /* Transition Matrix */
+    .transition-matrix-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .transition-matrix-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .transition-matrix-header h5 {
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+    }
+    
+    .transition-matrix {
+        overflow-x: auto;
+        padding: 1rem;
+    }
+    
+    .transition-matrix table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 4px;
+    }
+    
+    .transition-matrix th {
+        text-align: center;
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #333;
+        min-width: 80px;
+    }
+    
+    .transition-matrix th.row-header {
+        text-align: right;
+        padding-right: 1rem;
+        min-width: 120px;
+    }
+    
+    .transition-matrix td {
+        text-align: center;
+        padding: 0.5rem;
+    }
+    
+    .transition-cell {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        background: #f8f9fa;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        transition: all 0.2s;
+    }
+    
+    .transition-cell:hover {
+        border-color: #62378a;
+        transform: scale(1.1);
+    }
+    
+    .transition-cell.allowed {
+        background: linear-gradient(135deg, #86bc25 0%, #6a9c1f 100%);
+        border-color: #6a9c1f;
+        color: white;
+    }
+    
+    .transition-cell.same-status {
+        background: #e9ecef;
+        border-color: #dee2e6;
+        cursor: not-allowed;
+        color: #adb5bd;
+    }
+    
+    .transition-cell i {
+        font-size: 1rem;
+    }
+    
+    .matrix-legend {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-top: 1px solid #eee;
+        font-size: 0.85rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .legend-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+    
+    .legend-box.allowed {
+        background: linear-gradient(135deg, #86bc25 0%, #6a9c1f 100%);
+    }
+    
+    .legend-box.not-allowed {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+    }
+    
+    .btn-save-transitions {
+        background: linear-gradient(135deg, #62378a 0%, #4a2a6a 100%);
+        border: none;
+        color: white;
+        padding: 0.6rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .btn-save-transitions:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(98, 55, 138, 0.3);
+        color: white;
+    }
+    
+    .workflow-info-alert {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border: none;
+        border-left: 4px solid #fb8c00;
+        color: #e65100;
+        border-radius: 8px;
+    }
 </style>
 {% endblock %}
 
@@ -341,9 +662,9 @@
                 </nav>
                 <h1>
                     <i class="bi bi-arrow-left-right me-2" style="color: #62378a;"></i>
-                    {{ 'Workflow Statuses' if lang == 'en' else 'Workflow-Status' }}
+                    {{ 'Workflow Settings' if lang == 'en' else 'Workflow-Einstellungen' }}
                 </h1>
-                <p class="subtitle mb-0">{{ 'Configure the workflow statuses for this project' if lang == 'en' else 'Konfigurieren Sie die Workflow-Status für dieses Projekt' }}</p>
+                <p class="subtitle mb-0">{{ 'Configure statuses and allowed transitions' if lang == 'en' else 'Status und erlaubte Übergänge konfigurieren' }}</p>
             </div>
             <div class="d-flex gap-2">
                 <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="action-btn action-btn-outline">
@@ -356,7 +677,24 @@
 </div>
 
 <div class="container-fluid">
-    <div class="row g-4">
+    <!-- Tab Navigation -->
+    <ul class="nav workflow-tabs" id="workflowTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="statuses-tab" data-bs-toggle="tab" data-bs-target="#statuses-pane" type="button" role="tab">
+                <i class="bi bi-collection me-2"></i>{{ 'Statuses' if lang == 'en' else 'Status' }}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="transitions-tab" data-bs-toggle="tab" data-bs-target="#transitions-pane" type="button" role="tab">
+                <i class="bi bi-shuffle me-2"></i>{{ 'Transitions' if lang == 'en' else 'Übergänge' }}
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="workflowTabContent">
+        <!-- Statuses Tab -->
+        <div class="tab-pane fade show active" id="statuses-pane" role="tabpanel" tabindex="0">
+            <div class="row g-4">
         <!-- Main Content -->
         <div class="col-lg-8">
             <!-- Workflow Visualization -->
@@ -518,18 +856,188 @@
             </div>
         </div>
     </div>
+</div><!-- End Statuses Tab Row -->
+        </div><!-- End Statuses Tab Pane -->
+        
+        <!-- Transitions Tab -->
+        <div class="tab-pane fade" id="transitions-pane" role="tabpanel" tabindex="0">
+            <div class="alert workflow-info-alert mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>{{ 'Workflow Transitions' if lang == 'en' else 'Workflow-Übergänge' }}:</strong>
+                {{ 'Click cells to toggle which status transitions are allowed. Empty means all transitions are permitted.' if lang == 'en' else 'Klicken Sie auf Zellen, um erlaubte Status-Übergänge zu aktivieren. Leer = alle Übergänge erlaubt.' }}
+            </div>
+            
+            <div class="transition-matrix-card">
+                <div class="transition-matrix-header">
+                    <h5><i class="bi bi-shuffle me-2"></i>{{ 'Transition Matrix' if lang == 'en' else 'Übergangs-Matrix' }}</h5>
+                    <button type="button" class="btn-save-transitions" id="saveTransitionsBtn">
+                        <i class="bi bi-check2 me-1"></i>{{ 'Save' if lang == 'en' else 'Speichern' }}
+                    </button>
+                </div>
+                <div class="transition-matrix">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="row-header">{{ 'From \\ To' if lang == 'en' else 'Von \\ Nach' }}</th>
+                                {% for to_status in issue_statuses %}
+                                <th>
+                                    <span style="color: {{ to_status.color }};">
+                                        {{ to_status.get_name(lang) }}
+                                    </span>
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for from_status in issue_statuses %}
+                            <tr>
+                                <th class="row-header">
+                                    <span style="color: {{ from_status.color }};">
+                                        {{ from_status.get_name(lang) }}
+                                    </span>
+                                </th>
+                                {% for to_status in issue_statuses %}
+                                <td>
+                                    {% if from_status.id == to_status.id %}
+                                    <div class="transition-cell same-status" title="{{ 'Same status' if lang == 'en' else 'Gleicher Status' }}">
+                                        <i class="bi bi-dash"></i>
+                                    </div>
+                                    {% else %}
+                                    {% set is_allowed = not from_status.allowed_transitions or to_status.id in from_status.allowed_transitions %}
+                                    <div class="transition-cell{% if is_allowed %} allowed{% endif %}" 
+                                         data-from="{{ from_status.id }}" 
+                                         data-to="{{ to_status.id }}"
+                                         title="{{ from_status.get_name(lang) }} → {{ to_status.get_name(lang) }}">
+                                        <i class="bi {% if is_allowed %}bi-check2{% else %}bi-x{% endif %}"></i>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="matrix-legend">
+                    <div class="legend-item">
+                        <div class="legend-box allowed"></div>
+                        <span>{{ 'Allowed' if lang == 'en' else 'Erlaubt' }}</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box not-allowed"></div>
+                        <span>{{ 'Not allowed' if lang == 'en' else 'Nicht erlaubt' }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transition Help -->
+            <div class="info-card mt-4">
+                <h6><i class="bi bi-lightbulb me-1"></i>{{ 'Tip' if lang == 'en' else 'Tipp' }}</h6>
+                <p class="mb-0" style="font-size: 0.85rem;">
+                    {{ 'Define which status transitions are valid in your workflow. For example, an issue in "Open" might only be allowed to move to "In Progress", not directly to "Done".' if lang == 'en' else 'Definieren Sie, welche Status-Übergänge in Ihrem Workflow gültig sind. Z.B. darf ein Issue in "Offen" nur nach "In Bearbeitung" wechseln, nicht direkt nach "Erledigt".' }}
+                </p>
+            </div>
+        </div><!-- End Transitions Tab Pane -->
+    </div><!-- End Tab Content -->
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Color preview for add status form
     const colorInput = document.getElementById('colorInput');
     const colorPreview = document.getElementById('colorPreview');
     
-    colorInput.addEventListener('input', function() {
-        colorPreview.style.backgroundColor = this.value;
+    if (colorInput && colorPreview) {
+        colorInput.addEventListener('input', function() {
+            colorPreview.style.backgroundColor = this.value;
+        });
+    }
+    
+    // Transition matrix toggle
+    const transitionCells = document.querySelectorAll('.transition-cell:not(.same-status)');
+    
+    transitionCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            this.classList.toggle('allowed');
+            const icon = this.querySelector('i');
+            if (this.classList.contains('allowed')) {
+                icon.className = 'bi bi-check2';
+            } else {
+                icon.className = 'bi bi-x';
+            }
+        });
     });
+    
+    // Save transitions
+    const saveBtn = document.getElementById('saveTransitionsBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async function() {
+            const transitions = {};
+            
+            // Build transitions object: {fromStatusId: [toStatusId1, toStatusId2, ...]}
+            transitionCells.forEach(cell => {
+                const fromId = cell.dataset.from;
+                const toId = parseInt(cell.dataset.to);
+                
+                if (!transitions[fromId]) {
+                    transitions[fromId] = [];
+                }
+                
+                if (cell.classList.contains('allowed')) {
+                    transitions[fromId].push(toId);
+                }
+            });
+            
+            // Send to server
+            try {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>{{ 'Saving...' if lang == 'en' else 'Speichern...' }}';
+                
+                const response = await fetch('{{ url_for("projects.save_workflow_transitions", project_id=project.id) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ transitions: transitions })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    saveBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>{{ 'Saved!' if lang == 'en' else 'Gespeichert!' }}';
+                    saveBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>{{ 'Save' if lang == 'en' else 'Speichern' }}';
+                        saveBtn.classList.remove('btn-success');
+                        saveBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('Error saving transitions:', error);
+                saveBtn.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>{{ 'Error' if lang == 'en' else 'Fehler' }}';
+                saveBtn.classList.add('btn-danger');
+                setTimeout(() => {
+                    saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>{{ 'Save' if lang == 'en' else 'Speichern' }}';
+                    saveBtn.classList.remove('btn-danger');
+                    saveBtn.disabled = false;
+                }, 2000);
+            }
+        });
+    }
+    
+    // Handle tab from URL hash
+    const hash = window.location.hash;
+    if (hash === '#transitions') {
+        const transitionsTab = document.getElementById('transitions-tab');
+        if (transitionsTab) {
+            const tab = new bootstrap.Tab(transitionsTab);
+            tab.show();
+        }
+    }
 });
 </script>
 {% endblock %}

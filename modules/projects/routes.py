@@ -647,8 +647,19 @@ def issue_detail(project_id, issue_key, project=None):
     
     issue = Issue.query.filter_by(project_id=project_id, key=issue_key).first_or_404()
     
-    # Get available statuses for transition
-    available_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    # Get all statuses for display
+    all_statuses = IssueStatus.query.filter_by(project_id=project_id).order_by(IssueStatus.sort_order).all()
+    
+    # Filter to only allowed transitions based on current status
+    current_status = issue.status
+    if current_status and current_status.allowed_transitions:
+        # Has workflow restrictions - filter to allowed statuses + current
+        allowed_ids = set(current_status.allowed_transitions)
+        allowed_ids.add(current_status.id)  # Always include current status
+        available_statuses = [s for s in all_statuses if s.id in allowed_ids]
+    else:
+        # No restrictions - all statuses available
+        available_statuses = all_statuses
     
     # Get child issues (sub-tasks)
     children = Issue.query.filter_by(parent_id=issue.id, is_archived=False).all()
@@ -966,6 +977,38 @@ def project_issue_status_add(project_id, project=None):
     return redirect(url_for('projects.project_issue_statuses', project_id=project_id))
 
 
+@bp.route('/<int:project_id>/settings/workflow/transitions', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def save_workflow_transitions(project_id, project=None):
+    """Save workflow transitions (allowed status changes)"""
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    if not data or 'transitions' not in data:
+        return jsonify({'error': 'Invalid data'}), 400
+    
+    transitions = data['transitions']
+    
+    # Update each status with its allowed transitions
+    for status_id_str, allowed_to_ids in transitions.items():
+        status_id = int(status_id_str)
+        status = IssueStatus.query.filter_by(id=status_id, project_id=project_id).first()
+        if status:
+            # Store empty list if all transitions for this status should be blocked
+            # Store list of IDs for specific allowed transitions
+            status.allowed_transitions = allowed_to_ids if allowed_to_ids else []
+    
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Transitions saved'})
+
+
 # ============================================================================
 # KANBAN BOARD
 # ============================================================================
@@ -1025,6 +1068,8 @@ def kanban_board(project_id, project=None):
 @project_access_required
 def kanban_move_issue(project_id, project=None):
     """API endpoint to move an issue on the board"""
+    lang = session.get('lang', 'de')
+    
     if project is None:
         project = Project.query.get_or_404(project_id)
     
@@ -1050,6 +1095,12 @@ def kanban_move_issue(project_id, project=None):
     
     old_status_id = issue.status_id
     old_status = issue.status
+    
+    # Validate workflow transition
+    if old_status and old_status.id != new_status_id:
+        if not old_status.can_transition_to(new_status_id):
+            error_msg = 'Übergang nicht erlaubt' if lang == 'de' else 'Transition not allowed'
+            return jsonify({'error': error_msg, 'transition_blocked': True}), 400
     
     # Update status
     issue.status_id = new_status_id

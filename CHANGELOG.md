@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.0] - 2026-01-03
+
+### 🔄 PM-10: Workflow Transitions
+
+#### Added
+- **Konfigurierbare Status-Übergänge**:
+  - Neue Tab-Ansicht in Workflow Settings: "Status" und "Übergänge"
+  - Interaktive Transition-Matrix zum Aktivieren/Deaktivieren von Übergängen
+  - Visuelle Legende (grün = erlaubt, grau = nicht erlaubt)
+
+- **API Endpoint**:
+  - `POST /<project_id>/settings/workflow/transitions` - Speichert Transition-Konfiguration
+  - Nutzt vorhandenes `allowed_transitions` JSON-Feld in IssueStatus
+
+- **Frontend Validation**:
+  - Issue-Detail: Status-Buttons zeigen nur erlaubte Transitions
+  - Kanban-Board: onMove Callback in SortableJS validiert vor Drop
+  - Visuelles Feedback (roter Rahmen) bei blockierten Drops
+
+- **Backend Validation**:
+  - `kanban_move_issue` prüft `can_transition_to()` vor Status-Änderung
+  - Fehler-Response mit `transition_blocked: true` Flag
+
+---
+
 ## [1.9.0] - 2026-01-03
 
 ### 🔍 PM-8: Quick Search

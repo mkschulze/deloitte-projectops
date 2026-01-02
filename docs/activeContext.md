@@ -8,38 +8,44 @@
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 12)  
-**Last Action:** PM-8 Quick Search implementiert  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-8 + UI Redesign
-**Version:** 1.9.0
+**Date:** 2026-01-03 (Session 13)  
+**Last Action:** PM-10 Workflow Transitions implementiert  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-10 + UI Redesign
+**Version:** 1.10.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 12)
+### ✅ What Was Accomplished (Session 13)
+
+1. **PM-10: Workflow Transitions** (Complete)
+
+   #### Konfigurierbare Status-Übergänge
+   - Tab-Navigation in Workflow Settings: "Status" und "Übergänge"
+   - Interaktive Transition-Matrix zum Konfigurieren
+   - Klickbare Zellen zum Aktivieren/Deaktivieren
+   - Visuelle Legende (grün = erlaubt, grau = nicht erlaubt)
+   
+   #### API Endpoint
+   - `POST /<project_id>/settings/workflow/transitions`
+   - Speichert Transition-Konfiguration in `allowed_transitions` JSON-Feld
+   
+   #### Frontend Validation
+   - Issue-Detail: Status-Buttons zeigen nur erlaubte Transitions
+   - Kanban-Board: onMove Callback validiert vor Drop
+   - Visuelles Feedback (roter Rahmen) bei blockierten Drops
+   
+   #### Backend Validation
+   - `kanban_move_issue` prüft `can_transition_to()`
+   - Fehler-Response mit `transition_blocked: true` Flag
+
+### ✅ Previously Completed (Session 12)
 
 1. **PM-8: Quick Search** (Complete)
-
-   #### Global Quick Search (⌘K)
-   - Globale Issue-Suche über alle zugänglichen Projekte
-   - Suche nach Issue-Key, Titel, Beschreibung
-   - Live-Typeahead ab 2 Zeichen
-   - Keyboard-Navigation (↑↓ + Enter)
-   - ESC zum Schließen
-   
-   #### Search API Endpoints
-   - `GET /projects/api/search?q=...` - Globale Issue-Suche
-   - `GET /projects/api/search/recent` - Zuletzt bearbeitete Issues
-   - Respektiert Projekt-Zugriffsrechte
-   - Optional: `?project_id=X` für projektspezifische Suche
-   
-   #### UI
-   - Search-Button in Navbar mit ⌘K Hint
-   - Modern Modal Design
-   - Recent Issues beim Öffnen
-   - Issue-Type Icons und Status-Badges
-   - Projekt- und Assignee-Informationen
+   - Global Quick Search (⌘K / Ctrl+K)
+   - Live-Typeahead, Keyboard-Navigation
+   - Search API Endpoints
 
 ### ✅ Previously Completed (Session 11)
 
