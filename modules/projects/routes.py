@@ -254,14 +254,21 @@ def project_edit(project_id, project=None):
         project.category = request.form.get('category', '').strip() or None
         project.icon = request.form.get('icon', 'bi-folder').strip()
         project.color = request.form.get('color', '#86BC25').strip()
+        project.methodology = request.form.get('methodology', 'scrum').strip()
         
         db.session.commit()
         
         flash('Projekt aktualisiert.' if lang == 'de' else 'Project updated.', 'success')
         return redirect(url_for('projects.project_detail', project_id=project_id))
     
+    from modules.projects.models import METHODOLOGY_CONFIG
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
-    return render_template('projects/form.html', project=project, users=users, lang=lang)
+    return render_template('projects/form.html', 
+        project=project, 
+        users=users, 
+        methodology_config=METHODOLOGY_CONFIG,
+        lang=lang
+    )
 
 
 @bp.route('/<int:project_id>/archive', methods=['POST'])
@@ -1007,6 +1014,79 @@ def save_workflow_transitions(project_id, project=None):
     db.session.commit()
     
     return jsonify({'success': True, 'message': 'Transitions saved'})
+
+
+@bp.route('/<int:project_id>/settings/methodology', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def project_methodology(project_id, project=None):
+    """Configure project methodology and terminology"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.project_detail', project_id=project_id))
+    
+    from modules.projects.models import METHODOLOGY_CONFIG
+    
+    if request.method == 'POST':
+        # Update methodology
+        new_methodology = request.form.get('methodology', 'scrum')
+        project.methodology = new_methodology
+        
+        # Update custom terminology overrides
+        terminology = {}
+        term_keys = ['sprint', 'backlog', 'epic', 'story', 'task', 'bug', 
+                     'story_points', 'velocity', 'burndown', 'board', 
+                     'done', 'in_progress', 'todo', 'release']
+        
+        for key in term_keys:
+            custom_de = request.form.get(f'term_{key}_de', '').strip()
+            custom_en = request.form.get(f'term_{key}_en', '').strip()
+            
+            # Only store if different from default
+            default_de = METHODOLOGY_CONFIG.get(new_methodology, {}).get('terminology', {}).get('de', {}).get(key, '')
+            default_en = METHODOLOGY_CONFIG.get(new_methodology, {}).get('terminology', {}).get('en', {}).get(key, '')
+            
+            if custom_de and custom_de != default_de or custom_en and custom_en != default_en:
+                terminology[key] = {'de': custom_de or default_de, 'en': custom_en or default_en}
+        
+        project.terminology = terminology if terminology else None
+        db.session.commit()
+        
+        flash('Methodologie aktualisiert.' if lang == 'de' else 'Methodology updated.', 'success')
+        return redirect(url_for('projects.project_methodology', project_id=project_id))
+    
+    return render_template('projects/settings/methodology.html',
+        project=project,
+        methodology_config=METHODOLOGY_CONFIG,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/settings/methodology/reset', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def reset_terminology(project_id, project=None):
+    """Reset terminology to methodology defaults"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        return jsonify({'error': 'No permission'}), 403
+    
+    project.terminology = None
+    db.session.commit()
+    
+    flash('Terminologie zurückgesetzt.' if lang == 'de' else 'Terminology reset.', 'success')
+    return redirect(url_for('projects.project_methodology', project_id=project_id))
 
 
 # ============================================================================

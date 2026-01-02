@@ -7,7 +7,7 @@ class Config:
     """Base configuration"""
     # App Info - CUSTOMIZE THESE
     APP_NAME = 'TaxOps Calendar'
-    APP_VERSION = '1.10.0'
+    APP_VERSION = '1.11.0'
     
     # Secret key for session management
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'

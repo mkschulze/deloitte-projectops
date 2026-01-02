@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Sprints - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
+{% block title %}{{ project.get_term('sprint', lang) }}s - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
 
 {% block content %}
 <!-- Hero Header -->
@@ -10,7 +10,7 @@
             <ol class="breadcrumb breadcrumb-dark mb-3">
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}" class="text-white-50">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-white-50">{{ project.key }}</a></li>
-                <li class="breadcrumb-item active text-white">Sprints</li>
+                <li class="breadcrumb-item active text-white">{{ project.get_term('sprint', lang) }}s</li>
             </ol>
         </nav>
 
@@ -21,7 +21,7 @@
                 </div>
             </div>
             <div class="col">
-                <h1 class="text-white mb-1">Sprints</h1>
+                <h1 class="text-white mb-1">{{ project.get_term('sprint', lang) }}s</h1>
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-white-50">
                         <i class="bi bi-folder me-1"></i>
@@ -29,14 +29,14 @@
                     </span>
                     <span class="text-white-50">
                         <i class="bi bi-collection me-1"></i>
-                        {{ sprints|length if sprints else 0 }} Sprints
+                        {{ sprints|length if sprints else 0 }} {{ project.get_term('sprint', lang) }}s
                     </span>
                 </div>
             </div>
             <div class="col-auto">
                 <a href="{{ url_for('projects.sprint_create', project_id=project.id) }}" class="btn btn-deloitte-green">
                     <i class="bi bi-plus-lg me-1"></i>
-                    {{ 'Neuer Sprint' if lang == 'de' else 'New Sprint' }}
+                    {{ ('Neuer ' + project.get_term('sprint', lang)) if lang == 'de' else ('New ' + project.get_term('sprint', lang)) }}
                 </a>
             </div>
         </div>
@@ -91,7 +91,7 @@
                     </div>
                     <div class="quick-stat-content">
                         <div class="quick-stat-value">{{ average_velocity }}</div>
-                        <div class="quick-stat-label">{{ 'Ø Velocity' if lang == 'de' else 'Avg Velocity' }}</div>
+                        <div class="quick-stat-label">{{ ('Ø ' + project.get_term('velocity', lang)) if lang == 'de' else ('Avg ' + project.get_term('velocity', lang)) }}</div>
                     </div>
                 </div>
             </div>

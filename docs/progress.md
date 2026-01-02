@@ -2,14 +2,34 @@
 
 > Development progress for Deloitte TaxOps Calendar
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-10 + UI Redesign
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + UI Redesign
 
 **Last Updated:** 2026-01-03 (Session 13)  
-**Version:** 1.10.0
+**Version:** 1.11.0
 
 ---
 
 ## Recent Releases
+
+### v1.11.0 - PM-11: Methodology Agnostic
+
+- **Flexible Projektmethodiken**: Unterstützung für verschiedene Projektstile
+  - Scrum (Standard): Sprints, Story Points, Velocity, Burndown
+  - Kanban: Kontinuierlicher Flow, WIP Limits, Durchlaufzeit
+  - Waterfall: Phasen, Meilensteine, Liefergegenstände
+  - Custom: Frei definierbar
+- **METHODOLOGY_CONFIG**: Zentrale Konfiguration mit Features und Terminologie pro Methodik
+- **Helper-Methoden auf Project Model**:
+  - `get_term(key, lang)`: 3-stufige Fallback-Kette (Projekt → Methodik → Scrum)
+  - `has_feature(feature)`: Prüfung ob Feature für Methodik aktiviert
+  - `get_methodology_name(lang)`: Lokalisierter Methodikname
+  - `get_methodology_config()`: Vollständige Methodikkonfiguration
+- **Settings UI**: Neue Methodik-Einstellungsseite unter Projekt-Settings
+  - Methodologie-Auswahl mit Feature-Badges
+  - Terminologie-Anpassung mit Tabelle (DE/EN)
+  - Reset-Button für Standard-Terminologie
+- **Template Integration**: Sprint-Liste, Backlog, Board nutzen dynamische Terminologie
+- **Dropdown-Erweiterung**: Methodik-Link im Projekt-Einstellungsmenü
 
 ### v1.10.0 - PM-10: Workflow Transitions
 

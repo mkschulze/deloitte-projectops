@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Board - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
+{% block title %}{{ project.get_term('board', lang) }} - {{ project.name }} - {{ 'Projekte' if lang == 'de' else 'Projects' }}{% endblock %}
 
 {% block content %}
 <!-- Hero Header -->
@@ -10,7 +10,7 @@
             <ol class="breadcrumb breadcrumb-dark mb-3">
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}" class="text-white-50">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="text-white-50">{{ project.key }}</a></li>
-                <li class="breadcrumb-item active text-white">Board</li>
+                <li class="breadcrumb-item active text-white">{{ project.get_term('board', lang) }}</li>
             </ol>
         </nav>
 
@@ -21,7 +21,7 @@
                 </div>
             </div>
             <div class="col">
-                <h1 class="text-white mb-1">Kanban Board</h1>
+                <h1 class="text-white mb-1">{{ project.get_term('board', lang) }}</h1>
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-white-50">
                         <i class="bi bi-folder me-1"></i>
@@ -37,11 +37,11 @@
                         <i class="bi bi-list-ul"></i>
                     </a>
                     <a href="{{ url_for('projects.kanban_board', project_id=project.id) }}" 
-                       class="btn btn-light active" title="{{ 'Board-Ansicht' if lang == 'de' else 'Board View' }}">
+                       class="btn btn-light active" title="{{ project.get_term('board', lang) }}">
                         <i class="bi bi-kanban"></i>
                     </a>
                     <a href="{{ url_for('projects.backlog', project_id=project.id) }}" 
-                       class="btn btn-outline-light" title="Backlog">
+                       class="btn btn-outline-light" title="{{ project.get_term('backlog', lang) }}">
                         <i class="bi bi-list-ol"></i>
                     </a>
                 </div>

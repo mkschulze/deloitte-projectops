@@ -52,6 +52,9 @@
                         <li><a class="dropdown-item" href="{{ url_for('projects.project_issue_statuses', project_id=project.id) }}">
                             <i class="bi bi-arrow-left-right me-2"></i>{{ 'Workflow' if lang == 'de' else 'Workflow' }}
                         </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('projects.project_methodology', project_id=project.id) }}">
+                            <i class="bi bi-signpost-split me-2"></i>{{ 'Methodik' if lang == 'de' else 'Methodology' }}
+                        </a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form action="{{ url_for('projects.project_archive', project_id=project.id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ 'Projekt wirklich archivieren?' if lang == 'de' else 'Really archive project?' }}')">

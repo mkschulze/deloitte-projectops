@@ -1072,25 +1072,50 @@ PM-9.3 Cumulative Flow (45min)
 
 ---
 
-#### Phase PM-10: Workflows (3h)
+#### Phase PM-10: Workflows (3h) ✅ ERLEDIGT
 
 **Tasks:**
 ```
-PM-10.1 Workflow Model (30min)
+PM-10.1 Workflow Model (30min) ✅
         - Erlaubte Status-Übergänge
         - Pro Projekt konfigurierbar
         
-PM-10.2 Workflow-Editor (1h)
+PM-10.2 Workflow-Editor (1h) ✅
         - Visual Editor für Übergänge
         - Validierung
         
-PM-10.3 Transition-Checks (30min)
+PM-10.3 Transition-Checks (30min) ✅
         - Pflichtfelder bei Übergang
         - Berechtigungsprüfung
         
-PM-10.4 Post-Functions (1h)
+PM-10.4 Post-Functions (1h) ✅
         - Automatische Aktionen
         - Assignee setzen, Notifications
+```
+
+---
+
+#### Phase PM-11: Methodology Agnostic (2h) ✅ ERLEDIGT
+
+**Tasks:**
+```
+PM-11.1 METHODOLOGY_CONFIG (30min) ✅
+        - Scrum, Kanban, Waterfall, Custom Definitionen
+        - Features und Terminologie pro Methodik
+        
+PM-11.2 Helper-Methoden (30min) ✅
+        - get_term(key, lang) mit Fallback-Kette
+        - has_feature(feature) Check
+        - get_methodology_name(lang)
+        
+PM-11.3 Settings UI (45min) ✅
+        - Methodik-Auswahl mit Feature-Badges
+        - Terminologie-Anpassung (DE/EN)
+        - Reset zu Standard
+        
+PM-11.4 Template Integration (15min) ✅
+        - Sprint-Liste, Backlog, Board mit get_term()
+        - Dynamische Labels basierend auf Methodik
 ```
 
 ---

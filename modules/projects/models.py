@@ -39,6 +39,215 @@ class ProjectMethodology(Enum):
         return [(m.value, m.name.title()) for m in cls]
 
 
+# =============================================================================
+# METHODOLOGY CONFIGURATION
+# =============================================================================
+
+METHODOLOGY_CONFIG = {
+    'scrum': {
+        'name': {'de': 'Scrum', 'en': 'Scrum'},
+        'description': {
+            'de': 'Agile Methodik mit Sprints, User Stories und täglichen Stand-ups',
+            'en': 'Agile methodology with sprints, user stories and daily stand-ups'
+        },
+        'features': {
+            'sprints': True,
+            'story_points': True,
+            'velocity': True,
+            'burndown': True,
+            'backlog': True,
+            'kanban_board': True
+        },
+        'terminology': {
+            'de': {
+                'sprint': 'Sprint',
+                'backlog': 'Backlog',
+                'epic': 'Epic',
+                'story': 'User Story',
+                'task': 'Aufgabe',
+                'bug': 'Bug',
+                'story_points': 'Story Points',
+                'velocity': 'Velocity',
+                'burndown': 'Burndown',
+                'board': 'Board',
+                'done': 'Erledigt',
+                'in_progress': 'In Bearbeitung',
+                'todo': 'Zu erledigen',
+                'release': 'Release'
+            },
+            'en': {
+                'sprint': 'Sprint',
+                'backlog': 'Backlog',
+                'epic': 'Epic',
+                'story': 'User Story',
+                'task': 'Task',
+                'bug': 'Bug',
+                'story_points': 'Story Points',
+                'velocity': 'Velocity',
+                'burndown': 'Burndown',
+                'board': 'Board',
+                'done': 'Done',
+                'in_progress': 'In Progress',
+                'todo': 'To Do',
+                'release': 'Release'
+            }
+        }
+    },
+    'kanban': {
+        'name': {'de': 'Kanban', 'en': 'Kanban'},
+        'description': {
+            'de': 'Kontinuierlicher Flow mit WIP-Limits und visueller Arbeitsverwaltung',
+            'en': 'Continuous flow with WIP limits and visual work management'
+        },
+        'features': {
+            'sprints': False,
+            'story_points': False,
+            'velocity': False,
+            'burndown': False,
+            'backlog': True,
+            'kanban_board': True,
+            'wip_limits': True,
+            'cycle_time': True
+        },
+        'terminology': {
+            'de': {
+                'sprint': 'Zyklus',
+                'backlog': 'Aufgabenliste',
+                'epic': 'Initiative',
+                'story': 'Arbeitspaket',
+                'task': 'Aufgabe',
+                'bug': 'Fehler',
+                'story_points': 'Aufwand',
+                'velocity': 'Durchsatz',
+                'burndown': 'Fortschritt',
+                'board': 'Kanban-Board',
+                'done': 'Fertig',
+                'in_progress': 'In Arbeit',
+                'todo': 'Offen',
+                'release': 'Lieferung'
+            },
+            'en': {
+                'sprint': 'Cycle',
+                'backlog': 'Queue',
+                'epic': 'Initiative',
+                'story': 'Work Item',
+                'task': 'Task',
+                'bug': 'Defect',
+                'story_points': 'Effort',
+                'velocity': 'Throughput',
+                'burndown': 'Progress',
+                'board': 'Kanban Board',
+                'done': 'Done',
+                'in_progress': 'In Progress',
+                'todo': 'Open',
+                'release': 'Delivery'
+            }
+        }
+    },
+    'waterfall': {
+        'name': {'de': 'Wasserfall', 'en': 'Waterfall'},
+        'description': {
+            'de': 'Sequenzielle Projektphasen mit Meilensteinen und Liefergegenständen',
+            'en': 'Sequential project phases with milestones and deliverables'
+        },
+        'features': {
+            'sprints': False,
+            'story_points': False,
+            'velocity': False,
+            'burndown': False,
+            'backlog': False,
+            'kanban_board': True,
+            'phases': True,
+            'milestones': True,
+            'gantt': True
+        },
+        'terminology': {
+            'de': {
+                'sprint': 'Phase',
+                'backlog': 'Anforderungsliste',
+                'epic': 'Arbeitspaket',
+                'story': 'Anforderung',
+                'task': 'Aktivität',
+                'bug': 'Abweichung',
+                'story_points': 'Aufwand (PT)',
+                'velocity': 'Fortschritt',
+                'burndown': 'Phasenfortschritt',
+                'board': 'Übersicht',
+                'done': 'Abgeschlossen',
+                'in_progress': 'In Umsetzung',
+                'todo': 'Geplant',
+                'release': 'Meilenstein'
+            },
+            'en': {
+                'sprint': 'Phase',
+                'backlog': 'Requirements',
+                'epic': 'Work Package',
+                'story': 'Requirement',
+                'task': 'Activity',
+                'bug': 'Deviation',
+                'story_points': 'Effort (PD)',
+                'velocity': 'Progress',
+                'burndown': 'Phase Progress',
+                'board': 'Overview',
+                'done': 'Completed',
+                'in_progress': 'In Progress',
+                'todo': 'Planned',
+                'release': 'Milestone'
+            }
+        }
+    },
+    'custom': {
+        'name': {'de': 'Benutzerdefiniert', 'en': 'Custom'},
+        'description': {
+            'de': 'Eigene Methodik mit anpassbarer Terminologie',
+            'en': 'Custom methodology with customizable terminology'
+        },
+        'features': {
+            'sprints': True,
+            'story_points': True,
+            'velocity': True,
+            'burndown': True,
+            'backlog': True,
+            'kanban_board': True
+        },
+        'terminology': {
+            'de': {
+                'sprint': 'Iteration',
+                'backlog': 'Aufgabenliste',
+                'epic': 'Thema',
+                'story': 'Anforderung',
+                'task': 'Aufgabe',
+                'bug': 'Fehler',
+                'story_points': 'Punkte',
+                'velocity': 'Geschwindigkeit',
+                'burndown': 'Fortschritt',
+                'board': 'Board',
+                'done': 'Erledigt',
+                'in_progress': 'In Bearbeitung',
+                'todo': 'Offen',
+                'release': 'Version'
+            },
+            'en': {
+                'sprint': 'Iteration',
+                'backlog': 'Work Queue',
+                'epic': 'Theme',
+                'story': 'Requirement',
+                'task': 'Task',
+                'bug': 'Issue',
+                'story_points': 'Points',
+                'velocity': 'Velocity',
+                'burndown': 'Progress',
+                'board': 'Board',
+                'done': 'Done',
+                'in_progress': 'In Progress',
+                'todo': 'Open',
+                'release': 'Version'
+            }
+        }
+    }
+}
+
+
 class ProjectRole(Enum):
     """Project member role enumeration"""
     ADMIN = 'admin'      # Full project control
@@ -114,6 +323,44 @@ class Project(db.Model):
         self.issue_counter += 1
         return f"{self.key}-{self.issue_counter}"
     
+    def get_methodology_config(self):
+        """Get the methodology configuration for this project"""
+        return METHODOLOGY_CONFIG.get(self.methodology or 'scrum', METHODOLOGY_CONFIG['scrum'])
+    
+    def get_term(self, key, lang='de'):
+        """
+        Get terminology for a specific key, with fallback chain:
+        1. Project-specific override (self.terminology)
+        2. Methodology default (METHODOLOGY_CONFIG)
+        3. Scrum default as ultimate fallback
+        """
+        # First check project-specific overrides
+        if self.terminology and key in self.terminology:
+            term = self.terminology[key]
+            # Handle both simple string and {de:..., en:...} format
+            if isinstance(term, dict):
+                return term.get(lang, term.get('de', key))
+            return term
+        
+        # Then check methodology default
+        config = self.get_methodology_config()
+        terms = config.get('terminology', {}).get(lang, {})
+        if key in terms:
+            return terms[key]
+        
+        # Ultimate fallback to scrum terminology
+        return METHODOLOGY_CONFIG['scrum']['terminology'].get(lang, {}).get(key, key)
+    
+    def has_feature(self, feature):
+        """Check if a feature is enabled for this project's methodology"""
+        config = self.get_methodology_config()
+        return config.get('features', {}).get(feature, False)
+    
+    def get_methodology_name(self, lang='de'):
+        """Get localized methodology name"""
+        config = self.get_methodology_config()
+        return config.get('name', {}).get(lang, self.methodology)
+    
     def is_member(self, user):
         """Check if user is a member of this project"""
         if user.role == 'admin':
@@ -143,51 +390,6 @@ class Project(db.Model):
         """Check if user can create/edit issues"""
         role = self.get_member_role(user)
         return role in ['admin', 'lead', 'member']
-    
-    def get_term(self, key, lang='de'):
-        """Get terminology with project-specific override
-        
-        Args:
-            key: Standard term (epic, story, task, sprint, backlog, etc.)
-            lang: Language code
-        
-        Returns:
-            Project-specific term or default
-        """
-        defaults = {
-            'de': {
-                'epic': 'Epic',
-                'story': 'Story',
-                'task': 'Aufgabe',
-                'bug': 'Fehler',
-                'subtask': 'Unteraufgabe',
-                'sprint': 'Sprint',
-                'backlog': 'Backlog',
-                'board': 'Board',
-                'issue': 'Issue'
-            },
-            'en': {
-                'epic': 'Epic',
-                'story': 'Story',
-                'task': 'Task',
-                'bug': 'Bug',
-                'subtask': 'Sub-Task',
-                'sprint': 'Sprint',
-                'backlog': 'Backlog',
-                'board': 'Board',
-                'issue': 'Issue'
-            }
-        }
-        
-        # Check project terminology override
-        if self.terminology and key in self.terminology:
-            override = self.terminology[key]
-            if isinstance(override, dict):
-                return override.get(lang, override.get('de', key))
-            return override
-        
-        # Return default
-        return defaults.get(lang, defaults['de']).get(key, key)
     
     def get_default_issue_type(self):
         """Get the default issue type for this project"""
