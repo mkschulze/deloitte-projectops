@@ -91,9 +91,13 @@ deloitte-projectops-calendar/
 ├── tests/                  # Unit test suite
 │   ├── conftest.py         # Pytest fixtures & test app
 │   ├── factories.py        # Factory Boy model factories
-│   └── unit/               # Unit tests (125 tests)
+│   └── unit/               # Unit tests (424 tests)
 │       ├── test_models.py
+│       ├── test_task_model.py
+│       ├── test_project_methods.py
 │       ├── test_services.py
+│       ├── test_all_services.py
+│       ├── test_middleware.py
 │       ├── test_translations.py
 │       └── ...
 │
@@ -282,7 +286,7 @@ flask db downgrade
 ### Running Tests
 
 ```bash
-# Run all tests (125 tests, 34% coverage as of v1.13.0)
+# Run all tests (424 tests, 43% coverage as of v1.14.0)
 pytest
 
 # Run with coverage

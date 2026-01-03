@@ -54,6 +54,49 @@ def db(app):
     _db.drop_all()
 
 
+@pytest.fixture(autouse=True)
+def clean_db_session(db):
+    """Ensure clean database session for each test."""
+    yield
+    # After each test, rollback any uncommitted changes and clear session
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def clean_db_tables(db):
+    """Clean up all data after each test to ensure test isolation."""
+    yield
+    # Clean up in reverse order of dependencies
+    from models import User, Tenant, TenantMembership, TenantApiKey, Notification
+    from modules.projects.models import (
+        Project, ProjectMember, Sprint, Issue, IssueType, IssueStatus,
+        IssueComment, IssueActivity, IssueAttachment
+    )
+    
+    try:
+        # Delete in order of dependencies
+        db.session.query(IssueAttachment).delete()
+        db.session.query(IssueActivity).delete()
+        db.session.query(IssueComment).delete()
+        db.session.query(Issue).delete()
+        db.session.query(IssueType).delete()
+        db.session.query(IssueStatus).delete()
+        db.session.query(Sprint).delete()
+        db.session.query(ProjectMember).delete()
+        db.session.query(Project).delete()
+        db.session.query(Notification).delete()
+        db.session.query(TenantApiKey).delete()
+        db.session.query(TenantMembership).delete()
+        db.session.query(Tenant).delete()
+        db.session.query(User).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
 @pytest.fixture(scope='function')
 def session(db):
     """Create a new database session for a test."""
@@ -108,10 +151,7 @@ def user(db):
     db.session.commit()
     
     yield user
-    
-    # Cleanup
-    db.session.delete(user)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -131,9 +171,7 @@ def admin_user(db):
     db.session.commit()
     
     yield admin
-    
-    db.session.delete(admin)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -168,9 +206,7 @@ def tenant(db):
     db.session.commit()
     
     yield tenant
-    
-    db.session.delete(tenant)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -189,9 +225,7 @@ def tenant_with_user(db, tenant, user):
     db.session.commit()
     
     yield tenant, user
-    
-    db.session.delete(membership)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 # =============================================================================
@@ -215,9 +249,7 @@ def project(db, tenant):
     db.session.commit()
     
     yield project
-    
-    db.session.delete(project)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -235,9 +267,7 @@ def project_with_member(db, project, user):
     db.session.commit()
     
     yield project, user
-    
-    db.session.delete(member)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -258,9 +288,7 @@ def sprint(db, project):
     db.session.commit()
     
     yield sprint
-    
-    db.session.delete(sprint)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -279,9 +307,7 @@ def issue_type(db, project):
     db.session.commit()
     
     yield issue_type
-    
-    db.session.delete(issue_type)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -301,9 +327,7 @@ def issue_status(db, project):
     db.session.commit()
     
     yield status
-    
-    db.session.delete(status)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 @pytest.fixture
@@ -326,9 +350,7 @@ def issue(db, project, issue_type, issue_status, user, tenant):
     db.session.commit()
     
     yield issue
-    
-    db.session.delete(issue)
-    db.session.commit()
+    # Cleanup handled by clean_db_tables fixture
 
 
 # =============================================================================

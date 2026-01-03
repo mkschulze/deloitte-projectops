@@ -18,6 +18,6 @@ socketio = SocketIO()
 
 # Login Manager
 login_manager = LoginManager()
-login_manager.login_view = 'core.login'
+login_manager.login_view = 'login'
 login_manager.login_message = 'Bitte melden Sie sich an.'
 login_manager.login_message_category = 'warning'

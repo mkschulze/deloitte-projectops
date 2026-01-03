@@ -2,14 +2,39 @@
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-03 (Session 15)  
-**Version:** 1.13.0
+**Last Updated:** 2026-01-03 (Session 16)  
+**Version:** 1.14.0
 
 ---
 
 ## Recent Releases
+
+### v1.14.0 - Test Coverage Expansion (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Comprehensive Unit Test Suite**:
+  - Expanded from 125 to 424 tests (+299 tests)
+  - Code coverage increased from 34% to 43% (+9%)
+  - Test Coverage Plan documented in `docs/testCoveragePlan.md`
+
+- **New Test Files**:
+  - `test_task_model.py` - 56 tests for Task, User, Tenant, Notification models
+  - `test_project_methods.py` - 42 tests for Project model getters
+  - `test_all_services.py` - 36 tests for all service classes
+  - `test_middleware_advanced.py` - 18 tests for middleware functions
+  - `test_middleware.py` - 35 tests for tenant middleware
+  - `test_models_advanced.py` - Extended model tests
+  - `test_project_models_advanced.py` - Project model edge cases
+  - `test_services_advanced.py` - Service method testing
+  - `test_modules.py` - Module system tests
+
+- **Infrastructure Improvements**:
+  - Fixed database isolation issues in `conftest.py`
+  - Added autouse `clean_db_tables` fixture for proper test cleanup
+  - Resolved test failures from database state leaking
 
 ### v1.13.0 - Unit Test Infrastructure (2026-01-03)
 

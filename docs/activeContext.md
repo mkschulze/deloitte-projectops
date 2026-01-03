@@ -9,9 +9,9 @@
 ## Session Information
 
 **Date:** 2026-01-03 (Session 16)  
-**Last Action:** Unit Test Infrastructure v1.13.0  
+**Last Action:** Test Coverage Expansion v1.14.0  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
-**Version:** 1.13.0
+**Version:** 1.14.0
 
 ---
 
@@ -19,46 +19,36 @@
 
 ### ✅ What Was Accomplished (Session 16)
 
-1. **Unit Test Infrastructure v1.13.0** (Complete)
+1. **Test Coverage Expansion v1.14.0** (Complete)
 
-   #### Test Framework Setup
-   - `pytest.ini` with markers (unit, integration, slow, api, models, services)
-   - `tests/conftest.py` with fixtures (app, db, user, tenant, project, sprint, issue)
-   - `tests/factories.py` with Factory Boy factories for test data
-   - pipenv dev dependencies (pytest, pytest-cov, pytest-flask, factory-boy)
+   #### Test Suite Expansion
+   - Expanded from 125 to 424 tests (+299 tests)
+   - Code coverage increased from 34% to 43% (+9%)
    
-   #### Unit Tests (125 tests, 34% coverage)
-   - User model tests (9 tests): creation, password, roles, authentication
-   - Project/Sprint/Issue models (18 tests): CRUD, relationships, methodology
-   - Tenant/Membership models (14 tests): creation, roles, members
-   - Notification model (9 tests): types, preferences
-   - Services tests (13 tests): NotificationService, CalendarService, etc.
-   - Translations tests (10 tests): DE/EN support
-   - Config tests (10 tests): Config classes
-   - Extensions tests (8 tests): Flask extensions
-   - Methodology/Estimation tests (17 tests): scales, terminology
-   - Sprint/Board tests (17 tests): status, priority, labels, time tracking
+   #### New Test Files
+   - `test_task_model.py` - 56 tests for Task, User, Tenant, Notification models
+   - `test_project_methods.py` - 42 tests for Project model getters
+   - `test_all_services.py` - 36 tests for all service classes
+   - `test_middleware_advanced.py` - 18 tests for middleware functions
+   - `test_middleware.py` - 35 tests for tenant middleware
+   - `test_models_advanced.py` - Extended model tests
+   - `test_project_models_advanced.py` - Project model edge cases
+   - `test_services_advanced.py` - Service method testing
+   - `test_modules.py` - Module system tests
    
-   #### Integration Tests
-   - Auth routes (login, logout)
-   - Dashboard routes (requires auth)
-   - Notification API
-   - Project routes
+   #### Infrastructure Improvements
+   - Fixed database isolation issues in `conftest.py`
+   - Added autouse `clean_db_tables` fixture for proper test cleanup
+   - Resolved intermittent test failures from database state leaking
    
-   #### Additional Improvements
-   - Estimation scale settings UI for projects
-   - Dashboard improvements with project insights and trends
-   - Fix: Waterfall projects now show Personentage instead of Fibonacci
-   - README badges for tests and coverage
-
-2. **Estimation Scale Bug Fix** (Complete)
-   - Waterfall projects now default to Personentage (PT) scale
-   - Template fix in settings/estimation.html
-   - Reset estimation_scale when methodology changes
+   #### Test Coverage Plan
+   - Created `docs/testCoveragePlan.md` with roadmap to 100% coverage
+   - 5-phase implementation plan with time estimates
+   - Target: ~920 tests for full coverage
 
 ### ✅ Previously Completed (Session 15)
 
-1. **PM-11: Methodology-Agnostic Terminology** (Complete)
+1. **Unit Test Infrastructure v1.13.0** (Complete)
    - Neutral URL paths: `/sprints/` → `/iterations/`, `/issues/` → `/items/`
    - Dynamic terminology per methodology
    - METHODOLOGY_CONFIG with issue/issue_plural keys

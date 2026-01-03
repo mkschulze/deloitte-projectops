@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.0] - 2026-01-03
+
+### 🧪 Test Coverage Expansion
+
+#### Added
+- **Comprehensive Unit Test Suite** - Expanded from 125 to 424 tests (+299 tests)
+- **Test Coverage Plan** - Documented roadmap to 100% coverage in `docs/testCoveragePlan.md`
+- **New Test Files**:
+  - `test_task_model.py` - 56 tests for Task, User, Tenant, Notification models
+  - `test_project_methods.py` - 42 tests for Project model getters
+  - `test_all_services.py` - 36 tests for all service classes
+  - `test_middleware_advanced.py` - 18 tests for middleware functions
+  - `test_middleware.py` - 35 tests for tenant middleware
+  - `test_models_advanced.py` - Extended model tests
+  - `test_project_models_advanced.py` - Project model edge cases
+  - `test_services_advanced.py` - Service method testing
+  - `test_modules.py` - Module system tests
+
+#### Changed
+- **Code Coverage** increased from 34% to 43% (+9%)
+- **Test Infrastructure** - Fixed database isolation issues in `conftest.py`
+- **Fixture Management** - Added autouse `clean_db_tables` fixture for proper test cleanup
+
+#### Fixed
+- Database state leaking between tests (fixed with proper cleanup fixtures)
+- Test isolation issues causing intermittent failures
+
+---
+
+## [1.13.0] - 2026-01-03
+
+### 🧪 Unit Test Infrastructure
+
+#### Added
+- **pytest Test Suite** - Initial unit test infrastructure with 125 tests
+- **Test Coverage** - 34% code coverage baseline
+- **Test Files**:
+  - `test_models.py` - Model attribute and relationship tests
+  - `test_services.py` - Service class tests  
+  - `test_translations.py` - Translation system tests
+
+---
+
 ## [1.12.0] - 2026-01-03
 
 ### 🏢 Multi-Tenancy: Enterprise Client Separation
@@ -59,20 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.13.0] - 2026-01-03
-
-### 1.13.0
-
-#### Added
-- TODO: Add new features
-
-#### Changed
-- TODO: Add changes
-
-#### Fixed
-- TODO: Add fixes
-
-
+---
 
 ## [1.11.0] - 2026-01-03
 
