@@ -129,32 +129,78 @@ def verify_memory_bank_checked() -> bool:
     """
     Require explicit confirmation that all Memory Bank files were read and updated.
     This is a mandatory step before any release can proceed.
+    
+    ENHANCED: Now requires confirmation for EACH file individually + final confirmation.
     """
     print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}  🤖 MEMORY BANK VERIFICATION REQUIRED{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
     
-    print(f"{Colors.WARNING}Before proceeding, you MUST have READ and UPDATED these files:{Colors.ENDC}\n")
+    print(f"{Colors.WARNING}{Colors.BOLD}⚠️  STOP! Before proceeding, you MUST have:{Colors.ENDC}")
+    print(f"{Colors.WARNING}   1. READ each Memory Bank file below{Colors.ENDC}")
+    print(f"{Colors.WARNING}   2. UPDATED any files that need changes for this release{Colors.ENDC}")
+    print(f"{Colors.WARNING}   3. Confirm EACH file individually{Colors.ENDC}\n")
     
+    print(f"{Colors.CYAN}{'─'*70}{Colors.ENDC}")
+    print(f"{Colors.BOLD}INDIVIDUAL FILE VERIFICATION:{Colors.ENDC}")
+    print(f"{Colors.CYAN}{'─'*70}{Colors.ENDC}\n")
+    
+    # Verify EACH file individually
+    verified_count = 0
     for filepath, description in MEMORY_BANK_FILES:
         full_path = PROJECT_ROOT / filepath
-        exists = "✓" if full_path.exists() else "✗"
-        color = Colors.GREEN if full_path.exists() else Colors.FAIL
-        print(f"  {color}{exists}{Colors.ENDC} {Colors.BOLD}{filepath}{Colors.ENDC}")
-        print(f"      └─ {Colors.CYAN}{description}{Colors.ENDC}")
+        exists = full_path.exists()
+        
+        if not exists:
+            print(f"  {Colors.FAIL}✗ {filepath} - FILE MISSING!{Colors.ENDC}")
+            continue
+        
+        print(f"  {Colors.BOLD}{filepath}{Colors.ENDC}")
+        print(f"    └─ {Colors.CYAN}{description}{Colors.ENDC}")
+        
+        response = input(f"    Did you READ and UPDATE (if needed) this file? [{Colors.GREEN}y{Colors.ENDC}/n]: ").strip().lower()
+        
+        if response in ('y', 'yes'):
+            print(f"    {Colors.GREEN}✓ Confirmed{Colors.ENDC}\n")
+            verified_count += 1
+        else:
+            print(f"    {Colors.FAIL}✗ Not confirmed - RELEASE BLOCKED{Colors.ENDC}\n")
+            print_error(f"You must confirm reading {filepath}. Please read the file and try again.")
+            return False
     
-    print(f"\n{Colors.WARNING}{'─'*70}{Colors.ENDC}")
-    print(f"{Colors.BOLD}Have you READ each file above and UPDATED them for this release?{Colors.ENDC}")
-    print(f"{Colors.WARNING}{'─'*70}{Colors.ENDC}\n")
-    
-    response = input(f"Type {Colors.GREEN}'yes'{Colors.ENDC} to confirm you have verified all Memory Bank files: ").strip().lower()
-    
-    if response != 'yes':
-        print_error("Memory Bank verification failed. You must type 'yes' to confirm.")
-        print(f"\n{Colors.CYAN}Please read and update all Memory Bank files, then run the release again.{Colors.ENDC}\n")
+    total_files = len(MEMORY_BANK_FILES)
+    if verified_count < total_files:
+        print_error(f"Only {verified_count}/{total_files} files verified. All files must be confirmed.")
         return False
     
-    print_success("Memory Bank verification confirmed")
+    print(f"{Colors.GREEN}{'─'*70}{Colors.ENDC}")
+    print(f"{Colors.GREEN}{Colors.BOLD}All {verified_count} Memory Bank files individually confirmed!{Colors.ENDC}")
+    print(f"{Colors.GREEN}{'─'*70}{Colors.ENDC}\n")
+    
+    # FINAL CONFIRMATION - Extra strong check
+    print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}  🔐 FINAL MANUAL CONFIRMATION{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
+    
+    print(f"{Colors.WARNING}This is the FINAL check before release.{Colors.ENDC}")
+    print(f"{Colors.WARNING}Type the exact phrase below to confirm:{Colors.ENDC}\n")
+    
+    confirmation_phrase = "I have read and updated all memory bank files"
+    print(f"  {Colors.BOLD}Required phrase:{Colors.ENDC} {Colors.CYAN}{confirmation_phrase}{Colors.ENDC}\n")
+    
+    response = input(f"  {Colors.BOLD}Your confirmation:{Colors.ENDC} ").strip().lower()
+    
+    if response != confirmation_phrase:
+        print_error("Final confirmation failed. The phrase did not match.")
+        print(f"\n{Colors.CYAN}Expected: '{confirmation_phrase}'{Colors.ENDC}")
+        print(f"{Colors.CYAN}Received: '{response}'{Colors.ENDC}\n")
+        return False
+    
+    print(f"\n{Colors.GREEN}{Colors.BOLD}{'='*70}{Colors.ENDC}")
+    print(f"{Colors.GREEN}{Colors.BOLD}  ✅ MEMORY BANK VERIFICATION COMPLETE{Colors.ENDC}")
+    print(f"{Colors.GREEN}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
+    
+    print_success("All Memory Bank files verified and confirmed")
     return True
 
 
