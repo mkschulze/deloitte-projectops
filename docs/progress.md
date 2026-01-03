@@ -11,25 +11,31 @@
 
 ## Recent Releases
 
-### v1.11.0 - PM-11: Methodology Agnostic
+### v1.11.0 - PM-11: Methodology-Agnostic Terminology
 
-- **Flexible Projektmethodiken**: Unterstützung für verschiedene Projektstile
-  - Scrum (Standard): Sprints, Story Points, Velocity, Burndown
-  - Kanban: Kontinuierlicher Flow, WIP Limits, Durchlaufzeit
-  - Waterfall: Phasen, Meilensteine, Liefergegenstände
-  - Custom: Frei definierbar
-- **METHODOLOGY_CONFIG**: Zentrale Konfiguration mit Features und Terminologie pro Methodik
+- **Neutrale URL-Pfade**:
+  - `/sprints/` → `/iterations/` (neutral für alle Methodologien)
+  - `/issues/` → `/items/` (neutral für alle Methodologien)
+  - Template-Ordner entsprechend umbenannt
+  - Alle `url_for()`-Aufrufe aktualisiert
+- **Dynamische Terminologie im gesamten UI**:
+  - Sprint → Phase (Waterfall), Zyklus (Kanban), Iteration (Custom)
+  - Issue → Aktivität (Waterfall), Aufgabe (Kanban), Eintrag (Custom)
+  - Story Points → Aufwand (PT) für Waterfall
+  - Burndown Chart → Fortschrittsdiagramm für Waterfall
+  - Velocity → Durchsatz für Waterfall/Kanban
+- **METHODOLOGY_CONFIG erweitert**:
+  - `issue` / `issue_plural` Keys für alle 4 Methodologien
+  - Deutsche und englische Übersetzungen
+- **Templates aktualisiert**:
+  - Projektübersicht: Dynamische Action-Cards und Stat-Labels
+  - Iteration-Report: Dynamische Chart-Titel und Labels
+  - Item-Formular: Dynamische Placeholders und Tipps
+  - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
+  - Dropdown-Menü: Dynamische Typ-Bezeichnung
 - **Helper-Methoden auf Project Model**:
   - `get_term(key, lang)`: 3-stufige Fallback-Kette (Projekt → Methodik → Scrum)
   - `has_feature(feature)`: Prüfung ob Feature für Methodik aktiviert
-  - `get_methodology_name(lang)`: Lokalisierter Methodikname
-  - `get_methodology_config()`: Vollständige Methodikkonfiguration
-- **Settings UI**: Neue Methodik-Einstellungsseite unter Projekt-Settings
-  - Methodologie-Auswahl mit Feature-Badges
-  - Terminologie-Anpassung mit Tabelle (DE/EN)
-  - Reset-Button für Standard-Terminologie
-- **Template Integration**: Sprint-Liste, Backlog, Board nutzen dynamische Terminologie
-- **Dropdown-Erweiterung**: Methodik-Link im Projekt-Einstellungsmenü
 
 ### v1.10.0 - PM-10: Workflow Transitions
 

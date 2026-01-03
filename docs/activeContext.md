@@ -8,65 +8,47 @@
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 13)  
-**Last Action:** PM-10 Workflow Transitions implementiert  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-10 + UI Redesign
-**Version:** 1.10.0
+**Date:** 2026-01-03 (Session 14)  
+**Last Action:** PM-11 Methodology-Agnostic Terminology abgeschlossen  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + UI Redesign
+**Version:** 1.11.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 13)
+### ✅ What Was Accomplished (Session 14)
+
+1. **PM-11: Methodology-Agnostic Terminology** (Complete)
+
+   #### Neutrale URL-Pfade
+   - `/sprints/` → `/iterations/` (neutral für alle Methodologien)
+   - `/issues/` → `/items/` (neutral für alle Methodologien)
+   - Template-Ordner umbenannt: `issues/` → `items/`, `sprints/` → `iterations/`
+   - Alle `url_for()` Aufrufe und Route-Endpunkte aktualisiert
+   
+   #### Dynamische Terminologie
+   - METHODOLOGY_CONFIG erweitert mit `issue` / `issue_plural` Keys
+   - Alle 4 Methodologien haben vollständige Terminologie (DE/EN):
+     - Scrum: Issue/Issues
+     - Kanban: Aufgabe/Aufgaben (DE), Item/Items (EN)
+     - Waterfall: Aktivität/Aktivitäten (DE), Activity/Activities (EN)
+     - Custom: Eintrag/Einträge (DE), Item/Items (EN)
+   
+   #### Templates aktualisiert
+   - Projektübersicht: "Neues Issue" → "Neue Aktivität" (Waterfall)
+   - Projektübersicht: "Alle Issues" → "Alle Aktivitäten"
+   - Projektübersicht: "Issue-Typen" → "Aktivität-Typen"
+   - Iteration-Report: Burndown → Fortschrittsdiagramm, Velocity → Durchsatz
+   - Item-Formular: Dynamische Placeholders und Tipps
+   - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
+
+### ✅ Previously Completed (Session 13)
 
 1. **PM-10: Workflow Transitions** (Complete)
-
-   #### Konfigurierbare Status-Übergänge
-   - Tab-Navigation in Workflow Settings: "Status" und "Übergänge"
-   - Interaktive Transition-Matrix zum Konfigurieren
-   - Klickbare Zellen zum Aktivieren/Deaktivieren
-   - Visuelle Legende (grün = erlaubt, grau = nicht erlaubt)
-   
-   #### API Endpoint
-   - `POST /<project_id>/settings/workflow/transitions`
-   - Speichert Transition-Konfiguration in `allowed_transitions` JSON-Feld
-   
-   #### Frontend Validation
-   - Issue-Detail: Status-Buttons zeigen nur erlaubte Transitions
-   - Kanban-Board: onMove Callback validiert vor Drop
-   - Visuelles Feedback (roter Rahmen) bei blockierten Drops
-   
-   #### Backend Validation
-   - `kanban_move_issue` prüft `can_transition_to()`
-   - Fehler-Response mit `transition_blocked: true` Flag
-
-### ✅ Previously Completed (Session 12)
-
-1. **PM-8: Quick Search** (Complete)
-   - Global Quick Search (⌘K / Ctrl+K)
-   - Live-Typeahead, Keyboard-Navigation
-   - Search API Endpoints
-
-### ✅ Previously Completed (Session 11)
-
-1. **PM-6: Issue Details Enhancement**
-   - Activity Log für Issues (IssueActivity Model)
-   - Approval Workflow Verbesserungen
-   - Projekt Activity Log
-   - Modul-Zugriffskontrolle
-
-### ✅ Previously Completed (Sessions 1-10)
-
-- **Phase A:** In-App Notifications (WebSocket + Flask-SocketIO)
-- **Phase B:** Bulk Operations (select all, bulk status, reassign, delete)
-- **Phase C:** Excel/PDF Export (task list, detail, status summary)
-- **Phase D:** Calendar Sync (iCal feed with secure tokens)
-- **Phase E:** Email Notifications (SMTP/SendGrid, templates, preferences)
-- **Phase F:** Dashboard Charts (Chart.js — status pie, monthly bar, team workload)
-- **Phase G:** Entity Scoping (access levels, hierarchy inheritance)
-- **Phase H:** Recurring Tasks (RRULE)
-- **Phase I:** Archival & Soft-Delete
-- **MVP:** Full task lifecycle, evidence, comments, multi-reviewer, teams
+   - Tab-Navigation in Workflow Settings
+   - Interaktive Transition-Matrix
+   - Frontend/Backend Validation
 
 ---
 
