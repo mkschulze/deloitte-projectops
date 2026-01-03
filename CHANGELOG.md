@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.20.0] - 2026-01-03
+
+### 🏗️ Phase 4b Complete Route Migration
+
+#### Added
+- **`routes/presets.py`** - New presets blueprint with 13 routes:
+  - Admin CRUD for task presets (list, new, edit, delete)
+  - API endpoints (PATCH, bulk toggle, bulk delete)
+  - Custom field CRUD (POST, GET, PUT, DELETE)
+  - Export to JSON, template download, seed from JSON files
+
+- **User-Entity Permission Routes** (6 routes added to admin_bp):
+  - `/admin/users/<id>/modules` GET/POST
+  - `/admin/users/<id>/entities` GET/POST
+  - `/admin/entities/<id>/users` GET/POST
+
+- **Dashboard API Routes** (4 routes added to api_bp):
+  - `/api/dashboard/team-chart` GET
+  - `/api/dashboard/project-velocity/<id>` GET
+  - `/api/dashboard/trends` GET
+  - `/api/dashboard/project-distribution` GET
+
+- **Notification API Routes** (4 routes added to api_bp):
+  - `/api/notifications` GET
+  - `/api/notifications/unread-count` GET
+  - `/api/notifications/<id>/read` POST
+  - `/api/notifications/mark-all-read` POST
+
+- **Export Routes** (3 routes added to tasks_bp):
+  - `/tasks/export/excel` GET
+  - `/tasks/export/summary` GET
+  - `/tasks/<id>/export/pdf` GET
+
+#### Changed
+- **`routes/__init__.py`** - Added presets_bp export
+- **`app.py`** - Registers presets_bp blueprint
+- **`routes/MIGRATION_STATUS.md`** - Updated to reflect 97 migrated routes
+
+#### Architecture
+- **6 registered route blueprints**: auth_bp, main_bp, tasks_bp, admin_bp, api_bp, presets_bp
+- **97 routes now in blueprints** (up from 67 in v1.19.0)
+- Phase 4b route migration complete
+
+#### Test Results
+- **Total tests**: 641 passed, 12 skipped, 9 xfailed (up from 626)
+- **Routes fully migrated**: All 30 remaining routes from Phase 4a now in blueprints
+
+---
+
 ## [1.19.0] - 2026-01-03
 
 ### 🏗️ Phase 4 Blueprint Refactoring

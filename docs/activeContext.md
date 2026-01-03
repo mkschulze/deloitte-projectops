@@ -8,48 +8,38 @@
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 19)  
-**Last Action:** Phase 4 Blueprint Refactoring v1.19.0  
+**Date:** 2026-01-03 (Session 20)  
+**Last Action:** Phase 4b Complete Route Migration v1.20.0  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
-**Version:** 1.19.0
+**Version:** 1.20.0
 
 ---
 
 ## Current State
 
+### ✅ What Was Accomplished (Session 20)
+
+1. **Phase 4b Complete Route Migration v1.20.0** (Complete)
+
+   #### New Presets Blueprint (`routes/presets.py`) - 13 routes
+   - Admin CRUD: `/admin/presets`, `/admin/presets/new`, `/admin/presets/<id>`, `/admin/presets/<id>/delete`
+   - API endpoints: `/api/presets/<id>` PATCH, `/api/presets/bulk-toggle-active`, `/api/presets/bulk-delete`
+   - Custom field CRUD: `/api/preset-fields` POST, `/api/preset-fields/<id>` GET/PUT/DELETE
+   - Import/Export: `/admin/presets/export`, `/admin/presets/template`, `/admin/presets/seed`
+
+   #### Extended Existing Blueprints
+   - **admin_bp** (+6 routes): user_modules, user_entities, entity_users (GET/POST each)
+   - **api_bp** (+8 routes): dashboard team-chart/velocity/trends/distribution, notifications list/count/read/mark-all
+   - **tasks_bp** (+3 routes): export/excel, export/summary, export/pdf
+
+   #### Final Stats
+   - **97 routes migrated** across 6 blueprints (was 67 in v1.19.0)
+   - **641 tests passed** (was 626)
+   - Phase 4b route migration complete
+
 ### ✅ What Was Accomplished (Session 19)
 
 1. **Phase 4 Blueprint Refactoring v1.19.0** (Complete)
-
-   #### New Blueprint Architecture (`routes/` package)
-   - **`routes/__init__.py`** - Blueprint exports (auth_bp, main_bp, tasks_bp, admin_bp, api_bp)
-   - **`routes/auth.py`** - Authentication routes: login, logout, tenant selection (5 routes)
-   - **`routes/main.py`** - Main app routes: dashboard, calendar, notifications, profile (15 routes)
-   - **`routes/tasks.py`** - Task management: CRUD, status, evidence, comments (17 routes)
-   - **`routes/admin.py`** - Admin routes: users, entities, teams, categories, modules (~20 routes)
-   - **`routes/api.py`** - API routes: bulk operations, dashboard charts, presets (~15 routes)
-
-   #### Integration Tests: `test_blueprints.py` (28 tests)
-   - **TestAuthBlueprint** (4 tests) - login page, auth flow, logout redirect
-   - **TestMainBlueprint** (11 tests) - dashboard, calendar, notifications, profile
-   - **TestTasksBlueprint** (5 tests) - task list, detail, create, archive views
-   - **TestAdminBlueprint** (6 tests) - admin dashboard, users, entities, teams
-   - **TestApiBlueprint** (5 tests) - bulk operations, dashboard charts, presets
-   - **TestBlueprintUrlGeneration** (5 tests) - URL generation for all blueprints
-
-   #### Test Results
-   - **Total tests**: 626 passed, 12 skipped, 9 xfailed
-   - **Routes coverage**: 33% overall (auth 57%, main 64%, tasks 21%, admin 25%, api 26%)
-   - **7 registered blueprints**: admin, admin_tenants, api, auth, main, projects, tasks
-
-   #### Key Changes
-   - Updated `extensions.py`: `login_manager.login_view = 'auth.login'`
-   - Updated `app.py`: `create_app()` registers all 5 route blueprints
-   - Legacy routes in app.py superseded by blueprint routes (gradual removal planned)
-
-### ✅ What Was Accomplished (Session 18)
-
-1. **Phase 3 Service Layer Tests v1.18.0** (Complete)
 
    #### New Test File: `test_phase3_services.py` (62 tests)
    - **TestNotificationServiceCreate** (4 tests) - basic, with message, entity reference, actor

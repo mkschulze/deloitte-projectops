@@ -4,12 +4,35 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-03 (Session 19)  
-**Version:** 1.19.0
+**Last Updated:** 2026-01-03 (Session 20)  
+**Version:** 1.20.0
 
 ---
 
 ## Recent Releases
+
+### v1.20.0 - Phase 4b Complete Route Migration (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **New Presets Blueprint** (`routes/presets.py`) - 13 routes:
+  - Admin CRUD: list, new, edit, delete
+  - API: PATCH, bulk toggle, bulk delete
+  - Custom field CRUD: POST, GET, PUT, DELETE
+  - Import/Export: export JSON, template download, seed from files
+
+- **Extended Existing Blueprints**:
+  - `admin_bp` +6 routes: user_modules, user_entities, entity_users
+  - `api_bp` +8 routes: dashboard API (4) + notification API (4)
+  - `tasks_bp` +3 routes: export/excel, export/summary, export/pdf
+
+- **Migration Complete**:
+  - 97 routes now in blueprints (up from 67)
+  - 6 route blueprints: auth_bp, main_bp, tasks_bp, admin_bp, api_bp, presets_bp
+  - Updated `routes/MIGRATION_STATUS.md`
+
+- **Test Results**:
+  - Total tests: 641 passed, 12 skipped, 9 xfailed (up from 626)
 
 ### v1.19.0 - Phase 4 Blueprint Refactoring (2026-01-03)
 

@@ -595,7 +595,7 @@ def client(app):
 | **Integration Tests** | Component interactions | Database operations, workflows |
 | **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
 
-### Current Coverage (v1.19.0)
+### Current Coverage (v1.20.0)
 
 | Module | Coverage | Tests |
 |--------|----------|-------|
@@ -612,9 +612,10 @@ def client(app):
 | routes/tasks.py | 21% | - |
 | routes/admin.py | 25% | - |
 | routes/api.py | 26% | - |
+| routes/presets.py | ~20% | - |
 | app.py | 17% | - |
 | modules/projects/routes.py | 19% | - |
-| **Total** | **~38%** | **626 tests** |
+| **Total** | **~38%** | **641 tests** | |
 
 > See [testCoveragePlan.md](testCoveragePlan.md) for the roadmap to 100% coverage.
 
