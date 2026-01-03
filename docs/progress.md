@@ -5,11 +5,30 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
 **Last Updated:** 2026-01-03 (Session 16)  
-**Version:** 1.16.0
+**Version:** 1.16.1
 
 ---
 
 ## Recent Releases
+
+### v1.16.1 - Release Script Enhancement (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Extra Strong Memory Bank Verification**:
+  - Individual 'y' confirmation required for each of 7 Memory Bank files
+  - Final phrase confirmation: "I have read and updated all memory bank files"
+  - Blocks release if any confirmation fails
+  - Prevents AI from auto-confirming verification without actually reading files
+
+- **Files**:
+  - docs/activeContext.md - Session info, current state
+  - docs/progress.md - Release history, feature tracking
+  - docs/techContext.md - Tech stack, dependencies
+  - docs/systemPatterns.md - Architecture, patterns
+  - docs/productContext.md - User personas, features
+  - docs/projectbrief.md - Core requirements
+  - docs/technicalConcept.md - High-level architecture
 
 ### v1.16.0 - Test Coverage Phase 2 (2026-01-03)
 

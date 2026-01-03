@@ -595,16 +595,18 @@ def client(app):
 | **Integration Tests** | Component interactions | Database operations, workflows |
 | **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
 
-### Current Coverage (v1.14.0)
+### Current Coverage (v1.16.1)
 
 | Module | Coverage | Tests |
 |--------|----------|-------|
-| models.py | ~71% | 145 tests |
+| models.py | ~70% | 145 tests |
 | services.py | ~40% | 72 tests |
 | translations.py | 100% | 57 tests |
-| middleware/tenant.py | ~28% | 53 tests |
+| middleware/tenant.py | ~98% | 53 tests |
+| modules/__init__.py | ~88% | 16 tests |
+| modules/core/__init__.py | 100% | 11 tests |
 | config.py | 78% | 12 tests |
-| **Total** | **43%** | **424 tests** |
+| **Total** | **~45%** | **536 tests** |
 
 > See [testCoveragePlan.md](testCoveragePlan.md) for the roadmap to 100% coverage.
 

@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.16.1] - 2026-01-03
+
+### 🔒 Extra Strong Release Verification
+
+#### Added
+- **Individual File Confirmation** - Each of 7 Memory Bank files must be confirmed individually with 'y'
+- **Final Phrase Confirmation** - Must type exact phrase "I have read and updated all memory bank files" to proceed
+- **Blocked Release Protection** - Any failed confirmation blocks the release immediately
+
+#### Changed
+- Enhanced `verify_memory_bank_checked()` function in `scripts/release.py`
+- Prevents AI from auto-confirming verification without actually reading each file
+
+---
+
+## [1.16.0] - 2026-01-03
+
+### 🧪 Test Coverage Phase 2
+
+#### Added
+- **69 Middleware & Module Tests** (`test_phase2_middleware_modules.py`):
+  - TestLoadTenantContextLogic (8 tests) - unauthenticated, superadmin, regular user scenarios
+  - TestTenantRequiredDecoratorExecution (6 tests) - redirect behavior with mocked url_for/redirect
+  - TestTenantAdminRequiredDecoratorExecution (5 tests) - admin role checks
+  - TestTenantManagerRequiredDecoratorExecution (6 tests) - manager role checks
+  - TestSuperadminRequiredDecoratorExecution (3 tests) - superadmin-only access
+  - TestCanEditInTenant (5 tests) - edit permissions by role
+  - TestCanManageInTenant (5 tests) - manage permissions by role
+  - TestIsTenantAdmin (4 tests) - admin status checks
+  - TestScopeQueryToTenant (3 tests) - query scoping logic
+  - TestModuleRegistryMethods (8 tests) - module registration
+  - TestBaseModuleMethods (8 tests) - base module class
+  - TestCoreModuleDetails (3 tests) - core module attributes
+
+#### Changed
+- Total tests: 467 → 536 (+69)
+- middleware/tenant.py coverage: 28% → 98% (+70%)
+- modules/core/__init__.py: 89% → 100%
+- modules/__init__.py: 54% → 88% (+34%)
+
+---
+
+## [1.15.0] - 2026-01-03
+
+### 🧪 Test Coverage Phase 1
+
+#### Added
+- **43 New Model Tests** (`test_phase1_models.py`):
+  - TestUserTenantMethods (13 tests) - tenant access, roles, switching
+  - TestUserCalendarToken (3 tests) - token creation, regeneration
+  - TestUserTeamMethods (1 test) - team retrieval
+  - TestTeamModel (13 tests) - member management, multilingual names
+  - TestTaskReviewerModel (6 tests) - approve, reject, reset workflows
+  - TestUserEntityModel (5 tests) - entity permission levels
+  - TestEntityAccessLevelEnum (2 tests) - enum values and choices
+
+#### Changed
+- Created `.coveragerc` to exclude scripts/, migrations/, tests/, demo files
+- Total tests: 424 → 467 (+43)
+- models.py coverage: 63% → 70% (+7%)
+
+---
+
 ## [1.14.1] - 2026-01-03
 
 ### 🔧 Release Script Enhancement
@@ -17,36 +80,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 - Release workflow now has 9 steps (added verification step)
 - Updated header comment with clearer AI agent instructions
-
----
-
-## [1.16.0] - 2026-01-03
-
-### Test Coverage Phase 2
-
-#### Added
-- TODO: Add new features
-
-#### Changed
-- TODO: Add changes
-
-#### Fixed
-- TODO: Add fixes
-
-
-
-## [1.15.0] - 2026-01-03
-
-### Test Coverage Phase 1
-
-#### Added
-- TODO: Add new features
-
-#### Changed
-- TODO: Add changes
-
-#### Fixed
-- TODO: Add fixes
 
 
 

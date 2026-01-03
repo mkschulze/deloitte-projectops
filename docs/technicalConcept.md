@@ -156,44 +156,56 @@
 
 ## Feature Roadmap
 
-### MVP (Phase 1) — Target: 6-10 Core Screens
+### MVP (Phase 1) — ✅ Complete
 
 | Priority | Feature | Description | Status |
 |----------|---------|-------------|--------|
-| 1 | **Authentication** | Local Flask-Login (email/password) | 🟡 Existing |
-| 2 | **User Management** | Admin CRUD for users, role assignment | 🔴 To Build |
-| 3 | **Entity Management** | CRUD for legal entities/Gesellschaften | 🔴 To Build |
-| 4 | **Tax Types** | Manage tax type catalog (KSt, USt, GewSt, etc.) | 🔴 To Build |
-| 5 | **Excel Import** | Import YEAR/Anträge/Kommentare sheets | 🔴 To Build |
-| 6 | **Task Templates** | Generated from Excel, editable | 🔴 To Build |
-| 7 | **Task List** | Filterable list with status badges | 🔴 To Build |
-| 8 | **Task Detail** | Status change, evidence, comments, audit | 🔴 To Build |
-| 9 | **Calendar View** | Month view, color-coded by status | 🔴 To Build |
-| 10 | **Dashboard** | KPIs, filters, "My Tasks" panel | 🔴 To Build |
-| 11 | **Basic Reports** | Export filtered tasks to Excel | 🔴 To Build |
+| 1 | **Authentication** | Local Flask-Login (email/password) | ✅ Complete |
+| 2 | **User Management** | Admin CRUD for users, role assignment | ✅ Complete |
+| 3 | **Entity Management** | CRUD for legal entities/Gesellschaften | ✅ Complete |
+| 4 | **Tax Types** | Manage tax type catalog (KSt, USt, GewSt, etc.) | ✅ Complete |
+| 5 | **Excel Import** | Import YEAR/Anträge/Kommentare sheets | ✅ Complete |
+| 6 | **Task Templates** | Generated from Excel, editable | ✅ Complete |
+| 7 | **Task List** | Filterable list with status badges | ✅ Complete |
+| 8 | **Task Detail** | Status change, evidence, comments, audit | ✅ Complete |
+| 9 | **Calendar View** | Month view, color-coded by status | ✅ Complete |
+| 10 | **Dashboard** | KPIs, filters, "My Tasks" panel | ✅ Complete |
+| 11 | **Basic Reports** | Export filtered tasks to Excel | ✅ Complete |
 
-### Phase 2 — Enhanced Functionality
+### Phase 2 — ✅ Complete (Enhanced Functionality)
 
-| Feature | Description |
-|---------|-------------|
-| **OIDC/Entra ID** | SSO integration with Azure AD |
-| **Recurrence Rules** | RRULE-based automatic task generation |
-| **Reminder System** | Email/Teams notifications before due dates |
-| **Four-Eyes Enforcement** | Cannot complete without reviewer approval |
-| **Advanced Reports** | Compliance heatmaps, drilldowns, aging reports |
-| **Template Builder UI** | Create templates without Excel import |
-| **Batch Operations** | Reassign, change due dates in bulk |
-| **File Virus Scanning** | Integrate with antivirus for uploads |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Recurrence Rules** | RRULE-based automatic task generation | ✅ Complete |
+| **Reminder System** | Email notifications before due dates | ✅ Complete |
+| **Multi-Reviewer Approval** | Cannot complete without all reviewers approving | ✅ Complete |
+| **Advanced Reports** | PDF export, compliance exports | ✅ Complete |
+| **Template Builder UI** | Create templates via TaskPresets | ✅ Complete |
+| **Batch Operations** | Bulk task creation from presets | ✅ Complete |
+| **OIDC/Entra ID** | SSO integration with Azure AD | 🔴 Planned |
+| **File Virus Scanning** | Integrate with antivirus for uploads | 🔴 Planned |
 
-### Phase 3 — Enterprise Features
+### Phase 3 — ✅ Complete (Enterprise Features)
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-Tenant** | Support multiple client organizations |
-| **API Gateway** | REST API for external integrations |
-| **SAP Integration** | Pull/push data from SAP systems |
-| **Power BI Connector** | Export data for BI dashboards |
-| **Mobile App** | Progressive Web App or native |
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Multi-Tenant** | Complete client/organization separation | ✅ Complete |
+| **Tenant Roles** | Per-tenant admin, manager, member, viewer | ✅ Complete |
+| **Compliance Export** | JSON and Excel export with full audit trail | ✅ Complete |
+| **API Keys** | Per-tenant API access tokens | ✅ Complete |
+| **Project Management** | Scrum/Kanban/Waterfall methodologies | ✅ Complete |
+| **Issue Tracking** | Configurable workflows, priorities, labels | ✅ Complete |
+| **Sprint/Iteration** | Time-boxed work with burndown charts | ✅ Complete |
+| **Team Management** | User grouping with assignments | ✅ Complete |
+
+### Phase 4 — Future Enhancements
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **SAP Integration** | Pull/push data from SAP systems | 🔴 Planned |
+| **Power BI Connector** | Export data for BI dashboards | 🔴 Planned |
+| **Mobile App** | Progressive Web App or native | 🔴 Planned |
+| **REST API Gateway** | Full REST API for external integrations | 🔴 Planned |
 
 ---
 

@@ -2,31 +2,20 @@
 """
 Release Script for Deloitte ProjectOps
 
-╔══════════════════════════════════════════════════════════════════════════════╗
-║  🤖 AI AGENT: YOU MUST READ AND VERIFY ALL MEMORY BANK FILES BEFORE RELEASE  ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║                                                                              ║
-║  MANDATORY CHECKLIST - You must READ each file and UPDATE if needed:        ║
-║                                                                              ║
-║  [ ] docs/activeContext.md  - Update: session, last action, version         ║
-║  [ ] docs/progress.md       - Add: new release section, update version       ║
-║  [ ] docs/projectbrief.md   - Update: version number                         ║
-║  [ ] docs/techContext.md    - Update: test counts, dependencies, structure   ║
-║  [ ] docs/systemPatterns.md - Update: coverage stats, new patterns           ║
-║  [ ] docs/productContext.md - Update: if product scope changed               ║
-║  [ ] docs/technicalConcept.md - Update: if architecture changed              ║
-║                                                                              ║
-║  THE SCRIPT WILL ASK YOU TO CONFIRM YOU HAVE DONE THIS!                      ║
-║                                                                              ║
-║  ⚠️  Memory Bank MUST be in sync with the release - same commit, same push!  ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+This script enforces a 3-phase Memory Bank workflow:
 
-This script automates the release process:
+  PHASE 1: READ   - Displays content of each Memory Bank file
+  PHASE 2: UPDATE - Pauses for manual updates with actual content
+  PHASE 3: VERIFY - Checks all updates were made correctly
+
+This cannot be bypassed - you MUST read and update the files!
+
+Release workflow:
 1. Validates working directory is clean
-2. Updates version numbers in all files
-3. Updates CHANGELOG.md with new version section
-4. Updates README.md version badge
-5. Updates Memory Bank docs (progress.md, activeContext.md)
+2. Determines new version number  
+3. PHASE 1: Displays all Memory Bank files for reading
+4. PHASE 2: Pauses for manual updates
+5. PHASE 3: Verifies all updates were made
 6. Creates commit with release message
 7. Creates and pushes git tag
 8. Pushes to remote
@@ -125,82 +114,226 @@ def print_error(text: str):
     print(f"{Colors.FAIL}✗ {text}{Colors.ENDC}")
 
 
-def verify_memory_bank_checked() -> bool:
+def verify_memory_bank_checked(new_version: str, release_title: str, dry_run: bool = False) -> bool:
     """
-    Require explicit confirmation that all Memory Bank files were read and updated.
-    This is a mandatory step before any release can proceed.
+    MEMORY BANK REVIEW & UPDATE WORKFLOW:
     
-    ENHANCED: Now requires confirmation for EACH file individually + final confirmation.
+    1. Display the content of each Memory Bank file (forces AI to read)
+    2. Pause to allow updates to be made
+    3. Verify all files have been updated to the new version
+    
+    This ensures the AI actually reads each file before updating.
     """
     print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
-    print(f"{Colors.HEADER}{Colors.BOLD}  🤖 MEMORY BANK VERIFICATION REQUIRED{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}  📖 MEMORY BANK REVIEW & UPDATE{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
     
-    print(f"{Colors.WARNING}{Colors.BOLD}⚠️  STOP! Before proceeding, you MUST have:{Colors.ENDC}")
-    print(f"{Colors.WARNING}   1. READ each Memory Bank file below{Colors.ENDC}")
-    print(f"{Colors.WARNING}   2. UPDATED any files that need changes for this release{Colors.ENDC}")
-    print(f"{Colors.WARNING}   3. Confirm EACH file individually{Colors.ENDC}\n")
+    print(f"{Colors.CYAN}Target version: {new_version}{Colors.ENDC}")
+    print(f"{Colors.CYAN}Release title: {release_title}{Colors.ENDC}\n")
     
-    print(f"{Colors.CYAN}{'─'*70}{Colors.ENDC}")
-    print(f"{Colors.BOLD}INDIVIDUAL FILE VERIFICATION:{Colors.ENDC}")
-    print(f"{Colors.CYAN}{'─'*70}{Colors.ENDC}\n")
+    today = datetime.now().strftime('%Y-%m-%d')
     
-    # Verify EACH file individually
-    verified_count = 0
-    for filepath, description in MEMORY_BANK_FILES:
+    # ═══════════════════════════════════════════════════════════════════════
+    # PHASE 1: Display content of each Memory Bank file
+    # ═══════════════════════════════════════════════════════════════════════
+    
+    memory_bank_files = [
+        ('docs/activeContext.md', 'Session info, version, current state'),
+        ('docs/progress.md', 'Release history, milestones'),
+        ('docs/projectbrief.md', 'Project overview, version'),
+        ('docs/systemPatterns.md', 'Coverage stats, patterns'),
+        ('docs/techContext.md', 'Tech stack, test counts'),
+        ('docs/productContext.md', 'Product scope, features'),
+        ('docs/technicalConcept.md', 'Architecture, roadmap'),
+    ]
+    
+    print(f"{Colors.HEADER}{'─'*70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}  PHASE 1: Reading Memory Bank Files{Colors.ENDC}")
+    print(f"{Colors.HEADER}{'─'*70}{Colors.ENDC}\n")
+    
+    file_contents = {}
+    
+    for filepath, description in memory_bank_files:
         full_path = PROJECT_ROOT / filepath
-        exists = full_path.exists()
         
-        if not exists:
-            print(f"  {Colors.FAIL}✗ {filepath} - FILE MISSING!{Colors.ENDC}")
+        print(f"\n{Colors.BOLD}{'═'*70}{Colors.ENDC}")
+        print(f"{Colors.BOLD}📄 {filepath}{Colors.ENDC}")
+        print(f"{Colors.CYAN}   Purpose: {description}{Colors.ENDC}")
+        print(f"{'═'*70}\n")
+        
+        if not full_path.exists():
+            print(f"{Colors.FAIL}   ❌ FILE NOT FOUND{Colors.ENDC}\n")
             continue
         
-        print(f"  {Colors.BOLD}{filepath}{Colors.ENDC}")
-        print(f"    └─ {Colors.CYAN}{description}{Colors.ENDC}")
+        content = full_path.read_text()
+        file_contents[filepath] = content
         
-        response = input(f"    Did you READ and UPDATE (if needed) this file? [{Colors.GREEN}y{Colors.ENDC}/n]: ").strip().lower()
+        # Display the COMPLETE file content
+        lines = content.split('\n')
         
-        if response in ('y', 'yes'):
-            print(f"    {Colors.GREEN}✓ Confirmed{Colors.ENDC}\n")
-            verified_count += 1
+        for i, line in enumerate(lines, 1):
+            # Highlight version patterns
+            if '**Version:**' in line or 'Version:' in line:
+                print(f"{Colors.WARNING}   {i:3}: {line}{Colors.ENDC}")
+            elif 'Current Coverage' in line:
+                print(f"{Colors.WARNING}   {i:3}: {line}{Colors.ENDC}")
+            elif '## Session Information' in line or '## Recent Releases' in line:
+                print(f"{Colors.CYAN}   {i:3}: {line}{Colors.ENDC}")
+            elif line.startswith('###') or line.startswith('## '):
+                print(f"{Colors.BOLD}   {i:3}: {line}{Colors.ENDC}")
+            else:
+                print(f"   {i:3}: {line}")
+        
+        print(f"\n   {Colors.CYAN}[END OF FILE - {len(lines)} lines total]{Colors.ENDC}")
+        
+        # Extract and display current version
+        version_match = re.search(r'\*\*Version:\*\*\s*([\d.]+)', content)
+        if version_match:
+            current_ver = version_match.group(1)
+            if current_ver == new_version:
+                print(f"\n   {Colors.GREEN}✓ Version: {current_ver} (already correct){Colors.ENDC}")
+            else:
+                print(f"\n   {Colors.WARNING}⚠ Version: {current_ver} → needs update to {new_version}{Colors.ENDC}")
+    
+    # ═══════════════════════════════════════════════════════════════════════
+    # PHASE 2: Pause for updates
+    # ═══════════════════════════════════════════════════════════════════════
+    
+    print(f"\n\n{Colors.HEADER}{'─'*70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}  PHASE 2: Update Memory Bank Files{Colors.ENDC}")
+    print(f"{Colors.HEADER}{'─'*70}{Colors.ENDC}\n")
+    
+    print(f"{Colors.WARNING}{Colors.BOLD}⚠️  ACTION REQUIRED:{Colors.ENDC}")
+    print(f"""
+{Colors.CYAN}You have now READ all Memory Bank files. Before continuing, you MUST:{Colors.ENDC}
+
+  1. {Colors.BOLD}docs/activeContext.md{Colors.ENDC}
+     - Update **Version:** to {new_version}
+     - Update **Last Action:** to describe this release
+     - Add accomplishments to "What Was Accomplished" section
+
+  2. {Colors.BOLD}docs/progress.md{Colors.ENDC}
+     - Update **Version:** to {new_version}
+     - Add new release section under "## Recent Releases"
+
+  3. {Colors.BOLD}docs/projectbrief.md{Colors.ENDC}
+     - Update **Version:** to {new_version}
+
+  4. {Colors.BOLD}docs/systemPatterns.md{Colors.ENDC}
+     - Update "Current Coverage (vX.Y.Z)" to v{new_version}
+     - Update test counts if changed
+
+  5. {Colors.BOLD}docs/techContext.md{Colors.ENDC}
+     - Update test file list if new tests added
+     - Update any dependency changes
+
+  6. {Colors.BOLD}docs/technicalConcept.md{Colors.ENDC}
+     - Update feature roadmap status if features completed
+
+  7. {Colors.BOLD}CHANGELOG.md{Colors.ENDC}
+     - Add [{new_version}] section with actual changes
+
+  8. {Colors.BOLD}VERSION, config.py, README.md{Colors.ENDC}
+     - Update version to {new_version}
+""")
+    
+    if dry_run:
+        print(f"{Colors.WARNING}DRY RUN: Skipping update verification{Colors.ENDC}\n")
+        return True
+    
+    print(f"{Colors.BOLD}Press ENTER when you have completed all updates...{Colors.ENDC}")
+    input()
+    
+    # ═══════════════════════════════════════════════════════════════════════
+    # PHASE 3: Verify all updates were made
+    # ═══════════════════════════════════════════════════════════════════════
+    
+    print(f"\n{Colors.HEADER}{'─'*70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}  PHASE 3: Verifying Updates{Colors.ENDC}")
+    print(f"{Colors.HEADER}{'─'*70}{Colors.ENDC}\n")
+    
+    errors = []
+    
+    # Check version in key files
+    version_checks = [
+        ('docs/activeContext.md', r'\*\*Version:\*\*\s*([\d.]+)'),
+        ('docs/progress.md', r'\*\*Version:\*\*\s*([\d.]+)'),
+        ('docs/projectbrief.md', r'\*\*Version:\*\*\s*([\d.]+)'),
+        ('VERSION', None),  # Special handling
+        ('config.py', r"APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]"),
+    ]
+    
+    for filepath, pattern in version_checks:
+        full_path = PROJECT_ROOT / filepath
+        if not full_path.exists():
+            errors.append(f"{filepath}: File not found")
+            print(f"  {Colors.FAIL}✗ {filepath} - File not found{Colors.ENDC}")
+            continue
+        
+        content = full_path.read_text()
+        
+        if pattern is None:  # VERSION file
+            found_version = content.strip()
         else:
-            print(f"    {Colors.FAIL}✗ Not confirmed - RELEASE BLOCKED{Colors.ENDC}\n")
-            print_error(f"You must confirm reading {filepath}. Please read the file and try again.")
-            return False
+            match = re.search(pattern, content)
+            found_version = match.group(1) if match else None
+        
+        if found_version == new_version:
+            print(f"  {Colors.GREEN}✓ {filepath} - v{new_version}{Colors.ENDC}")
+        else:
+            errors.append(f"{filepath}: Found '{found_version}', expected '{new_version}'")
+            print(f"  {Colors.FAIL}✗ {filepath} - Found '{found_version}', expected '{new_version}'{Colors.ENDC}")
     
-    total_files = len(MEMORY_BANK_FILES)
-    if verified_count < total_files:
-        print_error(f"Only {verified_count}/{total_files} files verified. All files must be confirmed.")
+    # Check systemPatterns.md coverage version
+    patterns_path = PROJECT_ROOT / 'docs/systemPatterns.md'
+    if patterns_path.exists():
+        content = patterns_path.read_text()
+        match = re.search(r'Current Coverage \(v([\d.]+)\)', content)
+        if match:
+            if match.group(1) == new_version:
+                print(f"  {Colors.GREEN}✓ docs/systemPatterns.md - Coverage v{new_version}{Colors.ENDC}")
+            else:
+                errors.append(f"docs/systemPatterns.md: Coverage version is '{match.group(1)}'")
+                print(f"  {Colors.FAIL}✗ docs/systemPatterns.md - Coverage shows v{match.group(1)}{Colors.ENDC}")
+    
+    # Check CHANGELOG has entry
+    changelog_path = PROJECT_ROOT / 'CHANGELOG.md'
+    if changelog_path.exists():
+        content = changelog_path.read_text()
+        if f'## [{new_version}]' in content:
+            print(f"  {Colors.GREEN}✓ CHANGELOG.md - Entry for [{new_version}] found{Colors.ENDC}")
+        else:
+            errors.append(f"CHANGELOG.md: No entry for [{new_version}]")
+            print(f"  {Colors.FAIL}✗ CHANGELOG.md - No entry for [{new_version}]{Colors.ENDC}")
+    
+    # Check README badge
+    readme_path = PROJECT_ROOT / 'README.md'
+    if readme_path.exists():
+        content = readme_path.read_text()
+        if f'Version-{new_version}-blue' in content:
+            print(f"  {Colors.GREEN}✓ README.md - Version badge updated{Colors.ENDC}")
+        else:
+            errors.append(f"README.md: Version badge not updated")
+            print(f"  {Colors.FAIL}✗ README.md - Version badge not updated{Colors.ENDC}")
+    
+    print()
+    
+    if errors:
+        print(f"{Colors.FAIL}{Colors.BOLD}{'='*70}{Colors.ENDC}")
+        print(f"{Colors.FAIL}{Colors.BOLD}  ❌ VERIFICATION FAILED - Updates incomplete{Colors.ENDC}")
+        print(f"{Colors.FAIL}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
+        
+        print(f"{Colors.WARNING}The following files still need updates:{Colors.ENDC}")
+        for error in errors:
+            print(f"  {Colors.FAIL}• {error}{Colors.ENDC}")
+        
+        print(f"\n{Colors.CYAN}Please update these files and run the release script again.{Colors.ENDC}\n")
         return False
     
-    print(f"{Colors.GREEN}{'─'*70}{Colors.ENDC}")
-    print(f"{Colors.GREEN}{Colors.BOLD}All {verified_count} Memory Bank files individually confirmed!{Colors.ENDC}")
-    print(f"{Colors.GREEN}{'─'*70}{Colors.ENDC}\n")
-    
-    # FINAL CONFIRMATION - Extra strong check
-    print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
-    print(f"{Colors.HEADER}{Colors.BOLD}  🔐 FINAL MANUAL CONFIRMATION{Colors.ENDC}")
-    print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
-    
-    print(f"{Colors.WARNING}This is the FINAL check before release.{Colors.ENDC}")
-    print(f"{Colors.WARNING}Type the exact phrase below to confirm:{Colors.ENDC}\n")
-    
-    confirmation_phrase = "I have read and updated all memory bank files"
-    print(f"  {Colors.BOLD}Required phrase:{Colors.ENDC} {Colors.CYAN}{confirmation_phrase}{Colors.ENDC}\n")
-    
-    response = input(f"  {Colors.BOLD}Your confirmation:{Colors.ENDC} ").strip().lower()
-    
-    if response != confirmation_phrase:
-        print_error("Final confirmation failed. The phrase did not match.")
-        print(f"\n{Colors.CYAN}Expected: '{confirmation_phrase}'{Colors.ENDC}")
-        print(f"{Colors.CYAN}Received: '{response}'{Colors.ENDC}\n")
-        return False
-    
-    print(f"\n{Colors.GREEN}{Colors.BOLD}{'='*70}{Colors.ENDC}")
-    print(f"{Colors.GREEN}{Colors.BOLD}  ✅ MEMORY BANK VERIFICATION COMPLETE{Colors.ENDC}")
+    print(f"{Colors.GREEN}{Colors.BOLD}{'='*70}{Colors.ENDC}")
+    print(f"{Colors.GREEN}{Colors.BOLD}  ✅ ALL MEMORY BANK FILES VERIFIED{Colors.ENDC}")
     print(f"{Colors.GREEN}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
     
-    print_success("All Memory Bank files verified and confirmed")
     return True
 
 
@@ -634,16 +767,16 @@ def main():
             print("Release cancelled")
             sys.exit(0)
     
-    # Step 3: Memory Bank Verification (MANDATORY)
-    print_step(3, "Memory Bank Verification...")
+    # Step 3: Automated Memory Bank Update
+    print_step(3, "Automated Memory Bank Update...")
     
-    if not args.dry_run:
-        if not verify_memory_bank_checked():
-            sys.exit(1)
-    else:
-        print_warning("Skipping Memory Bank verification in dry-run mode")
+    if not verify_memory_bank_checked(new_version, title, args.dry_run):
+        print(f"\n{Colors.FAIL}{'='*70}{Colors.ENDC}")
+        print(f"{Colors.FAIL}  RELEASE BLOCKED - Memory Bank update failed{Colors.ENDC}")
+        print(f"{Colors.FAIL}{'='*70}{Colors.ENDC}\n")
+        sys.exit(1)
     
-    # Step 4: Update version files
+    # Step 4: Update remaining version files (that weren't updated in step 3)
     print_step(4, "Updating version in files...")
     
     for filepath, config in VERSION_FILES.items():
