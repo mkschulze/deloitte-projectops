@@ -8,7 +8,7 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Framework** | Flask 2.x | Web application framework |
+| **Framework** | Flask 3.x | Web application framework |
 | **ORM** | SQLAlchemy (Flask-SQLAlchemy) | Database abstraction |
 | **Migrations** | Alembic (Flask-Migrate) | Schema version control |
 | **Authentication** | Flask-Login | Session management |
@@ -87,6 +87,15 @@ deloitte-projectops-calendar/
 │   ├── productContext.md
 │   ├── progress.md
 │   └── activeContext.md
+│
+├── tests/                  # Unit test suite
+│   ├── conftest.py         # Pytest fixtures & test app
+│   ├── factories.py        # Factory Boy model factories
+│   └── unit/               # Unit tests (125 tests)
+│       ├── test_models.py
+│       ├── test_services.py
+│       ├── test_translations.py
+│       └── ...
 │
 ├── data/                   # JSON data files for presets
 │   ├── steuerarten_aufgaben.json
@@ -187,9 +196,13 @@ eventlet = "*"
 icalendar = "*"
 
 [dev-packages]
+pytest = "*"              # Testing framework
+pytest-cov = "*"          # Coverage reporting
+pytest-flask = "*"        # Flask test helpers
+factory-boy = "*"         # Test data factories
 
 [requires]
-python_version = "3.9"
+python_version = "3.14"
 ```
 
 ### Production Additions (Deployment)
@@ -269,14 +282,36 @@ flask db downgrade
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (125 tests, 34% coverage as of v1.13.0)
 pytest
 
 # Run with coverage
-pytest --cov=app
+pytest --cov=. --cov-report=term-missing
 
 # Run specific test file
-pytest tests/test_tasks.py
+pytest tests/unit/test_models.py
+
+# Run with verbose output
+pytest -v
+```
+
+### Test Structure
+
+```
+tests/
+├── conftest.py           # App, db, user fixtures
+├── factories.py          # Factory Boy factories for models
+└── unit/
+    ├── test_models.py          # Model tests
+    ├── test_services.py        # Business logic tests
+    ├── test_translations.py    # i18n tests
+    ├── test_config.py          # Configuration tests
+    ├── test_methodology.py     # Project methodology tests
+    ├── test_sprint_board.py    # Sprint & board tests
+    ├── test_issue_workflow.py  # Issue workflow tests
+    ├── test_tenancy.py         # Multi-tenant tests
+    ├── test_permissions.py     # RBAC tests
+    └── test_calendar.py        # Calendar feature tests
 ```
 
 ### Environment Variables

@@ -508,3 +508,115 @@ def log_audit(action, entity_type, entity_id, entity_name=None,
 | `LOGOUT` | User logged out |
 | `UPLOAD` | File uploaded |
 | `IMPORT` | Excel data imported |
+
+---
+
+## Testing Patterns
+
+> Added in v1.13.0 - Unit test infrastructure with pytest
+
+### Test Configuration (pytest.ini)
+
+```ini
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = -v --tb=short
+filterwarnings = 
+    ignore::DeprecationWarning
+```
+
+### Factory Pattern for Test Data
+
+```python
+# tests/factories.py
+import factory
+from models import User, Tenant, Project, Task
+
+class TenantFactory(factory.Factory):
+    class Meta:
+        model = Tenant
+    
+    name = factory.Sequence(lambda n: f'Test Tenant {n}')
+    subdomain = factory.Sequence(lambda n: f'tenant{n}')
+
+class UserFactory(factory.Factory):
+    class Meta:
+        model = User
+    
+    email = factory.Sequence(lambda n: f'user{n}@test.com')
+    name = factory.Faker('name')
+    role = 'user'
+    tenant = factory.SubFactory(TenantFactory)
+```
+
+### Test Fixtures (conftest.py)
+
+```python
+# tests/conftest.py
+import pytest
+from app import create_app
+from extensions import db
+
+@pytest.fixture
+def app():
+    """Create test application."""
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'WTF_CSRF_ENABLED': False,
+        'SERVER_NAME': 'localhost'
+    })
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+@pytest.fixture
+def db_session(app):
+    """Provide database session."""
+    with app.app_context():
+        yield db.session
+
+@pytest.fixture
+def client(app):
+    """Create test client."""
+    return app.test_client()
+```
+
+### Test Categories
+
+| Category | Purpose | Example Tests |
+|----------|---------|---------------|
+| **Unit Tests** | Individual functions/methods | Model validation, service logic |
+| **Integration Tests** | Component interactions | Database operations, workflows |
+| **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
+
+### Current Coverage (v1.13.0)
+
+| Module | Coverage | Tests |
+|--------|----------|-------|
+| models.py | ~45% | 25 tests |
+| services.py | ~40% | 18 tests |
+| translations.py | 90% | 15 tests |
+| config.py | 80% | 12 tests |
+| **Total** | **34%** | **125 tests** |
+
+### Running Tests
+
+```bash
+# Full test suite
+pytest
+
+# With coverage report
+pytest --cov=. --cov-report=term-missing
+
+# Specific test file
+pytest tests/unit/test_models.py
+
+# Specific test function
+pytest tests/unit/test_models.py::TestTask::test_task_creation
+```
