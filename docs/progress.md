@@ -5,11 +5,30 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
 **Last Updated:** 2026-01-03 (Session 16)  
-**Version:** 1.16.1
+**Version:** 1.16.3
 
 ---
 
 ## Recent Releases
+
+### v1.16.3 - Version Bump Release (2026-01-03)
+
+**Status: ✅ Complete**
+
+- Version bump to validate 3-phase Memory Bank workflow
+- Confirms release script correctly enforces reading all Memory Bank files before release
+
+### v1.16.2 - Release Script 3-Phase Workflow (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **3-Phase Memory Bank Workflow**:
+  - PHASE 1: Displays COMPLETE content of all 7 Memory Bank files
+  - PHASE 2: Pauses for manual updates with specific instructions per file
+  - PHASE 3: Verifies all updates were made (version, CHANGELOG, etc.)
+  - Blocks release if any verification fails
+
+- **Key Improvement**: Forces AI to read entire file content before making updates, preventing incomplete or missed updates
 
 ### v1.16.1 - Release Script Enhancement (2026-01-03)
 

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.16.3] - 2026-01-03
+
+### 🔧 Version Bump Release
+
+#### Changed
+- Version bump to validate 3-phase Memory Bank workflow
+- Confirms release script correctly enforces reading all Memory Bank files before release
+
+---
+
+## [1.16.2] - 2026-01-03
+
+### 📖 Release Script 3-Phase Workflow
+
+#### Added
+- **PHASE 1: Complete File Display** - Script now displays the ENTIRE content of all 7 Memory Bank files
+- **PHASE 2: Manual Update Pause** - Script pauses with specific instructions for what needs to be updated in each file
+- **PHASE 3: Automated Verification** - Script verifies all required updates were made before proceeding
+
+#### Changed
+- Replaced confirmation-based workflow with content-display workflow
+- AI must now actually read each file's content before making updates
+- Release is blocked if any file is missing the correct version number
+- Updated docs/technicalConcept.md with correct feature roadmap status (MVP through Phase 3 complete)
+
+#### Fixed
+- Previous confirmation-based approach could be bypassed by typing 'y' without reading
+
+---
+
 ## [1.16.1] - 2026-01-03
 
 ### 🔒 Extra Strong Release Verification
