@@ -1,6 +1,6 @@
 # Technical Context
 
-> Development environment, dependencies, and project structure for Deloitte TaxOps Calendar
+> Development environment, dependencies, and project structure for Deloitte ProjectOps
 
 ## Tech Stack
 
@@ -53,7 +53,7 @@
 ## Project Structure
 
 ```
-deloitte-taxops-calendar/
+deloitte-projectops-calendar/
 ├── app.py                  # Application factory & routes (~3100 lines)
 ├── config.py               # Configuration classes
 ├── models.py               # SQLAlchemy models (~850 lines)
@@ -72,7 +72,7 @@ deloitte-taxops-calendar/
 │   ├── alembic.ini
 │   ├── env.py
 │   └── versions/
-│       ├── ff00c7cfda61_add_taxops_calendar_models.py
+│       ├── ff00c7cfda61_add_projectops_calendar_models.py
 │       ├── ebe34cad8512_add_multi_stage_approval_workflow_fields.py
 │       ├── 76fd77636f22_add_taskpreset_model_for_predefined_.py
 │       ├── f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py
@@ -223,7 +223,8 @@ apscheduler = "*"            # Simple scheduler
 
 ```bash
 # Clone repository
-cd deloitte-taxops-calendar
+git clone https://github.com/mkschulze/deloitte-projectops.git
+cd deloitte-projectops
 
 # Install dependencies
 pipenv install

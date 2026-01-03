@@ -1,8 +1,8 @@
-# 📅 Deloitte TaxOps Calendar
+# � Deloitte ProjectOps
 
-> **Tax Compliance Calendar & Deadline Tracking** — A centralized platform for managing tax compliance deadlines across entities and tax types.
+> **Project & Task Management Platform** — A centralized platform for managing projects, tasks, and deadlines across teams and organizations.
 
-![Version](https://img.shields.io/badge/Version-1.11.0-blue)
+![Version](https://img.shields.io/badge/Version-1.13.0-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?logo=bootstrap)
@@ -12,13 +12,13 @@
 
 ## 🎯 Purpose
 
-The **Deloitte TaxOps Calendar** is a web application designed to centralize tax compliance deadline management for enterprises. It provides a single platform to:
+The **Deloitte ProjectOps** is a web application designed to centralize project and task management for enterprises. It provides a single platform to:
 
-- **Plan** annual tax compliance calendars with all relevant deadlines
+- **Plan** projects with flexible methodologies (Scrum, Kanban, Waterfall, Custom)
 - **Assign** tasks to responsible owners and multiple reviewers
 - **Track** progress against due dates with visual status indicators
 - **Review** submitted work through a structured multi-reviewer approval process
-- **Evidence** compliance with document uploads and audit trails
+- **Document** compliance with file uploads and audit trails
 
 ---
 
@@ -137,8 +137,8 @@ Pre-defined task templates for common tax compliance tasks:
 
 ```bash
 # Clone the repository
-git clone https://github.com/deloitte/deloitte-taxops-calendar.git
-cd deloitte-taxops-calendar
+git clone https://github.com/mkschulze/deloitte-projectops.git
+cd deloitte-projectops
 
 # Install dependencies
 pipenv install
@@ -184,8 +184,8 @@ Open http://127.0.0.1:5000 in your browser.
 ## 📁 Project Structure
 
 ```
-deloitte-taxops-calendar/
-├── app.py                  # Main application (~3100 lines)
+deloitte-projectops/
+├── app.py                  # Main application (~3900 lines)
 ├── models.py               # SQLAlchemy models (~850 lines)
 ├── services.py             # Business logic services (~650 lines)
 ├── config.py               # Configuration classes
@@ -394,4 +394,4 @@ This project is proprietary software developed for Deloitte. All rights reserved
 
 ## 📞 Support
 
-For questions or support, contact the Deloitte TaxOps team.
+For questions or support, contact the Deloitte ProjectOps team.
