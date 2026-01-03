@@ -3,24 +3,20 @@
 Release Script for Deloitte ProjectOps
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  🤖 AI REMINDER: MEMORY BANK SYNCHRONIZATION IS MANDATORY FOR EVERY RELEASE  ║
+║  🤖 AI AGENT: YOU MUST READ AND VERIFY ALL MEMORY BANK FILES BEFORE RELEASE  ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  BEFORE git push, you MUST review and update ALL Memory Bank docs:           ║
+║  MANDATORY CHECKLIST - You must READ each file and UPDATE if needed:        ║
 ║                                                                              ║
-║  1. docs/activeContext.md  - Current session, recent work, next steps        ║
-║  2. docs/progress.md       - Release history, version changelog              ║
-║  3. docs/projectbrief.md   - Version number in Project Overview              ║
-║  4. docs/techContext.md    - Tech stack versions, dependencies, structure    ║
-║  5. docs/systemPatterns.md - Architecture patterns, new patterns added       ║
-║  6. docs/productContext.md - Product scope, features (if changed)            ║
-║  7. docs/technicalConcept.md - Technical design (if changed)                 ║
+║  [ ] docs/activeContext.md  - Update: session, last action, version         ║
+║  [ ] docs/progress.md       - Add: new release section, update version       ║
+║  [ ] docs/projectbrief.md   - Update: version number                         ║
+║  [ ] docs/techContext.md    - Update: test counts, dependencies, structure   ║
+║  [ ] docs/systemPatterns.md - Update: coverage stats, new patterns           ║
+║  [ ] docs/productContext.md - Update: if product scope changed               ║
+║  [ ] docs/technicalConcept.md - Update: if architecture changed              ║
 ║                                                                              ║
-║  WORKFLOW:                                                                   ║
-║  1. Run: python scripts/release.py --version X.Y.Z --no-push                 ║
-║  2. Review ALL Memory Bank docs and update with release changes              ║
-║  3. git add docs/ && git commit --amend --no-edit                            ║
-║  4. git push origin main --tags                                              ║
+║  THE SCRIPT WILL ASK YOU TO CONFIRM YOU HAVE DONE THIS!                      ║
 ║                                                                              ║
 ║  ⚠️  Memory Bank MUST be in sync with the release - same commit, same push!  ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -79,6 +75,17 @@ VERSION_FILES = {
     }
 }
 
+# Memory Bank files that MUST be reviewed before each release
+MEMORY_BANK_FILES = [
+    ('docs/activeContext.md', 'Session info, last action, version, current state'),
+    ('docs/progress.md', 'Release history, version changelog, milestones'),
+    ('docs/projectbrief.md', 'Version number in Project Overview section'),
+    ('docs/techContext.md', 'Test counts, dependencies, project structure'),
+    ('docs/systemPatterns.md', 'Coverage stats, architecture patterns'),
+    ('docs/productContext.md', 'Product scope, features (if changed)'),
+    ('docs/technicalConcept.md', 'Technical design, architecture (if changed)'),
+]
+
 # Colors for terminal output
 class Colors:
     HEADER = '\033[95m'
@@ -116,6 +123,39 @@ def print_warning(text: str):
 def print_error(text: str):
     """Print error message."""
     print(f"{Colors.FAIL}✗ {text}{Colors.ENDC}")
+
+
+def verify_memory_bank_checked() -> bool:
+    """
+    Require explicit confirmation that all Memory Bank files were read and updated.
+    This is a mandatory step before any release can proceed.
+    """
+    print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}  🤖 MEMORY BANK VERIFICATION REQUIRED{Colors.ENDC}")
+    print(f"{Colors.HEADER}{Colors.BOLD}{'='*70}{Colors.ENDC}\n")
+    
+    print(f"{Colors.WARNING}Before proceeding, you MUST have READ and UPDATED these files:{Colors.ENDC}\n")
+    
+    for filepath, description in MEMORY_BANK_FILES:
+        full_path = PROJECT_ROOT / filepath
+        exists = "✓" if full_path.exists() else "✗"
+        color = Colors.GREEN if full_path.exists() else Colors.FAIL
+        print(f"  {color}{exists}{Colors.ENDC} {Colors.BOLD}{filepath}{Colors.ENDC}")
+        print(f"      └─ {Colors.CYAN}{description}{Colors.ENDC}")
+    
+    print(f"\n{Colors.WARNING}{'─'*70}{Colors.ENDC}")
+    print(f"{Colors.BOLD}Have you READ each file above and UPDATED them for this release?{Colors.ENDC}")
+    print(f"{Colors.WARNING}{'─'*70}{Colors.ENDC}\n")
+    
+    response = input(f"Type {Colors.GREEN}'yes'{Colors.ENDC} to confirm you have verified all Memory Bank files: ").strip().lower()
+    
+    if response != 'yes':
+        print_error("Memory Bank verification failed. You must type 'yes' to confirm.")
+        print(f"\n{Colors.CYAN}Please read and update all Memory Bank files, then run the release again.{Colors.ENDC}\n")
+        return False
+    
+    print_success("Memory Bank verification confirmed")
+    return True
 
 
 def run_command(cmd: str, check: bool = True, capture: bool = True) -> subprocess.CompletedProcess:
@@ -548,8 +588,17 @@ def main():
             print("Release cancelled")
             sys.exit(0)
     
-    # Step 3: Update version files
-    print_step(3, "Updating version in files...")
+    # Step 3: Memory Bank Verification (MANDATORY)
+    print_step(3, "Memory Bank Verification...")
+    
+    if not args.dry_run:
+        if not verify_memory_bank_checked():
+            sys.exit(1)
+    else:
+        print_warning("Skipping Memory Bank verification in dry-run mode")
+    
+    # Step 4: Update version files
+    print_step(4, "Updating version in files...")
     
     for filepath, config in VERSION_FILES.items():
         update_version_in_file(
@@ -560,29 +609,29 @@ def main():
             args.dry_run
         )
     
-    # Step 4: Update CHANGELOG
+    # Step 5: Update CHANGELOG
     if not args.skip_changelog:
-        print_step(4, "Updating CHANGELOG.md...")
+        print_step(5, "Updating CHANGELOG.md...")
         update_changelog(new_version, title, args.dry_run)
     
-    # Step 5: Update Memory Bank docs (full update with AI prompt generation)
-    print_step(5, "Updating Memory Bank docs...")
+    # Step 6: Update Memory Bank docs (full update with AI prompt generation)
+    print_step(6, "Updating Memory Bank docs...")
     update_memory_bank(new_version, title, current_version, args.dry_run)
     
-    # Step 6: Create commit
-    print_step(6, "Creating release commit...")
+    # Step 7: Create commit
+    print_step(7, "Creating release commit...")
     create_commit(new_version, title, args.dry_run)
     
-    # Step 7: Create tag
-    print_step(7, "Creating git tag...")
+    # Step 8: Create tag
+    print_step(8, "Creating git tag...")
     create_tag(new_version, title, args.dry_run)
     
-    # Step 8: Push to remote
+    # Step 9: Push to remote
     if not args.no_push:
-        print_step(8, "Pushing to remote...")
+        print_step(9, "Pushing to remote...")
         push_to_remote(new_version, args.dry_run)
     else:
-        print_step(8, "Skipping push (--no-push)")
+        print_step(9, "Skipping push (--no-push)")
     
     # Done!
     print_header("Release Complete! 🚀")
@@ -592,13 +641,12 @@ def main():
   Title:    {title}
   Tag:      v{new_version}
   
+{Colors.CYAN}Memory Bank files verified and updated.{Colors.ENDC}
+
 {Colors.CYAN}Next steps:{Colors.ENDC}
-  1. Update CHANGELOG.md with actual changes
-  2. Update Memory Bank docs using the generated prompt:
-     {Colors.CYAN}scripts/memory_bank_update_prompt.txt{Colors.ENDC}
-  3. Create GitHub Release at:
+  1. Create GitHub Release at:
      https://github.com/mkschulze/deloitte-projectops/releases/new?tag=v{new_version}
-  4. Update GitHub 'About' description if needed
+  2. Update GitHub 'About' description if needed
 """)
 
 
