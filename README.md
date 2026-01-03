@@ -1,11 +1,12 @@
-# � Deloitte ProjectOps
+# 🚀 Deloitte ProjectOps
 
-> **Project & Task Management Platform** — A centralized platform for managing projects, tasks, and deadlines across teams and organizations.
+> **Enterprise Project & Task Management Platform** — A centralized platform for managing projects, tasks, and deadlines across teams and organizations with multi-tenant support.
 
-![Version](https://img.shields.io/badge/Version-1.13.0-blue)
+![Version](https://img.shields.io/badge/Version-1.12.0-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?logo=bootstrap)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.x-orange)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
 
 ---
@@ -40,18 +41,31 @@ The **Deloitte ProjectOps** is a web application designed to centralize project 
 | 🔐 **Role-Based Access** | Admin, Manager, Reviewer, Preparer, Read-only roles |
 | 🌍 **Internationalization** | German (default) and English language support |
 
-### Advanced Features (Phase A-H)
+### Project Management Module
 
 | Feature | Description |
 |---------|-------------|
+| 📁 **Multi-Methodology** | Scrum, Kanban, Waterfall, or Custom workflows |
+| 🏃 **Iterations/Sprints** | Time-boxed iterations with burndown charts |
+| 📋 **Kanban Boards** | Drag-and-drop issue management with WIP limits |
+| 🎯 **Issue Tracking** | Full lifecycle management with custom workflows |
+| 🔀 **Workflow Transitions** | Configurable status transitions per methodology |
+| 📊 **Reports & Analytics** | Velocity, burndown, cumulative flow diagrams |
+| 🏷️ **Labels & Priorities** | Customizable categorization |
+| ⏱️ **Work Logging** | Time tracking with estimates vs actuals |
+
+### Multi-Tenancy & Enterprise Features
+
+| Feature | Description |
+|---------|-------------|
+| 🏢 **Multi-Tenant Architecture** | Complete client separation with tenant-specific data |
+| 👔 **Per-Tenant Roles** | Admin, Manager, Member, Viewer roles per tenant |
+| 🔑 **API Keys** | Per-tenant API access for integrations |
+| 📤 **Compliance Export** | Full JSON/Excel export for audits (10+ sheets) |
 | 🔔 **Real-time Notifications** | WebSocket notifications via Flask-SocketIO |
 | ⚡ **Bulk Operations** | Select multiple tasks for status change, reassignment, deletion |
-| 📤 **Excel/PDF Export** | Task list Excel, individual task PDF, status summary reports |
 | 📆 **Calendar Sync (iCal)** | Subscribe to personal calendar feed in Outlook/Google/Apple |
 | 📧 **Email Notifications** | Task assignment, status change, comment, due reminder emails |
-| 📈 **Dashboard Charts** | Interactive Chart.js visualizations |
-| 🏛️ **Entity Scoping** | Fine-grained entity access permissions (view/edit/manage) |
-| 🔄 **Recurring Tasks** | RRULE-based task generation from presets |
 
 ### Multi-Stage Approval Workflow
 
@@ -225,12 +239,6 @@ deloitte-projectops/
     ├── progress.md
     └── activeContext.md
 ```
-    ├── techContext.md
-    ├── systemPatterns.md
-    ├── productContext.md
-    ├── progress.md
-    └── activeContext.md
-```
 
 ---
 
@@ -240,15 +248,17 @@ deloitte-projectops/
 
 | Model | Purpose |
 |-------|---------|
+| `Tenant` | Multi-tenant client separation |
+| `TenantMembership` | Per-tenant roles and access |
 | `User` | User accounts with roles and permissions |
+| `Project` | Projects with methodology configuration |
+| `Issue` | Issue/task tracking with workflows |
+| `Sprint` | Iterations/phases for time-boxed work |
 | `Entity` | Legal entities/subsidiaries (Gesellschaften) |
-| `TaxType` | Tax categories (KSt, USt, GewSt, etc.) |
-| `TaskTemplate` | Reusable task definitions |
-| `Task` | Individual calendar items with status |
+| `Task` | Calendar items with status |
 | `TaskReviewer` | Multi-reviewer assignments with approval tracking |
-| `TaskEvidence` | File uploads and links |
+| `Team` | Team groupings with members |
 | `Comment` | Discussion threads |
-| `TaskPreset` | Pre-defined task templates |
 | `AuditLog` | Activity logging |
 
 ### Task Status Flow
@@ -335,34 +345,31 @@ flask generate-recurring-tasks  # Generate tasks from presets (--year, --dry-run
 
 ## 📋 Roadmap
 
-### ✅ Completed (v1.0.0)
+### ✅ Completed (v1.12.0)
 
+- [x] Multi-tenant architecture with client separation
+- [x] Project Management Module (Scrum, Kanban, Waterfall, Custom)
+- [x] Methodology-agnostic terminology
+- [x] Configurable workflow transitions
+- [x] Kanban boards with drag-and-drop
+- [x] Sprint/Iteration management with reports
 - [x] User authentication with Flask-Login
-- [x] Entity and Tax Type management
 - [x] Task CRUD with multi-stage workflow
 - [x] Multi-reviewer approval system
 - [x] Team management and assignment
 - [x] Calendar views (month/year)
 - [x] Evidence upload and preview
-- [x] Comments and audit logging
-- [x] Task presets from JSON
-- [x] Internationalization (DE/EN)
 - [x] Real-time WebSocket notifications
-- [x] Bulk operations (status, reassign, delete)
-- [x] Excel/PDF export
-- [x] iCal calendar sync
-- [x] Email notifications with preferences
-- [x] Dashboard charts (Chart.js)
-- [x] Entity access permissions
-- [x] Recurring task generation (RRULE)
+- [x] Internationalization (DE/EN)
+- [x] Compliance export (JSON/Excel)
 
 ### 🔜 Planned (Future Releases)
 
 - [ ] OIDC/Entra ID SSO integration
 - [ ] MS Teams notifications
-- [ ] Archival & soft-delete
-- [ ] Advanced compliance reports
+- [ ] Advanced analytics dashboard
 - [ ] Template builder UI
+- [ ] Mobile-responsive improvements
 
 ---
 
