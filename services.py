@@ -798,7 +798,7 @@ class NotificationService:
     @staticmethod
     def notify_comment_added(task, comment, recipient_id: int, actor_id: int) -> 'Notification':
         """Create notification when comment is added to task."""
-        preview = (comment.content[:50] + '...') if len(comment.content) > 50 else comment.content
+        preview = (comment.text[:50] + '...') if len(comment.text) > 50 else comment.text
         return NotificationService.create(
             user_id=recipient_id,
             notification_type='task_comment',
