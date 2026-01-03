@@ -7,7 +7,7 @@ class Config:
     """Base configuration"""
     # App Info - CUSTOMIZE THESE
     APP_NAME = 'Deloitte ProjectOps'
-    APP_VERSION = '1.18.0'
+    APP_VERSION = '1.19.0'
     
     # Secret key for session management
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'

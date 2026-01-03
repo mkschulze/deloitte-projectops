@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.19.0] - 2026-01-03
+
+### 🏗️ Phase 4 Blueprint Refactoring
+
+#### Added
+- **`routes/` package** - New Flask Blueprints architecture for modular route organization:
+  - **`routes/__init__.py`** - Blueprint exports (auth_bp, main_bp, tasks_bp, admin_bp, api_bp)
+  - **`routes/auth.py`** - Authentication routes: login, logout, tenant selection (5 routes)
+  - **`routes/main.py`** - Main app routes: dashboard, calendar, notifications, profile (15 routes)
+  - **`routes/tasks.py`** - Task management routes: CRUD, status, evidence, comments (17 routes)
+  - **`routes/admin.py`** - Admin routes: users, entities, teams, categories, modules (~20 routes)
+  - **`routes/api.py`** - API routes: bulk operations, dashboard charts, presets (~15 routes)
+
+- **`tests/integration/test_blueprints.py`** - 28 integration tests for all blueprints:
+  - TestAuthBlueprint (4 tests) - login page, auth flow, logout redirect
+  - TestMainBlueprint (11 tests) - dashboard, calendar, notifications, profile, language
+  - TestTasksBlueprint (5 tests) - task list, detail, create, archive views
+  - TestAdminBlueprint (6 tests) - admin dashboard, users, entities, teams, categories, modules
+  - TestApiBlueprint (5 tests) - bulk operations, dashboard charts, presets API
+  - TestBlueprintUrlGeneration (5 tests) - URL generation for all blueprints
+
+#### Changed
+- **`extensions.py`** - Updated `login_manager.login_view` to use `'auth.login'` endpoint
+- **`app.py`** - Updated `create_app()` to register all 5 route blueprints
+
+#### Architecture
+- **7 registered blueprints**: admin, admin_tenants, api, auth, main, projects, tasks
+- Blueprints enable proper route isolation and testability
+- Legacy routes in app.py superseded by blueprint routes (gradual removal planned)
+
+#### Test Results
+- **Total tests**: 626 passed, 12 skipped, 9 xfailed
+- **Routes coverage**: 33% overall (auth 57%, main 64%, tasks 21%, admin 25%, api 26%)
+
+---
+
 ## [1.18.0] - 2026-01-03
 
 ### 🧪 Phase 3 Service Layer Tests

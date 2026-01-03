@@ -595,18 +595,26 @@ def client(app):
 | **Integration Tests** | Component interactions | Database operations, workflows |
 | **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
 
-### Current Coverage (v1.18.0)
+### Current Coverage (v1.19.0)
 
 | Module | Coverage | Tests |
 |--------|----------|-------|
-| models.py | ~71% | 145 tests |
-| services.py | ~37% | 134 tests |
+| models.py | 71% | 145 tests |
+| services.py | 37% | 134 tests |
 | translations.py | 100% | 57 tests |
-| middleware/tenant.py | ~98% | 53 tests |
-| modules/__init__.py | ~88% | 16 tests |
+| middleware/tenant.py | 98% | 53 tests |
+| modules/__init__.py | 88% | 16 tests |
 | modules/core/__init__.py | 100% | 11 tests |
 | config.py | 100% | 12 tests |
-| **Total** | **~35%** | **598 tests** |
+| routes/__init__.py | 100% | - |
+| routes/auth.py | 57% | - |
+| routes/main.py | 64% | - |
+| routes/tasks.py | 21% | - |
+| routes/admin.py | 25% | - |
+| routes/api.py | 26% | - |
+| app.py | 17% | - |
+| modules/projects/routes.py | 19% | - |
+| **Total** | **~38%** | **626 tests** |
 
 > See [testCoveragePlan.md](testCoveragePlan.md) for the roadmap to 100% coverage.
 

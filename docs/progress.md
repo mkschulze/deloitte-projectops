@@ -4,12 +4,37 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-03 (Session 18)  
-**Version:** 1.18.0
+**Last Updated:** 2026-01-03 (Session 19)  
+**Version:** 1.19.0
 
 ---
 
 ## Recent Releases
+
+### v1.19.0 - Phase 4 Blueprint Refactoring (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **New Blueprint Architecture** (`routes/` package):
+  - `routes/__init__.py` - Blueprint exports (auth_bp, main_bp, tasks_bp, admin_bp, api_bp)
+  - `routes/auth.py` - Login, logout, tenant selection (5 routes)
+  - `routes/main.py` - Dashboard, calendar, notifications, profile (15 routes)
+  - `routes/tasks.py` - Task CRUD, status, evidence, comments (17 routes)
+  - `routes/admin.py` - User, entity, team, category, module management (~20 routes)
+  - `routes/api.py` - Bulk operations, dashboard charts, presets (~15 routes)
+
+- **Integration Tests** (`test_blueprints.py`):
+  - 28 tests covering all 5 route blueprints
+  - TestAuthBlueprint, TestMainBlueprint, TestTasksBlueprint, TestAdminBlueprint, TestApiBlueprint
+
+- **Key Changes**:
+  - Updated `extensions.py`: login_view = 'auth.login'
+  - Updated `app.py`: registers all 5 route blueprints
+  - 7 registered blueprints: admin, admin_tenants, api, auth, main, projects, tasks
+
+- **Test Results**:
+  - Total tests: 626 passed, 12 skipped, 9 xfailed
+  - Routes coverage: 33% overall
 
 ### v1.18.0 - Phase 3 Service Layer Tests (2026-01-03)
 
