@@ -3,16 +3,26 @@
 Release Script for Deloitte ProjectOps
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  🤖 AI REMINDER: BEFORE RUNNING THIS SCRIPT WITH --no-push, YOU MUST:        ║
+║  🤖 AI REMINDER: MEMORY BANK SYNCHRONIZATION IS MANDATORY FOR EVERY RELEASE  ║
+╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  1. Run with --no-push first: python scripts/release.py --version X.Y.Z --no-push
-║  2. Read the generated prompt: scripts/memory_bank_update_prompt.txt         ║
-║  3. Update docs/activeContext.md with new session info and accomplishments   ║
-║  4. Update docs/progress.md with new release section                         ║
-║  5. git add docs/ && git commit --amend --no-edit                            ║
-║  6. git push origin main --tags                                              ║
+║  BEFORE git push, you MUST review and update ALL Memory Bank docs:           ║
 ║                                                                              ║
-║  Memory Bank MUST be in sync with the release - same commit, same push!      ║
+║  1. docs/activeContext.md  - Current session, recent work, next steps        ║
+║  2. docs/progress.md       - Release history, version changelog              ║
+║  3. docs/projectbrief.md   - Version number in Project Overview              ║
+║  4. docs/techContext.md    - Tech stack versions, dependencies, structure    ║
+║  5. docs/systemPatterns.md - Architecture patterns, new patterns added       ║
+║  6. docs/productContext.md - Product scope, features (if changed)            ║
+║  7. docs/technicalConcept.md - Technical design (if changed)                 ║
+║                                                                              ║
+║  WORKFLOW:                                                                   ║
+║  1. Run: python scripts/release.py --version X.Y.Z --no-push                 ║
+║  2. Review ALL Memory Bank docs and update with release changes              ║
+║  3. git add docs/ && git commit --amend --no-edit                            ║
+║  4. git push origin main --tags                                              ║
+║                                                                              ║
+║  ⚠️  Memory Bank MUST be in sync with the release - same commit, same push!  ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 This script automates the release process:
