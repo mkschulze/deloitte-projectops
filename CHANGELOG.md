@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.14.1] - 2026-01-03
+
+### 🔧 Release Script Enhancement
+
+#### Added
+- **Mandatory Memory Bank Verification** - Release script now requires explicit 'yes' confirmation that all Memory Bank files were read and updated before proceeding
+
+#### Changed
+- Release workflow now has 9 steps (added verification step)
+- Updated header comment with clearer AI agent instructions
+
+---
+
 ## [1.14.0] - 2026-01-03
 
 ### 🧪 Test Coverage Expansion

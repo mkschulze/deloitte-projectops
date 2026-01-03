@@ -5,11 +5,21 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
 **Last Updated:** 2026-01-03 (Session 16)  
-**Version:** 1.14.0
+**Version:** 1.14.1
 
 ---
 
 ## Recent Releases
+
+### v1.14.1 - Release Script Enhancement (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Mandatory Memory Bank Verification**:
+  - Added verification step requiring explicit confirmation before releases
+  - AI must type 'yes' to confirm all Memory Bank files were read
+  - Lists all 7 Memory Bank files with descriptions
+  - Blocks release if verification not confirmed
 
 ### v1.14.0 - Test Coverage Expansion (2026-01-03)
 

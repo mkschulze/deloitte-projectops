@@ -8,7 +8,7 @@
 
 **Name:** Deloitte ProjectOps  
 **Type:** Enterprise Project & Task Management Platform  
-**Version:** 1.14.0  
+**Version:** 1.14.1  
 **Repository:** https://github.com/mkschulze/deloitte-projectops
 
 ---

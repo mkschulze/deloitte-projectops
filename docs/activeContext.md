@@ -9,9 +9,9 @@
 ## Session Information
 
 **Date:** 2026-01-03 (Session 16)  
-**Last Action:** Test Coverage Expansion v1.14.0  
+**Last Action:** Release Script Enhancement v1.14.1  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
-**Version:** 1.14.0
+**Version:** 1.14.1
 
 ---
 
