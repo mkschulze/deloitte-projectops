@@ -139,3 +139,39 @@ Routes are being migrated from `app.py` to Flask Blueprints in the `routes/` pac
 - Routes in app.py are superseded by blueprint routes (blueprints take precedence)
 - The duplicate definitions in app.py are harmless but could be cleaned up
 - Full removal requires careful testing to ensure all routes work correctly
+
+---
+
+## Code Coverage (v1.20.0)
+
+**Overall: 35%** (8,818 statements, 5,691 missed)  
+**Tests: 641 passed**, 12 skipped, 9 xfailed
+
+### By Module
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| config.py | 100% | ✅ |
+| extensions.py | 100% | ✅ |
+| translations.py | 100% | ✅ |
+| routes/__init__.py | 100% | ✅ |
+| modules/core/__init__.py | 100% | ✅ |
+| middleware/tenant.py | 98% | ✅ |
+| modules/__init__.py | 88% | |
+| models.py | 74% | |
+| modules/projects/models.py | 69% | |
+| routes/main.py | 68% | |
+| routes/auth.py | 57% | |
+| routes/api.py | 43% | |
+| services.py | 37% | |
+| routes/tasks.py | 28% | |
+| routes/admin.py | 24% | |
+| routes/presets.py | 20% | |
+| modules/projects/routes.py | 19% | |
+| app.py | 17% | Legacy |
+| admin/tenants.py | 17% | |
+
+### Coverage Goals
+- **Next target**: 50% overall coverage
+- **Priority areas**: routes/tasks.py, routes/admin.py, services.py
+- **High coverage maintained**: Core modules (config, extensions, translations)
