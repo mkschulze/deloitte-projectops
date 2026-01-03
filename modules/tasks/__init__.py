@@ -1,32 +1,32 @@
 """
-TaxOps Calendar Module
-Tax compliance calendar, task management, and deadline tracking.
+Tasks Module
+Task management, deadline tracking, and compliance calendar.
 """
 from flask import Blueprint, url_for
 from modules import BaseModule, ModuleRegistry
 
 
 @ModuleRegistry.register
-class TaxOpsModule(BaseModule):
-    """TaxOps Calendar - Tax Compliance Management"""
+class TasksModule(BaseModule):
+    """ProjectOps Tasks - Task & Deadline Management"""
     
-    code = 'taxops'
-    name_de = 'Steuerkalender'
-    name_en = 'Tax Calendar'
-    description_de = 'Steuerliche Fristen und Aufgabenverwaltung'
-    description_en = 'Tax deadlines and task management'
-    icon = 'bi-calendar-check'
+    code = 'tasks'
+    name_de = 'Aufgaben'
+    name_en = 'Tasks'
+    description_de = 'Aufgaben- und Fristenverwaltung'
+    description_en = 'Task and deadline management'
+    icon = 'bi-list-task'
     nav_order = 10
     is_core = True  # Main module, always active
     
     @classmethod
     def get_blueprint(cls):
-        """TaxOps routes are currently in app.py, will be refactored later"""
+        """Task routes are currently in app.py, will be refactored later"""
         return None
     
     @classmethod
     def get_nav_items(cls, user, lang='de'):
-        """Navigation items for TaxOps module"""
+        """Navigation items for Tasks module"""
         t = lambda de, en: de if lang == 'de' else en
         
         items = [

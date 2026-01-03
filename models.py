@@ -1,12 +1,233 @@
 """
-Deloitte TaxOps Calendar - Database Models
+Deloitte ProjectOps - Database Models
 """
 from datetime import datetime, date
 from enum import Enum
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
+import hashlib
 
 from extensions import db
+
+
+# ============================================================================
+# MULTI-TENANCY MODELS
+# ============================================================================
+
+class TenantRole(Enum):
+    """Roles within a tenant"""
+    ADMIN = 'admin'      # Full access to tenant settings and all data
+    MANAGER = 'manager'  # Can manage projects, tasks, users within tenant
+    MEMBER = 'member'    # Standard user, can work on assigned items
+    VIEWER = 'viewer'    # Read-only access
+    
+    @classmethod
+    def choices(cls):
+        return [(role.value, role.name.title()) for role in cls]
+
+
+class Tenant(db.Model):
+    """Mandant/Client for Multi-Tenancy"""
+    __tablename__ = 'tenant'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Branding
+    logo_data = db.Column(db.Text)  # Base64-encoded image (max 500KB)
+    logo_mime_type = db.Column(db.String(50))  # e.g., 'image/png'
+    primary_color = db.Column(db.String(7), default='#0076A8')
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    is_archived = db.Column(db.Boolean, default=False, index=True)
+    archived_at = db.Column(db.DateTime)
+    archived_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Settings (JSON for flexible config)
+    settings = db.Column(db.JSON, default=dict)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    memberships = db.relationship('TenantMembership', back_populates='tenant',
+                                   cascade='all, delete-orphan')
+    api_keys = db.relationship('TenantApiKey', back_populates='tenant',
+                                cascade='all, delete-orphan')
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+    archived_by = db.relationship('User', foreign_keys=[archived_by_id])
+    
+    @property
+    def members(self):
+        """All users of this tenant"""
+        return [m.user for m in self.memberships]
+    
+    @property
+    def admin_users(self):
+        """All admins of this tenant"""
+        return [m.user for m in self.memberships if m.role == 'admin']
+    
+    @property
+    def member_count(self):
+        """Number of members"""
+        return len(self.memberships)
+    
+    def get_member_role(self, user):
+        """Get role of a user in this tenant"""
+        membership = TenantMembership.query.filter_by(
+            tenant_id=self.id, user_id=user.id
+        ).first()
+        return membership.role if membership else None
+    
+    def has_member(self, user):
+        """Check if user is member"""
+        return TenantMembership.query.filter_by(
+            tenant_id=self.id, user_id=user.id
+        ).first() is not None
+    
+    def add_member(self, user, role='member', invited_by=None, is_default=False):
+        """Add a user to this tenant"""
+        existing = TenantMembership.query.filter_by(
+            tenant_id=self.id, user_id=user.id
+        ).first()
+        if existing:
+            return existing
+        
+        membership = TenantMembership(
+            tenant_id=self.id,
+            user_id=user.id,
+            role=role,
+            is_default=is_default,
+            invited_by_id=invited_by.id if invited_by else None
+        )
+        db.session.add(membership)
+        return membership
+    
+    def remove_member(self, user):
+        """Remove a user from this tenant"""
+        TenantMembership.query.filter_by(
+            tenant_id=self.id, user_id=user.id
+        ).delete()
+    
+    def archive(self, user):
+        """Archive this tenant (soft-delete)"""
+        self.is_archived = True
+        self.is_active = False
+        self.archived_at = datetime.utcnow()
+        self.archived_by_id = user.id if user else None
+    
+    def restore(self):
+        """Restore tenant from archive"""
+        self.is_archived = False
+        self.is_active = True
+        self.archived_at = None
+        self.archived_by_id = None
+    
+    def __repr__(self):
+        return f'<Tenant {self.name}>'
+
+
+class TenantMembership(db.Model):
+    """User-Tenant assignment with role"""
+    __tablename__ = 'tenant_membership'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id', ondelete='CASCADE'), 
+                          nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), 
+                        nullable=False, index=True)
+    role = db.Column(db.String(20), nullable=False, default='member')  # admin, manager, member, viewer
+    is_default = db.Column(db.Boolean, default=False)  # Default tenant on login
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    invited_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    tenant = db.relationship('Tenant', back_populates='memberships')
+    user = db.relationship('User', foreign_keys=[user_id], backref='tenant_memberships')
+    invited_by = db.relationship('User', foreign_keys=[invited_by_id])
+    
+    __table_args__ = (
+        db.UniqueConstraint('tenant_id', 'user_id', name='unique_tenant_user'),
+    )
+    
+    ROLES = ['admin', 'manager', 'member', 'viewer']
+    
+    def is_admin(self):
+        return self.role == 'admin'
+    
+    def is_manager_or_above(self):
+        return self.role in ('admin', 'manager')
+    
+    def can_edit(self):
+        return self.role in ('admin', 'manager', 'member')
+    
+    def __repr__(self):
+        return f'<TenantMembership {self.user_id}@{self.tenant_id} ({self.role})>'
+
+
+class TenantApiKey(db.Model):
+    """API Keys for external integrations per tenant"""
+    __tablename__ = 'tenant_api_key'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id', ondelete='CASCADE'), 
+                          nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)  # e.g., "DATEV Integration"
+    key_hash = db.Column(db.String(128), nullable=False)  # SHA-256 hash
+    key_prefix = db.Column(db.String(8), nullable=False)  # First 8 chars for display
+    scopes = db.Column(db.JSON, default=list)  # ['read:tasks', 'write:tasks']
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    expires_at = db.Column(db.DateTime)
+    last_used_at = db.Column(db.DateTime)
+    
+    # Audit
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    tenant = db.relationship('Tenant', back_populates='api_keys')
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+    
+    @classmethod
+    def generate_key(cls):
+        """Generate a new API key (returns plaintext key, only shown once)"""
+        key = secrets.token_urlsafe(32)
+        return key
+    
+    @classmethod
+    def hash_key(cls, key):
+        """Hash an API key for storage"""
+        return hashlib.sha256(key.encode()).hexdigest()
+    
+    def verify_key(self, key):
+        """Verify a plaintext key against stored hash"""
+        return self.key_hash == self.hash_key(key)
+    
+    def is_expired(self):
+        """Check if key is expired"""
+        if not self.expires_at:
+            return False
+        return datetime.utcnow() > self.expires_at
+    
+    def record_usage(self):
+        """Record API key usage"""
+        self.last_used_at = datetime.utcnow()
+    
+    def has_scope(self, scope):
+        """Check if key has specific scope"""
+        if not self.scopes:
+            return False
+        return scope in self.scopes or '*' in self.scopes
+    
+    def __repr__(self):
+        return f'<TenantApiKey {self.key_prefix}... for Tenant {self.tenant_id}>'
 
 
 # ============================================================================
@@ -181,6 +402,10 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     calendar_token = db.Column(db.String(64), unique=True, index=True)  # Token for iCal feed access
     
+    # Multi-Tenancy fields
+    is_superadmin = db.Column(db.Boolean, default=False, index=True)  # System-wide admin
+    current_tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)
+    
     # Email notification preferences (JSON field)
     email_notifications = db.Column(db.Boolean, default=True)  # Master switch
     email_on_assignment = db.Column(db.Boolean, default=True)
@@ -191,6 +416,7 @@ class User(UserMixin, db.Model):
     # Relationships
     owned_tasks = db.relationship('Task', foreign_keys='Task.owner_id', backref='owner', lazy='dynamic')
     reviewed_tasks = db.relationship('Task', foreign_keys='Task.reviewer_id', backref='reviewer', lazy='dynamic')
+    current_tenant = db.relationship('Tenant', foreign_keys=[current_tenant_id])
     
     def set_password(self, password):
         """Hash and set password"""
@@ -233,6 +459,68 @@ class User(UserMixin, db.Model):
         self.calendar_token = secrets.token_urlsafe(32)
         db.session.commit()
         return self.calendar_token
+    
+    # =========================================================================
+    # MULTI-TENANCY METHODS
+    # =========================================================================
+    
+    @property
+    def tenants(self):
+        """All active tenants this user belongs to"""
+        return [m.tenant for m in self.tenant_memberships if m.tenant.is_active]
+    
+    @property
+    def all_tenants(self):
+        """All tenants (including inactive) this user belongs to"""
+        return [m.tenant for m in self.tenant_memberships]
+    
+    @property
+    def default_tenant(self):
+        """Get default tenant for this user"""
+        default = TenantMembership.query.filter_by(
+            user_id=self.id, is_default=True
+        ).first()
+        if default and default.tenant.is_active:
+            return default.tenant
+        # Fallback: first active tenant
+        for m in self.tenant_memberships:
+            if m.tenant.is_active:
+                return m.tenant
+        return None
+    
+    def get_role_in_tenant(self, tenant_id=None):
+        """Get role in specific tenant"""
+        tid = tenant_id or self.current_tenant_id
+        if not tid:
+            return None
+        membership = TenantMembership.query.filter_by(
+            user_id=self.id, tenant_id=tid
+        ).first()
+        return membership.role if membership else None
+    
+    def is_tenant_admin(self, tenant_id=None):
+        """Check if user is admin in tenant"""
+        return self.get_role_in_tenant(tenant_id) == 'admin'
+    
+    def is_tenant_manager_or_above(self, tenant_id=None):
+        """Check if user is manager or admin in tenant"""
+        role = self.get_role_in_tenant(tenant_id)
+        return role in ('admin', 'manager')
+    
+    def can_access_tenant(self, tenant_id):
+        """Check if user can access tenant"""
+        if self.is_superadmin:
+            return True
+        return TenantMembership.query.filter_by(
+            user_id=self.id, tenant_id=tenant_id
+        ).first() is not None
+    
+    def set_current_tenant(self, tenant_id):
+        """Set current working tenant"""
+        if self.can_access_tenant(tenant_id):
+            self.current_tenant_id = tenant_id
+            return True
+        return False
     
     # =========================================================================
     # ENTITY ACCESS METHODS
@@ -340,7 +628,8 @@ class Team(db.Model):
     __tablename__ = 'team'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)  # Internal identifier
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
+    name = db.Column(db.String(100), nullable=False)  # Internal identifier (unique per tenant)
     name_de = db.Column(db.String(100))  # German display name
     name_en = db.Column(db.String(100))  # English display name
     description = db.Column(db.Text)
@@ -405,6 +694,7 @@ class AuditLog(db.Model):
     __tablename__ = 'audit_log'
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     action = db.Column(db.String(50), nullable=False)  # CREATE, UPDATE, DELETE, LOGIN, LOGOUT
@@ -433,6 +723,7 @@ class Entity(db.Model):
     __tablename__ = 'entity'
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     name = db.Column(db.String(200), nullable=False)  # Internal identifier
     name_de = db.Column(db.String(200))  # German display name
     name_en = db.Column(db.String(200))  # English display name
@@ -458,21 +749,24 @@ class Entity(db.Model):
         return f'<Entity {self.name}>'
 
 
-class TaxType(db.Model):
-    """Tax type catalog (Steuerart)"""
-    __tablename__ = 'tax_type'
+class TaskCategory(db.Model):
+    """Task category for organizing tasks (e.g., Tax types, Compliance, Reporting)"""
+    __tablename__ = 'task_category'
     
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(20), unique=True, nullable=False)  # KSt, USt, GewSt
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
+    code = db.Column(db.String(20), nullable=False)  # KSt, USt, COMPL, etc. (unique per tenant)
     name = db.Column(db.String(100), nullable=False)  # Internal/legacy name
-    name_de = db.Column(db.String(100))  # German display name (e.g. Körperschaftsteuer)
-    name_en = db.Column(db.String(100))  # English display name (e.g. Corporate Tax)
+    name_de = db.Column(db.String(100))  # German display name
+    name_en = db.Column(db.String(100))  # English display name
     description = db.Column(db.Text)  # Legacy description field
     description_de = db.Column(db.Text)  # German description
     description_en = db.Column(db.Text)  # English description
     is_active = db.Column(db.Boolean, default=True)
+    color = db.Column(db.String(7), default='#6c757d')  # Hex color for visual distinction
+    icon = db.Column(db.String(50), default='bi-folder')  # Bootstrap icon class
     
-    templates = db.relationship('TaskTemplate', backref='tax_type', lazy='dynamic')
+    templates = db.relationship('TaskTemplate', backref='task_category', lazy='dynamic')
     
     def get_name(self, lang='de'):
         """Get translated name based on language"""
@@ -491,7 +785,12 @@ class TaxType(db.Model):
         return self.description_de or self.description_en or self.description or ''
     
     def __repr__(self):
-        return f'<TaxType {self.code}>'
+        return f'<TaskCategory {self.code}>'
+
+
+# Backward compatibility aliases
+TaxType = TaskCategory
+Category = TaskCategory  # Alias for code that uses Category
 
 
 class TaskTemplate(db.Model):
@@ -499,7 +798,7 @@ class TaskTemplate(db.Model):
     __tablename__ = 'task_template'
     
     id = db.Column(db.Integer, primary_key=True)
-    tax_type_id = db.Column(db.Integer, db.ForeignKey('tax_type.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('task_category.id'), nullable=False)
     keyword = db.Column(db.String(100), nullable=False)  # Short identifier
     description = db.Column(db.Text)
     default_recurrence = db.Column(db.String(20), default='annual')  # none, monthly, quarterly, annual
@@ -629,6 +928,7 @@ class TaskPreset(db.Model):
     ]
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     category = db.Column(db.String(20), nullable=False, default='aufgabe')  # antrag, aufgabe
     tax_type = db.Column(db.String(100))  # Steuerart (free text, more flexible than FK)
     title = db.Column(db.String(300), nullable=False)  # Internal/legacy title
@@ -724,6 +1024,7 @@ class Task(db.Model):
     }
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     template_id = db.Column(db.Integer, db.ForeignKey('task_template.id'), nullable=True)
     entity_id = db.Column(db.Integer, db.ForeignKey('entity.id'), nullable=False, index=True)
     year = db.Column(db.Integer, nullable=False, index=True)
@@ -1165,6 +1466,7 @@ class Notification(db.Model):
     __tablename__ = 'notification'
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     
     # Notification content
@@ -1306,7 +1608,7 @@ class Module(db.Model):
     __tablename__ = 'module'
     
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(50), unique=True, nullable=False, index=True)  # 'taxops', 'projects'
+    code = db.Column(db.String(50), unique=True, nullable=False, index=True)  # 'tasks', 'projects'
     name_de = db.Column(db.String(100), nullable=False)
     name_en = db.Column(db.String(100), nullable=False)
     description_de = db.Column(db.Text)

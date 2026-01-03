@@ -1,6 +1,6 @@
 # Technical Concept Document
 
-> **Deloitte TaxOps Calendar** — Tax Compliance Calendar & Deadline Tracking
+> **Deloitte ProjectOps** — Tax Compliance Calendar & Deadline Tracking
 
 ## Architecture Overview
 

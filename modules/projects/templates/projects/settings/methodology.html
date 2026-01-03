@@ -256,6 +256,17 @@
         color: white;
     }
     
+    /* Save button pulse animation for unsaved changes */
+    .btn-save-pulse {
+        animation: pulse-green 2s infinite;
+    }
+    
+    @keyframes pulse-green {
+        0% { box-shadow: 0 0 0 0 rgba(134, 188, 37, 0.6); }
+        50% { box-shadow: 0 0 0 8px rgba(134, 188, 37, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(134, 188, 37, 0); }
+    }
+    
     /* Info Alert */
     .info-alert {
         background: linear-gradient(135deg, #e8f4fd 0%, #d4ecfd 100%);
@@ -346,12 +357,10 @@
         <div class="settings-card">
             <div class="settings-card-header">
                 <h5><i class="bi bi-translate me-2"></i>{{ 'Terminology' if lang == 'en' else 'Terminologie' }}</h5>
-                <form action="{{ url_for('projects.reset_terminology', project_id=project.id) }}" method="post" class="d-inline">
-                    <button type="submit" class="btn-reset" onclick="return confirm('{{ 'Reset terminology to defaults?' if lang == 'en' else 'Terminologie auf Standard zurücksetzen?' }}')">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i>
-                        {{ 'Reset' if lang == 'en' else 'Zurücksetzen' }}
-                    </button>
-                </form>
+                <button type="button" class="btn-reset" onclick="resetTerminology()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>
+                    {{ 'Reset to Defaults' if lang == 'en' else 'Auf Standard' }}
+                </button>
             </div>
             <div class="settings-card-body">
                 <div class="alert info-alert mb-4">
@@ -416,6 +425,7 @@
 // Methodology configuration from server
 const methodologyConfig = {{ methodology_config|tojson|safe }};
 const lang = '{{ lang }}';
+let hasChanges = false;
 
 function selectMethodology(key) {
     // Update card selection
@@ -436,6 +446,31 @@ function selectMethodology(key) {
             }
         });
     }
+    
+    markAsChanged();
+}
+
+function resetTerminology() {
+    const confirmMsg = lang === 'de' 
+        ? 'Terminologie auf Standard zurücksetzen? Die Felder werden geleert und verwenden dann die Standardwerte der gewählten Methodik.'
+        : 'Reset terminology to defaults? The fields will be cleared and use the default values of the selected methodology.';
+    
+    if (confirm(confirmMsg)) {
+        document.querySelectorAll('#terminologyTable input').forEach(input => {
+            input.value = '';
+        });
+        markAsChanged();
+    }
+}
+
+function markAsChanged() {
+    hasChanges = true;
+    const saveBtn = document.querySelector('.btn-save');
+    if (saveBtn && !saveBtn.classList.contains('btn-save-pulse')) {
+        saveBtn.classList.add('btn-save-pulse');
+        // Add visual indicator that there are unsaved changes
+        saveBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>' + (lang === 'de' ? 'Änderungen speichern *' : 'Save Changes *');
+    }
 }
 
 // Initialize on page load
@@ -445,6 +480,24 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', function() {
             selectMethodology(this.value);
         });
+    });
+    
+    // Track terminology input changes
+    document.querySelectorAll('#terminologyTable input').forEach(input => {
+        input.addEventListener('input', markAsChanged);
+    });
+    
+    // Warn on leaving with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+    
+    // Clear warning on form submit
+    document.querySelector('form').addEventListener('submit', function() {
+        hasChanges = false;
     });
 });
 </script>

@@ -1,6 +1,6 @@
 # System Patterns
 
-> Architecture patterns, conventions, and implementation guidelines for Deloitte TaxOps Calendar
+> Architecture patterns, conventions, and implementation guidelines for Deloitte ProjectOps
 
 ## Architecture Overview
 
@@ -295,7 +295,7 @@ class AuditLog(db.Model):
 ### Planned Model Relationships
 
 ```python
-# Planned relationships for TaxOps models
+# Planned relationships for ProjectOps models
 
 Entity (1) ─────< (N) Task
     │

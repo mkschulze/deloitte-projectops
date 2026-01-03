@@ -219,6 +219,12 @@ def project_detail(project_id, project=None):
     # Get member list
     members = ProjectMember.query.filter_by(project_id=project_id).all()
     
+    # Get issue count
+    issue_count = Issue.query.filter_by(project_id=project_id).count()
+    
+    # Get sprints
+    sprints = Sprint.query.filter_by(project_id=project_id).order_by(Sprint.start_date.desc()).all()
+    
     # Get recent activities from all issues in this project
     from sqlalchemy import desc
     recent_activities = IssueActivity.query.join(Issue).filter(
@@ -226,6 +232,7 @@ def project_detail(project_id, project=None):
     ).order_by(desc(IssueActivity.created_at)).limit(20).all()
     
     return render_template('projects/detail.html', project=project, members=members, 
+                          sprints=sprints, issue_count=issue_count,
                           recent_activities=recent_activities, lang=lang)
 
 

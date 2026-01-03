@@ -1,6 +1,6 @@
 # Active Context
 
-> Current session state for Deloitte TaxOps Calendar development
+> Current session state for Deloitte ProjectOps development
 > 
 > **Purpose:** This file captures the active working context so development can continue seamlessly after context resets.
 
@@ -11,7 +11,7 @@
 **Date:** 2026-01-03 (Session 14)  
 **Last Action:** PM-11 Methodology-Agnostic Terminology abgeschlossen  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + UI Redesign
-**Version:** 1.11.0
+**Version:** 1.12.0
 
 ---
 
@@ -163,7 +163,7 @@ team.get_member_count()      # Count members
 ## File Structure
 
 ```
-deloitte-taxops-calendar/
+deloitte-projectops-calendar/
 ├── app.py                  # ~3100 lines - All routes + CLI commands
 ├── models.py               # ~850 lines - All models
 ├── services.py             # ~650 lines - Business logic services

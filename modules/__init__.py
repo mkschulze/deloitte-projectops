@@ -72,7 +72,7 @@ class BaseModule:
     """Base class for all application modules"""
     
     # Module identification
-    code = None          # Unique code (e.g., 'taxops', 'projects')
+    code = None          # Unique code (e.g., 'tasks', 'projects')
     name_de = None       # German display name
     name_en = None       # English display name
     description_de = ''  # German description

@@ -1,9 +1,61 @@
 # Changelog
 
-All notable changes to the Deloitte TaxOps Calendar will be documented in this file.
+All notable changes to the Deloitte ProjectOps will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.12.0] - 2026-01-03
+
+### 🏢 Multi-Tenancy: Enterprise Client Separation
+
+#### Added
+- **Tenant Model & Infrastructure**:
+  - `Tenant` model with slug, name, logo (base64), is_active, is_archived flags
+  - `TenantMembership` model with per-tenant roles (admin, manager, member, viewer)
+  - `TenantApiKey` model for API access per tenant
+  - `tenant_id` column on all major tables (Task, Entity, Project, Issue, Sprint, Team, etc.)
+
+- **Super-Admin Tenant Management** (`/admin/tenants/`):
+  - Modern UI with gradient header and stats overview
+  - Tenant list with active/archived filters
+  - Tenant detail page with member list, API keys, quick actions
+  - Create, edit, archive, restore, delete tenants
+  - "Enter Tenant" to switch context as Super-Admin
+
+- **Tenant Selection** (`/select-tenant`):
+  - Users with multiple tenant memberships can switch between clients
+  - Modern card-based UI with Deloitte branding
+  - Super-Admin section to access Tenant Management
+
+- **Compliance Export**:
+  - JSON export of tenant data
+  - Excel export with 10 sheets for full compliance documentation:
+    - Mandant Info, Mitglieder, Gesellschaften
+    - Projekte, Items (Issues), Iterationen (Sprints)
+    - Kommentare, Aktivitätsprotokoll
+    - Aufgaben (Kalender), Teams
+  - Timestamped filenames for audit trail
+
+- **Demo Data Script** (`scripts/create_full_demo_data.py`):
+  - Creates demo tenants with full data
+  - Issues, Sprints, Tasks, Teams, Entities per tenant
+  - Assigns issues to sprints based on status
+
+#### Changed
+- **Tenant Switcher** moved from navbar to user dropdown menu
+- **Project Detail Stats** now show actual issue and sprint counts from database
+- **Methodology Settings** improved UX with pulsing save button and client-side reset
+
+#### Fixed
+- `AmbiguousForeignKeysError` on TenantMembership joins (explicit FK specification)
+- Field name corrections: `joined_at` instead of `created_at`, `key` instead of `issue_key`
+- `activity_type` instead of `action` in IssueActivity
+- `state` instead of `status` in Sprint model
+- Labels export as comma-separated string instead of JSON array
+- Team members count with `.count()` for dynamic relationships
 
 ---
 
@@ -314,7 +366,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **User Module Assignments**: New `/admin/users/<id>/modules` page for per-user module access
 - **CLI Command**: `flask sync-modules` to synchronize module definitions to database
 - **Core Module**: Essential functionality (authentication, admin)
-- **TaxOps Module**: Tax calendar and task management (core, always active)
+- **ProjectOps Module**: Tax calendar and task management (core, always active)
 - **Projects Module**: Placeholder for Jira-like project management (optional)
 
 #### Changed
@@ -441,7 +493,7 @@ This release adds comprehensive archival functionality for task lifecycle manage
 
 ### 🎉 Initial Release
 
-First production-ready release of the Deloitte TaxOps Calendar with complete MVP features and Phase A-H enhancements.
+First production-ready release of the Deloitte ProjectOps with complete MVP features and Phase A-H enhancements.
 
 ### Core Features (MVP)
 

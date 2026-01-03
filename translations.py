@@ -1,5 +1,5 @@
 """
-Deloitte TaxOps Calendar - Translations (DE/EN)
+Deloitte ProjectOps - Translations (DE/EN)
 """
 
 TRANSLATIONS = {
@@ -13,7 +13,8 @@ TRANSLATIONS = {
     'nav_calendar': {'de': 'Kalender', 'en': 'Calendar'},
     'nav_tasks': {'de': 'Aufgaben', 'en': 'Tasks'},
     'nav_entities': {'de': 'Gesellschaften', 'en': 'Entities'},
-    'nav_tax_types': {'de': 'Steuerarten', 'en': 'Tax Types'},
+    'nav_categories': {'de': 'Kategorien', 'en': 'Categories'},
+    'nav_tax_types': {'de': 'Steuerarten', 'en': 'Tax Types'},  # Legacy alias
     
     # Common
     'save': {'de': 'Speichern', 'en': 'Save'},
@@ -67,7 +68,15 @@ TRANSLATIONS = {
     'parent_entity_help': {'de': 'Optional: Für Konzernstrukturen', 'en': 'Optional: For group structures'},
     'no_entities': {'de': 'Keine Gesellschaften vorhanden', 'en': 'No entities found'},
     
-    # Tax Types
+    # Categories (formerly Tax Types)
+    'categories': {'de': 'Kategorien', 'en': 'Categories'},
+    'category': {'de': 'Kategorie', 'en': 'Category'},
+    'new_category': {'de': 'Neue Kategorie', 'en': 'New Category'},
+    'edit_category': {'de': 'Kategorie bearbeiten', 'en': 'Edit Category'},
+    'no_categories': {'de': 'Keine Kategorien vorhanden', 'en': 'No categories found'},
+    'category_color': {'de': 'Farbe', 'en': 'Color'},
+    'category_icon': {'de': 'Icon', 'en': 'Icon'},
+    # Legacy aliases for backward compatibility
     'tax_types': {'de': 'Steuerarten', 'en': 'Tax Types'},
     'tax_type': {'de': 'Steuerart', 'en': 'Tax Type'},
     'new_tax_type': {'de': 'Neue Steuerart', 'en': 'New Tax Type'},
@@ -134,7 +143,8 @@ TRANSLATIONS = {
     'total_users': {'de': 'Benutzer gesamt', 'en': 'Total Users'},
     'active_users': {'de': 'Aktive Benutzer', 'en': 'Active Users'},
     'total_entities': {'de': 'Gesellschaften', 'en': 'Entities'},
-    'total_tax_types': {'de': 'Steuerarten', 'en': 'Tax Types'},
+    'total_categories': {'de': 'Kategorien', 'en': 'Categories'},
+    'total_tax_types': {'de': 'Steuerarten', 'en': 'Tax Types'},  # Legacy alias
     'total_tasks': {'de': 'Aufgaben gesamt', 'en': 'Total Tasks'},
     'tasks_overdue': {'de': 'Überfällige Aufgaben', 'en': 'Overdue Tasks'},
     'tasks_completed': {'de': 'Abgeschlossene Aufgaben', 'en': 'Completed Tasks'},

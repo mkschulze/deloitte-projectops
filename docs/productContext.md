@@ -1,10 +1,10 @@
 # Product Context
 
-> Deloitte TaxOps Calendar — Tax Compliance Calendar & Deadline Tracking
+> Deloitte ProjectOps — Tax Compliance Calendar & Deadline Tracking
 
 ## Purpose
 
-The **Deloitte TaxOps Calendar** is a web application designed to centralize tax compliance deadline management for enterprises. It provides a single platform to:
+The **Deloitte ProjectOps** is a web application designed to centralize tax compliance deadline management for enterprises. It provides a single platform to:
 
 - **Plan** annual tax compliance calendars with all relevant deadlines
 - **Assign** tasks to responsible owners and **multiple reviewers**

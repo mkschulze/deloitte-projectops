@@ -1,6 +1,6 @@
 # Projektmanagement-Modul — Technischer Plan
 
-> **Ziel:** Erweiterung des TaxOps Calendars um ein modulares, Jira-ähnliches Projektmanagement-System
+> **Ziel:** Erweiterung des ProjectOpss um ein modulares, Jira-ähnliches Projektmanagement-System
 > 
 > **Status:** Planung
 > **Erstellt:** 2025-12-31
@@ -17,8 +17,8 @@
 |------|--------------|-----------|
 | **Modularität** | PM als opt-in Modul, das Admins pro Benutzer freischalten können | MUSS |
 | **Jira-ähnlich** | Bekannte UX-Patterns für Adoption | MUSS |
-| **Standalone** | PM funktioniert unabhängig von TaxOps Tasks | MUSS |
-| **Integration** | Optional: TaxOps Tasks als PM-Issues verknüpfen | KANN |
+| **Standalone** | PM funktioniert unabhängig von ProjectOps Tasks | MUSS |
+| **Integration** | Optional: ProjectOps Tasks als PM-Issues verknüpfen | KANN |
 | **Skalierbar** | Weitere Module in Zukunft möglich | SOLL |
 
 #### Benutzerrollen & Berechtigungen
@@ -122,7 +122,7 @@ Probleme für Modularität:
 ├─────────────────────────────────────────────────────────────────┤
 │  ModuleRegistry                                                 │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   TaxOps    │  │   Projects  │  │   Future    │             │
+│  │   ProjectOps    │  │   Projects  │  │   Future    │             │
 │  │   Module    │  │   Module    │  │   Modules   │             │
 │  │             │  │             │  │             │             │
 │  │ - routes    │  │ - routes    │  │ - ...       │             │
@@ -147,7 +147,7 @@ Probleme für Modularität:
 -- Modul-System
 CREATE TABLE module (
     id INTEGER PRIMARY KEY,
-    code VARCHAR(50) UNIQUE,     -- 'taxops', 'projects'
+    code VARCHAR(50) UNIQUE,     -- 'projectops', 'projects'
     name VARCHAR(100),
     description TEXT,
     is_core BOOLEAN DEFAULT FALSE,  -- Core-Module können nicht deaktiviert werden
@@ -317,7 +317,7 @@ CREATE TABLE board_column (
 #### Blueprint-Struktur
 
 ```
-deloitte-taxops-calendar/
+deloitte-projectops-calendar/
 ├── app.py                      # Application Factory, nur Init
 ├── config.py                   # Konfiguration
 ├── extensions.py               # Flask Extensions (db, login, socketio)
@@ -339,7 +339,7 @@ deloitte-taxops-calendar/
 │   │       ├── login.html
 │   │       └── admin/
 │   │
-│   ├── taxops/                 # TaxOps Calendar (bestehend, refactored)
+│   ├── projectops/                 # ProjectOps (bestehend, refactored)
 │   │   ├── __init__.py
 │   │   ├── routes.py
 │   │   ├── models.py           # Task, Entity, TaxType, etc.
@@ -1201,7 +1201,7 @@ FEATURE_FLAGS = {
 
 ### C. Offene Fragen
 
-1. Sollen TaxOps-Tasks als PM-Issues importierbar sein?
+1. Sollen ProjectOps-Tasks als PM-Issues importierbar sein?
 2. Sollen Projekte Entity-bezogen sein?
 3. Sollen Workflows beim Erstellen eines Projekts kopiert werden können?
 4. Ist Zeiterfassung (Worklog) im MVP enthalten?

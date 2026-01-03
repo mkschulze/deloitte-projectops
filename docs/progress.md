@@ -1,15 +1,44 @@
 # Progress Tracker
 
-> Development progress for Deloitte TaxOps Calendar
+> Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + UI Redesign
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy Phase 1-3
 
-**Last Updated:** 2026-01-03 (Session 13)  
-**Version:** 1.11.0
+**Last Updated:** 2026-01-03 (Session 14)  
+**Version:** 1.12.0
 
 ---
 
 ## Recent Releases
+
+### v1.12.0 - Multi-Tenancy: Enterprise Client Separation
+
+**Status: ✅ Phase 1-3 Complete**
+
+- **Tenant Model & Infrastructure**:
+  - `Tenant` model with slug, name, logo, is_active, is_archived
+  - `TenantMembership` for per-tenant roles (admin, manager, member, viewer)
+  - `TenantApiKey` for API access
+  - `tenant_id` on all major tables
+
+- **Super-Admin Tenant Management** (`/admin/tenants/`):
+  - Modern Deloitte-styled UI with gradient headers
+  - Tenant list with stats overview
+  - Tenant detail with members, API keys, quick actions
+  - Full CRUD: create, edit, archive, restore, delete
+  - "Enter Tenant" to switch context
+
+- **Tenant Selection** (`/select-tenant`):
+  - Multi-tenant users can switch between clients
+  - Card-based UI with Super-Admin access
+
+- **Compliance Export**:
+  - JSON and Excel export (10 sheets)
+  - Full audit trail documentation
+
+- **Demo Data Script**: 
+  - Full demo data for all tenants
+  - Issues, Sprints, Tasks, Teams, Entities
 
 ### v1.11.0 - PM-11: Methodology-Agnostic Terminology
 
@@ -458,7 +487,7 @@
 - Reviewed existing Flask template codebase
 - Created Memory Bank documentation structure
 - Installed new dependencies (flask-migrate, openpyxl, python-dateutil)
-- Created all TaxOps Calendar models
+- Created all ProjectOps models
 - Added enums: TaskStatus, UserRole, EvidenceType, RecurrenceType
 - Extended User model with new roles and relationships
 - Initialized Alembic migrations
@@ -499,7 +528,7 @@
   - Entity-scoped logging for evidence/comments
 
 - **UI Improvements:**
-  - Navbar with "TaxOps Calendar" app name
+  - Navbar with "ProjectOps" app name
   - Green separator between logo and title
   - Calendar preview popovers on month/year views
   - Task list preview column with hover popovers

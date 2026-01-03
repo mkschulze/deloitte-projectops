@@ -1,6 +1,6 @@
 """
-Deloitte TaxOps Calendar
-Tax Compliance Calendar & Deadline Tracking for enterprises.
+Deloitte ProjectOps
+Project & Task Management Platform for enterprises.
 """
 import json
 import os
@@ -15,14 +15,16 @@ from flask_socketio import emit, join_room, leave_room
 
 from config import config
 from extensions import db, migrate, socketio, login_manager
-from models import User, AuditLog, Entity, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team, Notification, NotificationType, UserEntity, EntityAccessLevel, Module, UserModule
+from models import User, AuditLog, Entity, TaskCategory, TaxType, TaskTemplate, Task, TaskEvidence, Comment, ReferenceApplication, UserRole, TaskPreset, TaskReviewer, Team, Notification, NotificationType, UserEntity, EntityAccessLevel, Module, UserModule, Tenant, TenantMembership
 from translations import get_translation as t, TRANSLATIONS
 from services import ApprovalService, ApprovalResult, WorkflowService, NotificationService, ExportService, CalendarService, email_service, RecurrenceService
 from modules import ModuleRegistry
+from middleware import load_tenant_context, tenant_required, tenant_admin_required, superadmin_required
+from middleware.tenant import inject_tenant_context, can_edit_in_tenant, can_manage_in_tenant, is_tenant_admin
 
 # Import modules to register them
 import modules.core
-import modules.taxops
+import modules.tasks
 import modules.projects
 
 # Import project models for migrations
@@ -61,6 +63,10 @@ def create_app(config_name='default'):
     # Initialize module system
     ModuleRegistry.init_app(app)
     
+    # Register admin blueprints
+    from admin import admin_tenants
+    app.register_blueprint(admin_tenants)
+    
     return app
 
 
@@ -71,8 +77,24 @@ email_service.init_app(app)
 
 
 # ============================================================================
+# MULTI-TENANCY MIDDLEWARE
+# ============================================================================
+
+@app.before_request
+def before_request():
+    """Load tenant context for each request"""
+    load_tenant_context()
+
+
+# ============================================================================
 # CONTEXT PROCESSORS
 # ============================================================================
+
+@app.context_processor
+def inject_tenant():
+    """Inject tenant context into templates"""
+    return inject_tenant_context()
+
 
 @app.context_processor
 def inject_globals():
@@ -238,8 +260,89 @@ def logout():
     """Logout user"""
     log_action('LOGOUT', 'User', current_user.id, current_user.email)
     logout_user()
+    session.pop('current_tenant_id', None)
     flash('Sie wurden abgemeldet.', 'success')
     return redirect(url_for('index'))
+
+
+# ============================================================================
+# TENANT ROUTES
+# ============================================================================
+
+@app.route('/select-tenant')
+@login_required
+def select_tenant():
+    """Show tenant selection page"""
+    if current_user.is_superadmin:
+        # Super-admins can see all tenants
+        tenants = Tenant.query.filter_by(is_active=True, is_archived=False).order_by(Tenant.name).all()
+    else:
+        # Regular users see only their assigned tenants
+        tenants = [m.tenant for m in current_user.memberships 
+                   if m.tenant.is_active and not m.tenant.is_archived]
+    
+    return render_template('select_tenant.html', tenants=tenants)
+
+
+@app.route('/switch-tenant/<int:tenant_id>', methods=['POST'])
+@login_required
+def switch_tenant(tenant_id):
+    """Switch to a different tenant"""
+    tenant = Tenant.query.get_or_404(tenant_id)
+    
+    # Verify access
+    if not current_user.is_superadmin:
+        if not current_user.can_access_tenant(tenant_id):
+            flash('Sie haben keinen Zugriff auf diesen Mandanten.', 'error')
+            return redirect(url_for('select_tenant'))
+    
+    if not tenant.is_active and not current_user.is_superadmin:
+        flash('Dieser Mandant ist deaktiviert.', 'error')
+        return redirect(url_for('select_tenant'))
+    
+    # Update session
+    session['current_tenant_id'] = tenant_id
+    
+    # Update user's last tenant for persistence
+    current_user.current_tenant_id = tenant_id
+    db.session.commit()
+    
+    log_action('SWITCH_TENANT', 'Tenant', tenant_id, tenant.name)
+    flash(f'Mandant gewechselt zu: {tenant.name}', 'success')
+    
+    # Redirect to dashboard or next page
+    next_page = request.args.get('next') or request.form.get('next')
+    return redirect(next_page or url_for('dashboard'))
+
+
+@app.route('/api/switch-tenant/<int:tenant_id>', methods=['POST'])
+@login_required
+def api_switch_tenant(tenant_id):
+    """API endpoint for tenant switching (for AJAX calls)"""
+    tenant = Tenant.query.get(tenant_id)
+    
+    if not tenant:
+        return jsonify({'success': False, 'message': 'Mandant nicht gefunden'}), 404
+    
+    if not current_user.is_superadmin:
+        if not current_user.can_access_tenant(tenant_id):
+            return jsonify({'success': False, 'message': 'Kein Zugriff'}), 403
+    
+    if not tenant.is_active and not current_user.is_superadmin:
+        return jsonify({'success': False, 'message': 'Mandant deaktiviert'}), 403
+    
+    session['current_tenant_id'] = tenant_id
+    current_user.current_tenant_id = tenant_id
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'tenant': {
+            'id': tenant.id,
+            'name': tenant.name,
+            'display_name': tenant.display_name
+        }
+    })
 
 
 # ============================================================================
@@ -375,7 +478,7 @@ def task_list():
     else:
         entities = current_user.get_accessible_entities('view')
     
-    tax_types = TaxType.query.filter_by(is_active=True).order_by(TaxType.code).all()
+    categories = TaskCategory.query.filter_by(is_active=True).order_by(TaskCategory.code).all()
     years = db.session.query(Task.year).distinct().order_by(Task.year.desc()).all()
     years = [y[0] for y in years]
     
@@ -385,14 +488,15 @@ def task_list():
     return render_template('tasks/list.html', 
                          tasks=tasks, 
                          entities=entities,
-                         tax_types=tax_types,
+                         categories=categories,
+                         tax_types=categories,  # Legacy alias
                          years=years,
                          users=users,
                          current_filters={
                              'status': status_filter,
                              'entity': entity_filter,
-                             'tax_type': tax_type_filter,
-                             'year': year_filter
+                             'category': tax_type_filter,
+                             'tax_type': tax_type_filter  # Legacy alias
                          })
 
 
@@ -1465,7 +1569,8 @@ def admin_dashboard():
         'users': User.query.count(),
         'active_users': User.query.filter_by(is_active=True).count(),
         'entities': Entity.query.filter_by(is_active=True).count(),
-        'tax_types': TaxType.query.filter_by(is_active=True).count(),
+        'categories': TaskCategory.query.filter_by(is_active=True).count(),
+        'tax_types': TaskCategory.query.filter_by(is_active=True).count(),  # Legacy alias
         'tasks_total': Task.query.count(),
         'tasks_overdue': Task.query.filter(Task.due_date < date.today(), Task.status != 'completed').count(),
         'tasks_completed': Task.query.filter_by(status='completed').count(),
@@ -1854,34 +1959,44 @@ def admin_entity_users_save(entity_id):
 
 
 # ============================================================================
-# TAX TYPE MANAGEMENT
+# CATEGORY MANAGEMENT (formerly Tax Types)
 # ============================================================================
 
+@app.route('/admin/categories')
+@admin_required
+def admin_categories():
+    """Category management"""
+    categories = TaskCategory.query.order_by(TaskCategory.code).all()
+    return render_template('admin/categories.html', categories=categories)
+
+
+# Legacy alias for backward compatibility
 @app.route('/admin/tax-types')
 @admin_required
 def admin_tax_types():
-    """Tax type management"""
-    tax_types = TaxType.query.order_by(TaxType.code).all()
-    return render_template('admin/tax_types.html', tax_types=tax_types)
+    """Legacy redirect to categories"""
+    return redirect(url_for('admin_categories'))
 
 
-@app.route('/admin/tax-types/new', methods=['GET', 'POST'])
+@app.route('/admin/categories/new', methods=['GET', 'POST'])
 @admin_required
-def admin_tax_type_new():
-    """Create new tax type"""
+def admin_category_new():
+    """Create new category"""
     if request.method == 'POST':
         code = request.form.get('code', '').strip().upper()
         name_de = request.form.get('name_de', '').strip()
         name_en = request.form.get('name_en', '').strip()
         description_de = request.form.get('description_de', '').strip()
         description_en = request.form.get('description_en', '').strip()
+        color = request.form.get('color', '#6c757d').strip()
+        icon = request.form.get('icon', 'bi-folder').strip()
         
-        if TaxType.query.filter_by(code=code).first():
+        if TaskCategory.query.filter_by(code=code).first():
             flash('Code bereits vorhanden.', 'danger')
         elif not code or not name_de or not name_en:
             flash('Code und Name (DE/EN) sind erforderlich.', 'warning')
         else:
-            tax_type = TaxType(
+            category = TaskCategory(
                 code=code, 
                 name=name_de,  # Legacy field gets German name
                 name_de=name_de,
@@ -1889,38 +2004,42 @@ def admin_tax_type_new():
                 description=description_de or None,  # Legacy field
                 description_de=description_de or None,
                 description_en=description_en or None,
+                color=color,
+                icon=icon,
                 is_active=True
             )
-            db.session.add(tax_type)
+            db.session.add(category)
             db.session.commit()
-            log_action('CREATE', 'TaxType', tax_type.id, tax_type.code)
-            flash(f'Steuerart {code} wurde erstellt.', 'success')
-            return redirect(url_for('admin_tax_types'))
+            log_action('CREATE', 'TaskCategory', category.id, category.code)
+            flash(f'Kategorie {code} wurde erstellt.', 'success')
+            return redirect(url_for('admin_categories'))
     
-    return render_template('admin/tax_type_form.html', tax_type=None)
+    return render_template('admin/category_form.html', category=None)
 
 
-@app.route('/admin/tax-types/<int:tax_type_id>', methods=['GET', 'POST'])
+@app.route('/admin/categories/<int:category_id>', methods=['GET', 'POST'])
 @admin_required
-def admin_tax_type_edit(tax_type_id):
-    """Edit tax type"""
-    tax_type = TaxType.query.get_or_404(tax_type_id)
+def admin_category_edit(category_id):
+    """Edit category"""
+    category = TaskCategory.query.get_or_404(category_id)
     
     if request.method == 'POST':
-        tax_type.name_de = request.form.get('name_de', '').strip()
-        tax_type.name_en = request.form.get('name_en', '').strip()
-        tax_type.name = tax_type.name_de  # Keep legacy field in sync
-        tax_type.description_de = request.form.get('description_de', '').strip() or None
-        tax_type.description_en = request.form.get('description_en', '').strip() or None
-        tax_type.description = tax_type.description_de  # Keep legacy field in sync
-        tax_type.is_active = request.form.get('is_active') == 'on'
+        category.name_de = request.form.get('name_de', '').strip()
+        category.name_en = request.form.get('name_en', '').strip()
+        category.name = category.name_de  # Keep legacy field in sync
+        category.description_de = request.form.get('description_de', '').strip() or None
+        category.description_en = request.form.get('description_en', '').strip() or None
+        category.description = category.description_de  # Keep legacy field in sync
+        category.color = request.form.get('color', '#6c757d').strip()
+        category.icon = request.form.get('icon', 'bi-folder').strip()
+        category.is_active = request.form.get('is_active') == 'on'
         
         db.session.commit()
-        log_action('UPDATE', 'TaxType', tax_type.id, tax_type.code)
-        flash(f'Steuerart {tax_type.code} wurde aktualisiert.', 'success')
-        return redirect(url_for('admin_tax_types'))
+        log_action('UPDATE', 'Category', category.id, category.code)
+        flash(f'Kategorie {category.code} wurde aktualisiert.', 'success')
+        return redirect(url_for('admin_categories'))
     
-    return render_template('admin/tax_type_form.html', tax_type=tax_type)
+    return render_template('admin/category_form.html', category=category)
 
 
 # ============================================================================
@@ -2136,8 +2255,8 @@ def admin_preset_new():
     
     entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
-    tax_types = TaxType.query.filter_by(is_active=True).order_by(TaxType.code).all()
-    return render_template('admin/preset_form_enhanced.html', preset=None, entities=entities, users=users, tax_types=tax_types)
+    categories = TaskCategory.query.filter_by(is_active=True).order_by(Category.code).all()
+    return render_template('admin/preset_form_enhanced.html', preset=None, entities=entities, users=users, categories=categories, tax_types=categories)
 
 
 @app.route('/admin/presets/<int:preset_id>', methods=['GET', 'POST'])
@@ -2184,8 +2303,8 @@ def admin_preset_edit(preset_id):
     
     entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
-    tax_types = TaxType.query.filter_by(is_active=True).order_by(TaxType.code).all()
-    return render_template('admin/preset_form_enhanced.html', preset=preset, entities=entities, users=users, tax_types=tax_types)
+    categories = TaskCategory.query.filter_by(is_active=True).order_by(Category.code).all()
+    return render_template('admin/preset_form_enhanced.html', preset=preset, entities=entities, users=users, categories=categories, tax_types=categories)
 
 
 @app.route('/admin/presets/<int:preset_id>/delete', methods=['POST'])
@@ -3106,12 +3225,12 @@ def seed():
     ]
     
     for tt in tax_types_data:
-        if not TaxType.query.filter_by(code=tt['code']).first():
-            tax_type = TaxType(**tt, is_active=True)
-            db.session.add(tax_type)
+        if not TaskCategory.query.filter_by(code=tt['code']).first():
+            category = TaskCategory(**tt, is_active=True, color='#86BC25', icon='bi-calculator')
+            db.session.add(category)
     
     db.session.commit()
-    print(f'Created {len(tax_types_data)} tax types')
+    print(f'Created {len(tax_types_data)} categories (tax types)')
     
     # Create sample entities
     entities_data = [
@@ -3131,16 +3250,16 @@ def seed():
     print(f'Created {len(entities_data)} entities')
     
     # Create sample task templates
-    kst = TaxType.query.filter_by(code='KSt').first()
-    ust = TaxType.query.filter_by(code='USt').first()
-    gewst = TaxType.query.filter_by(code='GewSt').first()
+    kst = TaskCategory.query.filter_by(code='KSt').first()
+    ust = TaskCategory.query.filter_by(code='USt').first()
+    gewst = TaskCategory.query.filter_by(code='GewSt').first()
     
     templates_data = [
-        {'tax_type_id': kst.id, 'keyword': 'KSt-Voranmeldung', 'description': 'Körperschaftsteuer Voranmeldung', 'default_recurrence': 'quarterly'},
-        {'tax_type_id': kst.id, 'keyword': 'KSt-Erklärung', 'description': 'Jährliche Körperschaftsteuererklärung', 'default_recurrence': 'annual'},
-        {'tax_type_id': ust.id, 'keyword': 'USt-Voranmeldung', 'description': 'Monatliche Umsatzsteuer-Voranmeldung', 'default_recurrence': 'monthly'},
-        {'tax_type_id': ust.id, 'keyword': 'USt-Erklärung', 'description': 'Jährliche Umsatzsteuererklärung', 'default_recurrence': 'annual'},
-        {'tax_type_id': gewst.id, 'keyword': 'GewSt-Erklärung', 'description': 'Jährliche Gewerbesteuererklärung', 'default_recurrence': 'annual'},
+        {'category_id': kst.id, 'keyword': 'KSt-Voranmeldung', 'description': 'Körperschaftsteuer Voranmeldung', 'default_recurrence': 'quarterly'},
+        {'category_id': kst.id, 'keyword': 'KSt-Erklärung', 'description': 'Jährliche Körperschaftsteuererklärung', 'default_recurrence': 'annual'},
+        {'category_id': ust.id, 'keyword': 'USt-Voranmeldung', 'description': 'Monatliche Umsatzsteuer-Voranmeldung', 'default_recurrence': 'monthly'},
+        {'category_id': ust.id, 'keyword': 'USt-Erklärung', 'description': 'Jährliche Umsatzsteuererklärung', 'default_recurrence': 'annual'},
+        {'category_id': gewst.id, 'keyword': 'GewSt-Erklärung', 'description': 'Jährliche Gewerbesteuererklärung', 'default_recurrence': 'annual'},
     ]
     
     for t in templates_data:
@@ -3369,7 +3488,7 @@ def calendar_feed(token):
         ical_bytes,
         mimetype='text/calendar',
         headers={
-            'Content-Disposition': f'attachment; filename="taxops-calendar.ics"',
+            'Content-Disposition': f'attachment; filename="projectops-calendar.ics"',
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0'

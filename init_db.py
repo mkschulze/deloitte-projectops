@@ -4,7 +4,7 @@ Run: python init_db.py
 """
 from app import app
 from extensions import db
-from models import User, TaxType, Entity, Team
+from models import User, TaskCategory, Entity, Team
 
 
 def init_database():
@@ -46,31 +46,52 @@ def init_database():
         else:
             print('• Demo user already exists')
         
-        # Create default tax types with multilingual names
-        tax_types_data = [
+        # Create default categories (including tax types and general categories)
+        categories_data = [
+            # Tax categories (Steuerarten)
             {'code': 'EST', 'name': 'Einkommensteuer', 'name_de': 'Einkommensteuer', 'name_en': 'Income Tax', 
-             'description': 'Einkommensteuer für natürliche Personen', 'description_de': 'Einkommensteuer für natürliche Personen', 'description_en': 'Income tax for natural persons'},
+             'description': 'Einkommensteuer für natürliche Personen', 'description_de': 'Einkommensteuer für natürliche Personen', 'description_en': 'Income tax for natural persons',
+             'color': '#86BC25', 'icon': 'bi-calculator'},
             {'code': 'KOST', 'name': 'Körperschaftsteuer', 'name_de': 'Körperschaftsteuer', 'name_en': 'Corporate Tax',
-             'description': 'Körperschaftsteuer für juristische Personen', 'description_de': 'Körperschaftsteuer für juristische Personen', 'description_en': 'Corporate tax for legal entities'},
+             'description': 'Körperschaftsteuer für juristische Personen', 'description_de': 'Körperschaftsteuer für juristische Personen', 'description_en': 'Corporate tax for legal entities',
+             'color': '#86BC25', 'icon': 'bi-calculator'},
             {'code': 'GEWST', 'name': 'Gewerbesteuer', 'name_de': 'Gewerbesteuer', 'name_en': 'Trade Tax',
-             'description': 'Gewerbesteuer für Gewerbebetriebe', 'description_de': 'Gewerbesteuer für Gewerbebetriebe', 'description_en': 'Trade tax for businesses'},
+             'description': 'Gewerbesteuer für Gewerbebetriebe', 'description_de': 'Gewerbesteuer für Gewerbebetriebe', 'description_en': 'Trade tax for businesses',
+             'color': '#86BC25', 'icon': 'bi-calculator'},
             {'code': 'UST', 'name': 'Umsatzsteuer', 'name_de': 'Umsatzsteuer', 'name_en': 'VAT',
-             'description': 'Umsatzsteuer / Mehrwertsteuer', 'description_de': 'Umsatzsteuer / Mehrwertsteuer', 'description_en': 'Value Added Tax'},
+             'description': 'Umsatzsteuer / Mehrwertsteuer', 'description_de': 'Umsatzsteuer / Mehrwertsteuer', 'description_en': 'Value Added Tax',
+             'color': '#86BC25', 'icon': 'bi-calculator'},
             {'code': 'LST', 'name': 'Lohnsteuer', 'name_de': 'Lohnsteuer', 'name_en': 'Payroll Tax',
-             'description': 'Lohnsteuer für Arbeitnehmer', 'description_de': 'Lohnsteuer für Arbeitnehmer', 'description_en': 'Payroll tax for employees'},
+             'description': 'Lohnsteuer für Arbeitnehmer', 'description_de': 'Lohnsteuer für Arbeitnehmer', 'description_en': 'Payroll tax for employees',
+             'color': '#86BC25', 'icon': 'bi-calculator'},
             {'code': 'KAPEST', 'name': 'Kapitalertragsteuer', 'name_de': 'Kapitalertragsteuer', 'name_en': 'Capital Gains Tax',
-             'description': 'Steuer auf Kapitalerträge', 'description_de': 'Steuer auf Kapitalerträge', 'description_en': 'Tax on capital gains'},
+             'description': 'Steuer auf Kapitalerträge', 'description_de': 'Steuer auf Kapitalerträge', 'description_en': 'Tax on capital gains',
+             'color': '#86BC25', 'icon': 'bi-calculator'},
+            # General categories
+            {'code': 'COMPL', 'name': 'Compliance', 'name_de': 'Compliance', 'name_en': 'Compliance',
+             'description': 'Regulatorische Anforderungen', 'description_de': 'Regulatorische Anforderungen', 'description_en': 'Regulatory requirements',
+             'color': '#0076A8', 'icon': 'bi-shield-check'},
+            {'code': 'AUDIT', 'name': 'Audit', 'name_de': 'Prüfung', 'name_en': 'Audit',
+             'description': 'Interne und externe Prüfungen', 'description_de': 'Interne und externe Prüfungen', 'description_en': 'Internal and external audits',
+             'color': '#62B5E5', 'icon': 'bi-clipboard-check'},
+            {'code': 'REPORT', 'name': 'Reporting', 'name_de': 'Berichtswesen', 'name_en': 'Reporting',
+             'description': 'Finanzberichte und Meldungen', 'description_de': 'Finanzberichte und Meldungen', 'description_en': 'Financial reports and filings',
+             'color': '#43B02A', 'icon': 'bi-graph-up'},
+            {'code': 'LEGAL', 'name': 'Legal', 'name_de': 'Recht', 'name_en': 'Legal',
+             'description': 'Rechtliche Angelegenheiten', 'description_de': 'Rechtliche Angelegenheiten', 'description_en': 'Legal matters',
+             'color': '#6F3750', 'icon': 'bi-briefcase'},
             {'code': 'OTHER', 'name': 'Sonstige', 'name_de': 'Sonstige', 'name_en': 'Other',
-             'description': 'Sonstige Steuerarten', 'description_de': 'Sonstige Steuerarten', 'description_en': 'Other tax types'},
+             'description': 'Sonstige Kategorien', 'description_de': 'Sonstige Kategorien', 'description_en': 'Other categories',
+             'color': '#6c757d', 'icon': 'bi-folder'},
         ]
         
-        for tt_data in tax_types_data:
-            existing = TaxType.query.filter_by(code=tt_data['code']).first()
+        for cat_data in categories_data:
+            existing = TaskCategory.query.filter_by(code=cat_data['code']).first()
             if not existing:
-                tax_type = TaxType(**tt_data, is_active=True)
-                db.session.add(tax_type)
+                category = TaskCategory(**cat_data, is_active=True)
+                db.session.add(category)
         db.session.commit()
-        print('✓ Default tax types created')
+        print('✓ Default task categories created (including tax types)')
         
         # Create default entities with multilingual names
         entities_data = [

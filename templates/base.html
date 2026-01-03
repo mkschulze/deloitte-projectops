@@ -288,7 +288,7 @@
                 <img src="{{ url_for('static', filename='Deloitte-Master-Logo/DIGITAL/Deloitte-Master-Logo-White-RBG.svg') }}" alt="Deloitte">
                 <span class="d-none d-md-flex align-items-center ms-3">
                     <span class="text-deloitte-green fw-bold" style="font-size: 1.5rem;">|</span>
-                    <span class="ms-3 fw-light fs-5" style="letter-spacing: 0.5px;">TaxOps Calendar</span>
+                    <span class="ms-3 fw-light fs-5" style="letter-spacing: 0.5px;">ProjectOps</span>
                 </span>
             </a>
             
@@ -393,13 +393,39 @@
                             <i class="bi bi-person-circle"></i> {{ current_user.name }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            {% if current_tenant %}
+                            <!-- Tenant Info -->
+                            <li class="dropdown-header px-3 py-2">
+                                <small class="text-muted">{{ 'Mandant' if lang == 'de' else 'Tenant' }}</small>
+                                <div class="d-flex align-items-center">
+                                    {% if current_tenant.logo_data %}
+                                    <img src="data:{{ current_tenant.logo_mime_type or 'image/png' }};base64,{{ current_tenant.logo_data }}" 
+                                         alt="" class="rounded me-2" style="width: 20px; height: 20px; object-fit: contain;">
+                                    {% endif %}
+                                    <span class="fw-semibold">{{ current_tenant.name[:20] }}{% if current_tenant.name|length > 20 %}...{% endif %}</span>
+                                    {% if is_superadmin_mode %}
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.6rem;">SA</span>
+                                    {% endif %}
+                                </div>
+                            </li>
+                            <li><a class="dropdown-item" href="{{ url_for('select_tenant') }}">
+                                <i class="bi bi-arrow-left-right me-2"></i>{{ 'Mandant wechseln' if lang == 'de' else 'Switch Tenant' }}
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
                             {% if current_user.is_admin() %}
                             <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>{{ t('admin_dashboard') }}</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_entities') }}"><i class="bi bi-building me-2"></i>{{ t('entities') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin_tax_types') }}"><i class="bi bi-file-earmark-text me-2"></i>{{ t('tax_types') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin_categories') }}"><i class="bi bi-tags me-2"></i>{{ t('categories') }}</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_teams') }}"><i class="bi bi-people-fill me-2"></i>{{ t('teams') }}</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="bi bi-person me-2"></i>{{ t('nav_users') }}</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            {% if current_user.is_superadmin %}
+                            <li><a class="dropdown-item text-primary" href="{{ url_for('admin_tenants.tenant_list') }}">
+                                <i class="bi bi-shield-lock me-2"></i>{{ 'Super-Admin' if lang == 'de' else 'Super-Admin' }}
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('calendar_subscription') }}"><i class="bi bi-calendar2-plus me-2"></i>{{ 'Kalender-Abonnement' if lang == 'de' else 'Calendar Subscription' }}</a></li>

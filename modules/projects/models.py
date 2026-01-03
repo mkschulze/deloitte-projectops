@@ -305,7 +305,8 @@ class Project(db.Model):
     __tablename__ = 'project'
     
     id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(10), unique=True, nullable=False, index=True)  # TAX, AUD, HR
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
+    key = db.Column(db.String(10), nullable=False, index=True)  # TAX, AUD, HR (unique per tenant)
     name = db.Column(db.String(200), nullable=False)
     name_en = db.Column(db.String(200))  # English name (optional)
     description = db.Column(db.Text)
@@ -617,10 +618,11 @@ class Issue(db.Model):
     __tablename__ = 'issue'
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False, index=True)
     
     # Auto-generated key (TAX-1, TAX-2, etc.)
-    key = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    key = db.Column(db.String(20), nullable=False, index=True)  # Unique per tenant
     
     # Issue type (Epic, Story, Task, etc.)
     type_id = db.Column(db.Integer, db.ForeignKey('issue_type.id'), nullable=False)
@@ -1183,6 +1185,7 @@ class Sprint(db.Model):
     __tablename__ = 'sprint'
     
     id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenant.id'), index=True)  # Multi-tenancy
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False, index=True)
     
     # Sprint info

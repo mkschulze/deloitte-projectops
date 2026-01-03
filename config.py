@@ -6,8 +6,8 @@ import os
 class Config:
     """Base configuration"""
     # App Info - CUSTOMIZE THESE
-    APP_NAME = 'TaxOps Calendar'
-    APP_VERSION = '1.11.0'
+    APP_NAME = 'Deloitte ProjectOps'
+    APP_VERSION = '1.13.0'
     
     # Secret key for session management
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
@@ -30,7 +30,7 @@ class Config:
     MAIL_ENABLED = os.environ.get('MAIL_ENABLED', 'false').lower() == 'true'
     MAIL_PROVIDER = os.environ.get('MAIL_PROVIDER', 'smtp')  # smtp, sendgrid, ses
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@deloitte.com')
-    MAIL_DEFAULT_SENDER_NAME = os.environ.get('MAIL_DEFAULT_SENDER_NAME', 'TaxOps Calendar')
+    MAIL_DEFAULT_SENDER_NAME = os.environ.get('MAIL_DEFAULT_SENDER_NAME', 'Deloitte ProjectOps')
     
     # SMTP settings
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'localhost')
