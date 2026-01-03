@@ -5,11 +5,36 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
 **Last Updated:** 2026-01-03 (Session 16)  
-**Version:** 1.14.1
+**Version:** 1.15.0
 
 ---
 
 ## Recent Releases
+
+### v1.15.0 - Test Coverage Phase 1 (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Coverage Infrastructure**:
+  - Created `.coveragerc` to exclude scripts/, migrations/, tests/, demo files
+  - Proper coverage configuration for meaningful metrics
+
+- **43 New Model Tests** (`test_phase1_models.py`):
+  - TestUserTenantMethods (13 tests) - tenant access, roles, switching
+  - TestUserCalendarToken (3 tests) - token creation, regeneration
+  - TestUserTeamMethods (1 test) - team retrieval
+  - TestTeamModel (13 tests) - member management, multilingual names
+  - TestTaskReviewerModel (6 tests) - approve, reject, reset workflows
+  - TestUserEntityModel (5 tests) - entity permission levels
+  - TestEntityAccessLevelEnum (2 tests) - enum values and choices
+
+- **Test Fixture Improvements**:
+  - Added entity and task fixtures for Task model testing
+  - Updated cleanup to include team_members, Entity, Task tables
+
+- **Metrics**:
+  - Total tests: 424 → 467 (+43)
+  - models.py coverage: 63% → 70% (+7%)
 
 ### v1.14.1 - Release Script Enhancement (2026-01-03)
 
