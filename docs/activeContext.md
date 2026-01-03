@@ -8,18 +8,38 @@
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 16)  
-**Last Action:** Version Bump Release v1.16.3  
+**Date:** 2026-01-03 (Session 17)  
+**Last Action:** Separated Memory Bank Check Script v1.17.0  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
-**Version:** 1.16.3
+**Version:** 1.17.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 16)
+### ✅ What Was Accomplished (Session 17)
 
-1. **Release Script Enhancement v1.16.2** (Complete)
+1. **Separated Memory Bank Check Script v1.17.0** (Complete)
+
+   #### New `check_memory_bank.py` Script
+   - Created `scripts/check_memory_bank.py` - standalone script for reading Memory Bank files
+   - Displays complete content of all 7 Memory Bank files with line numbers
+   - Supports `--for-release X.Y.Z` flag to show update instructions
+   - Supports `--verify X.Y.Z` flag to verify all files updated correctly
+   - Supports `--brief` flag for quick version status check
+   
+   #### Simplified `release.py`
+   - Removed 3-phase display logic (moved to check_memory_bank.py)
+   - Now only verifies updates were made, doesn't display file contents
+   - Cleaner separation of concerns: read → update → verify → release
+   
+   #### New 4-Step Release Workflow
+   1. `python scripts/check_memory_bank.py --for-release X.Y.Z` (read files)
+   2. AI makes comprehensive updates to all files
+   3. `python scripts/check_memory_bank.py --verify X.Y.Z` (verify updates)
+   4. `python scripts/release.py --version X.Y.Z --title "..."` (commit & tag)
+
+2. **Release Script Enhancement v1.16.2** (Complete)
 
    #### 3-Phase Memory Bank Workflow
    - PHASE 1: Script displays COMPLETE content of all 7 Memory Bank files

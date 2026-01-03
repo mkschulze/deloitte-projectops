@@ -4,12 +4,32 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-03 (Session 16)  
-**Version:** 1.16.3
+**Last Updated:** 2026-01-03 (Session 17)  
+**Version:** 1.17.0
 
 ---
 
 ## Recent Releases
+
+### v1.17.0 - Separated Memory Bank Check Script (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **New `scripts/check_memory_bank.py`**:
+  - Standalone script for reading all Memory Bank files before release
+  - `--for-release X.Y.Z`: Displays all files with update instructions
+  - `--verify X.Y.Z`: Verifies all files have correct version
+  - `--brief`: Quick version status check across all files
+
+- **Simplified `scripts/release.py`**:
+  - Removed file display logic (moved to check_memory_bank.py)
+  - Now only verifies and commits, cleaner separation of concerns
+
+- **New 4-Step Release Workflow**:
+  1. `check_memory_bank.py --for-release X.Y.Z` → Read files
+  2. AI updates all relevant content (not just versions)
+  3. `check_memory_bank.py --verify X.Y.Z` → Verify updates
+  4. `release.py --version X.Y.Z` → Commit and tag
 
 ### v1.16.3 - Version Bump Release (2026-01-03)
 

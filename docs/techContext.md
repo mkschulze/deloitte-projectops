@@ -105,6 +105,17 @@ deloitte-projectops-calendar/
 │   ├── steuerarten_aufgaben.json
 │   └── Antraege.json
 │
+├── scripts/                # Development & release scripts
+│   ├── check_memory_bank.py    # Memory Bank reader for releases
+│   ├── release.py              # Release automation (commit, tag, push)
+│   ├── create_demo_tenants.py  # Demo tenant creation
+│   ├── create_full_demo_data.py
+│   ├── create_sample_issues.py
+│   ├── create_sample_projects.py
+│   ├── create_sample_sprints.py
+│   ├── update_memory_bank.py   # AI-assisted Memory Bank updates
+│   └── memory_bank_prompt.md   # Prompt template for AI updates
+│
 ├── static/                 # Static assets
 │   ├── Color Guide/        # Deloitte color documentation
 │   ├── Deloitte Special Case Web Icons/

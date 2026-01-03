@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.17.0] - 2026-01-03
+
+### 🔧 Separated Memory Bank Check Script
+
+#### Added
+- **`scripts/check_memory_bank.py`** - New standalone script for reading Memory Bank files before release
+  - `--for-release X.Y.Z`: Displays complete content of all 7 Memory Bank files with update instructions
+  - `--verify X.Y.Z`: Verifies all files have been updated to the target version
+  - `--brief`: Quick version status check across all files without full content display
+
+#### Changed
+- **`scripts/release.py`** - Simplified to only verify and commit
+  - Removed 3-phase file display logic (moved to check_memory_bank.py)
+  - Now focuses solely on verification, commit, and tag creation
+  - Cleaner separation of concerns in release workflow
+
+#### Documentation
+- New 4-step release workflow established:
+  1. `check_memory_bank.py --for-release` → Read all files
+  2. AI makes comprehensive updates (content, not just versions)
+  3. `check_memory_bank.py --verify` → Verify updates
+  4. `release.py` → Commit and tag
+
+---
+
 ## [1.16.3] - 2026-01-03
 
 ### 🔧 Version Bump Release
