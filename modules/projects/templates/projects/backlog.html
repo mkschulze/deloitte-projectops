@@ -41,7 +41,7 @@
             <div class="col-auto d-flex gap-2">
                 <!-- View Switcher -->
                 <div class="btn-group view-switcher" role="group">
-                    <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
+                    <a href="{{ url_for('projects.item_list', project_id=project.id) }}" 
                        class="btn btn-outline-light" title="{{ 'Listenansicht' if lang == 'de' else 'List View' }}">
                         <i class="bi bi-list-ul"></i>
                     </a>
@@ -56,7 +56,7 @@
                 </div>
                 
                 <!-- Create Issue -->
-                <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-deloitte-green">
+                <a href="{{ url_for('projects.item_new', project_id=project.id) }}" class="btn btn-deloitte-green">
                     <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
                 </a>
             </div>
@@ -225,11 +225,11 @@
                     <i class="bi {{ issue.issue_type.icon or 'bi-circle' if issue.issue_type else 'bi-circle' }}"></i>
                 </span>
                 
-                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-key">
+                <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-key">
                     {{ issue.key }}
                 </a>
                 
-                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-summary">
+                <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-summary">
                     {{ issue.summary }}
                 </a>
                 
@@ -274,7 +274,7 @@
         </div>
         <h4>{{ 'Keine Issues im Backlog' if lang == 'de' else 'No issues in backlog' }}</h4>
         <p class="text-muted mb-4">{{ 'Erstellen Sie ein neues Issue um zu beginnen.' if lang == 'de' else 'Create a new issue to get started.' }}</p>
-        <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-deloitte-green btn-lg">
+        <a href="{{ url_for('projects.item_new', project_id=project.id) }}" class="btn btn-deloitte-green btn-lg">
             <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
         </a>
     </div>

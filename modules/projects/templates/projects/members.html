@@ -418,7 +418,7 @@
                         </li>
                         <li>
                             <strong>Lead</strong><br>
-                            <span class="text-muted">{{ 'Bearbeitung, Zuweisung, Sprints verwalten' if lang == 'de' else 'Edit, assign, manage sprints' }}</span>
+                            <span class="text-muted">{{ ('Bearbeitung, Zuweisung, ' + project.get_term('sprint_plural', lang) + ' verwalten') if lang == 'de' else ('Edit, assign, manage ' + project.get_term('sprint_plural', lang)|lower) }}</span>
                         </li>
                         <li>
                             <strong>Member</strong><br>

@@ -31,7 +31,7 @@
             <div class="col-auto d-flex gap-2">
                 <!-- View Switcher -->
                 <div class="btn-group view-switcher" role="group">
-                    <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
+                    <a href="{{ url_for('projects.item_list', project_id=project.id) }}" 
                        class="btn btn-light active" title="{{ 'Listenansicht' if lang == 'de' else 'List View' }}">
                         <i class="bi bi-list-ul"></i>
                     </a>
@@ -46,7 +46,7 @@
                 </div>
                 
                 <!-- Create Issue -->
-                <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-deloitte-green">
+                <a href="{{ url_for('projects.item_new', project_id=project.id) }}" class="btn btn-deloitte-green">
                     <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
                 </a>
             </div>
@@ -192,14 +192,14 @@
                 <tbody>
                     {% if issues %}
                         {% for issue in issues %}
-                        <tr class="issue-row" onclick="window.location='{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}'">
+                        <tr class="issue-row" onclick="window.location='{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}'">
                             <td class="text-center">
                                 <span class="issue-type-badge" style="background-color: {{ issue.issue_type.color }}20; color: {{ issue.issue_type.color }};">
                                     <i class="{{ issue.issue_type.icon }}"></i>
                                 </span>
                             </td>
                             <td>
-                                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-key-link" onclick="event.stopPropagation()">
+                                <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-key-link" onclick="event.stopPropagation()">
                                     {{ issue.key }}
                                 </a>
                             </td>
@@ -264,7 +264,7 @@
                                     </div>
                                     <h5 class="mt-3">{{ 'Keine Issues gefunden' if lang == 'de' else 'No issues found' }}</h5>
                                     <p class="text-muted mb-3">{{ 'Erstellen Sie Ihr erstes Issue oder passen Sie die Filter an.' if lang == 'de' else 'Create your first issue or adjust the filters.' }}</p>
-                                    <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-deloitte-green">
+                                    <a href="{{ url_for('projects.item_new', project_id=project.id) }}" class="btn btn-deloitte-green">
                                         <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
                                     </a>
                                 </div>

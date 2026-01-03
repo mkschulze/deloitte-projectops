@@ -281,7 +281,7 @@
                     <ol class="breadcrumb mb-2">
                         <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
                         <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
-                        <li class="breadcrumb-item"><a href="{{ url_for('projects.sprint_list', project_id=project.id) }}">{{ project.get_term('sprint_plural', lang) }}</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('projects.iteration_list', project_id=project.id) }}">{{ project.get_term('sprint_plural', lang) }}</a></li>
                         <li class="breadcrumb-item active">{{ 'Report' if lang == 'en' else 'Bericht' }}</li>
                     </ol>
                 </nav>
@@ -297,11 +297,11 @@
                 {% endif %}
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="action-btn action-btn-primary">
+                <a href="{{ url_for('projects.iteration_board', project_id=project.id, sprint_id=sprint.id) }}" class="action-btn action-btn-primary">
                     <i class="bi bi-kanban"></i>
                     {{ 'Board' if lang == 'en' else 'Board' }}
                 </a>
-                <a href="{{ url_for('projects.sprint_list', project_id=project.id) }}" class="action-btn action-btn-outline">
+                <a href="{{ url_for('projects.iteration_list', project_id=project.id) }}" class="action-btn action-btn-outline">
                     <i class="bi bi-arrow-left"></i>
                     {{ 'Back' if lang == 'en' else 'Zurück' }}
                 </a>
@@ -329,7 +329,7 @@
                     <i class="bi bi-list-task"></i>
                 </div>
                 <div class="stat-value">{{ completed_issues }}/{{ total_issues }}</div>
-                <div class="stat-label">{{ 'Issues Completed' if lang == 'en' else 'Issues erledigt' }}</div>
+                <div class="stat-label">{{ (project.get_term('issue_plural', lang) + ' erledigt') if lang == 'de' else (project.get_term('issue_plural', lang) + ' Completed') }}</div>
                 {% set issue_pct = (completed_issues / total_issues * 100) if total_issues > 0 else 0 %}
                 <div class="stat-detail">{{ issue_pct|int }}%</div>
             </div>
@@ -340,7 +340,7 @@
                     <i class="bi bi-lightning-charge"></i>
                 </div>
                 <div class="stat-value">{{ completed_points }}/{{ total_points }}</div>
-                <div class="stat-label">{{ 'Story Points' if lang == 'en' else 'Story Points' }}</div>
+                <div class="stat-label">{{ project.get_term('story_points', lang) }}</div>
                 {% set points_pct = (completed_points / total_points * 100) if total_points > 0 else 0 %}
                 <div class="stat-detail">{{ points_pct|int }}%</div>
             </div>
@@ -371,7 +371,7 @@
         <div class="col-lg-8">
             <div class="chart-card">
                 <div class="chart-card-header">
-                    <h5><i class="bi bi-graph-down me-2"></i>{{ 'Burndown Chart' if lang == 'en' else 'Burndown-Diagramm' }}</h5>
+                    <h5><i class="bi bi-graph-down me-2"></i>{{ project.get_term('burndown', lang) + ('-Diagramm' if lang == 'de' else ' Chart') }}</h5>
                 </div>
                 <div class="chart-card-body">
                     {% if burndown_data.labels %}
@@ -392,7 +392,7 @@
         <div class="col-lg-4">
             <div class="chart-card">
                 <div class="chart-card-header">
-                    <h5><i class="bi bi-speedometer2 me-2"></i>{{ 'Velocity' if lang == 'en' else 'Velocity' }}</h5>
+                    <h5><i class="bi bi-speedometer2 me-2"></i>{{ project.get_term('velocity', lang) }}</h5>
                 </div>
                 <div class="chart-card-body">
                     {% if velocity_data.labels %}
@@ -404,7 +404,7 @@
                         <span><span class="dot" style="background: #86BC25;"></span>{{ 'Completed' if lang == 'en' else 'Erledigt' }}</span>
                     </div>
                     <div class="text-center mt-3">
-                        <strong>{{ 'Average Velocity' if lang == 'en' else 'Durchschnittliche Velocity' }}:</strong>
+                        <strong>{{ ('Durchschnittliche ' + project.get_term('velocity', lang)) if lang == 'de' else ('Average ' + project.get_term('velocity', lang)) }}:</strong>
                         <span class="text-success fs-5">{{ velocity_data.average }} SP</span>
                     </div>
                     {% else %}
@@ -440,7 +440,7 @@
                     </div>
                     {% else %}
                     <div class="text-center text-muted py-3">
-                        {{ 'No issues in sprint' if lang == 'en' else 'Keine Issues im Sprint' }}
+                        {{ ('Keine ' + project.get_term('issue_plural', lang) + ' in dieser ' + project.get_term('sprint', lang)) if lang == 'de' else ('No ' + project.get_term('issue_plural', lang)|lower + ' in this ' + project.get_term('sprint', lang)|lower) }}
                     </div>
                     {% endfor %}
                 </div>
@@ -469,7 +469,7 @@
                     </div>
                     {% else %}
                     <div class="text-center text-muted py-3">
-                        {{ 'No issues in sprint' if lang == 'en' else 'Keine Issues im Sprint' }}
+                        {{ ('Keine ' + project.get_term('issue_plural', lang) + ' in dieser ' + project.get_term('sprint', lang)) if lang == 'de' else ('No ' + project.get_term('issue_plural', lang)|lower + ' in this ' + project.get_term('sprint', lang)|lower) }}
                     </div>
                     {% endfor %}
                 </div>
@@ -481,7 +481,7 @@
     {% if completed_issue_list %}
     <div class="chart-card">
         <div class="chart-card-header">
-            <h5><i class="bi bi-check-circle me-2"></i>{{ 'Completed Issues' if lang == 'en' else 'Erledigte Issues' }} ({{ completed_issue_list|length }})</h5>
+            <h5><i class="bi bi-check-circle me-2"></i>{{ ('Erledigte ' + project.get_term('issue_plural', lang)) if lang == 'de' else ('Completed ' + project.get_term('issue_plural', lang)) }} ({{ completed_issue_list|length }})</h5>
         </div>
         <div class="chart-card-body p-0">
             <div class="table-responsive">
@@ -499,7 +499,7 @@
                         {% for issue in completed_issue_list %}
                         <tr>
                             <td>
-                                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-key">
+                                <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}" class="issue-key">
                                     {{ issue.key }}
                                 </a>
                             </td>
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Story Points'
+                            text: '{{ project.get_term("story_points", lang) }}'
                         }
                     },
                     x: {

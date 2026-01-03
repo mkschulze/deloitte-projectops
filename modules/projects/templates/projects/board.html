@@ -32,7 +32,7 @@
             <div class="col-auto d-flex gap-2">
                 <!-- View Switcher -->
                 <div class="btn-group view-switcher" role="group">
-                    <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" 
+                    <a href="{{ url_for('projects.item_list', project_id=project.id) }}" 
                        class="btn btn-outline-light" title="{{ 'Listenansicht' if lang == 'de' else 'List View' }}">
                         <i class="bi bi-list-ul"></i>
                     </a>
@@ -47,7 +47,7 @@
                 </div>
                 
                 <!-- Create Issue -->
-                <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="btn btn-deloitte-green">
+                <a href="{{ url_for('projects.item_new', project_id=project.id) }}" class="btn btn-deloitte-green">
                     <i class="bi bi-plus-lg me-1"></i>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}
                 </a>
             </div>
@@ -133,7 +133,7 @@
                      data-type="{{ issue.type_id }}" 
                      data-assignee="{{ issue.assignee_id or 'unassigned' }}"
                      data-priority="{{ issue.priority }}"
-                     data-href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}">
+                     data-href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}">
                     <div class="issue-card-priority priority-{{ issue.priority }}"></div>
                     <div class="issue-card-header">
                         {% if issue.issue_type %}

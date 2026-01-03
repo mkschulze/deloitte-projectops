@@ -420,7 +420,7 @@
                     <ol class="breadcrumb mb-2">
                         <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
                         <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
-                        <li class="breadcrumb-item"><a href="{{ url_for('projects.sprint_list', project_id=project.id) }}">{{ project.get_term('sprint_plural', lang) }}</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('projects.iteration_list', project_id=project.id) }}">{{ project.get_term('sprint_plural', lang) }}</a></li>
                         <li class="breadcrumb-item active">Board</li>
                     </ol>
                 </nav>
@@ -447,11 +447,11 @@
                 {% endif %}
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ url_for('projects.sprint_edit', project_id=project.id, sprint_id=sprint.id) }}" class="action-btn action-btn-outline">
+                <a href="{{ url_for('projects.iteration_edit', project_id=project.id, sprint_id=sprint.id) }}" class="action-btn action-btn-outline">
                     <i class="bi bi-pencil"></i>
                     {{ 'Bearbeiten' if lang == 'de' else 'Edit' }}
                 </a>
-                <a href="{{ url_for('projects.sprint_list', project_id=project.id) }}" class="action-btn action-btn-outline">
+                <a href="{{ url_for('projects.iteration_list', project_id=project.id) }}" class="action-btn action-btn-outline">
                     <i class="bi bi-arrow-left"></i>
                     {{ 'Zurück' if lang == 'de' else 'Back' }}
                 </a>
@@ -527,7 +527,7 @@
                                 </div>
                                 
                                 <div class="issue-card-summary">
-                                    <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}">
+                                    <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}">
                                         {{ issue.summary }}
                                     </a>
                                 </div>

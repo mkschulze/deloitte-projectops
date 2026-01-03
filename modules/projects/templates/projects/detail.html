@@ -47,7 +47,7 @@
                             <i class="bi bi-people me-2"></i>{{ 'Mitglieder verwalten' if lang == 'de' else 'Manage Members' }}
                         </a></li>
                         <li><a class="dropdown-item" href="{{ url_for('projects.project_issue_types', project_id=project.id) }}">
-                            <i class="bi bi-collection me-2"></i>{{ 'Issue-Typen' if lang == 'de' else 'Issue Types' }}
+                            <i class="bi bi-collection me-2"></i>{{ (project.get_term('issue', lang) + '-Typen') if lang == 'de' else (project.get_term('issue', lang) + ' Types') }}
                         </a></li>
                         <li><a class="dropdown-item" href="{{ url_for('projects.project_issue_statuses', project_id=project.id) }}">
                             <i class="bi bi-arrow-left-right me-2"></i>{{ 'Workflow' if lang == 'de' else 'Workflow' }}
@@ -102,7 +102,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-value">{{ project.issue_counter }}</div>
-                    <div class="stat-label">{{ 'Issues gesamt' if lang == 'de' else 'Total Issues' }}</div>
+                    <div class="stat-label">{{ (project.get_term('issue_plural', lang) + ' gesamt') if lang == 'de' else ('Total ' + project.get_term('issue_plural', lang)) }}</div>
                 </div>
             </div>
         </div>
@@ -113,7 +113,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-value">{{ sprints|length if sprints is defined else 0 }}</div>
-                    <div class="stat-label">Sprints</div>
+                    <div class="stat-label">{{ project.get_term('sprint_plural', lang) }}</div>
                 </div>
             </div>
         </div>
@@ -144,25 +144,25 @@
                     <div class="row g-3">
                         <!-- Primary Action -->
                         <div class="col-md-6 col-lg-4">
-                            <a href="{{ url_for('projects.issue_new', project_id=project.id) }}" class="action-card action-card-primary">
+                            <a href="{{ url_for('projects.item_new', project_id=project.id) }}" class="action-card action-card-primary">
                                 <div class="action-icon">
                                     <i class="bi bi-plus-lg"></i>
                                 </div>
                                 <div class="action-text">
-                                    <strong>{{ 'Neues Issue' if lang == 'de' else 'New Issue' }}</strong>
-                                    <small>{{ 'Issue erstellen' if lang == 'de' else 'Create issue' }}</small>
+                                    <strong>{{ ('Neue ' + project.get_term('issue', lang)) if lang == 'de' else ('New ' + project.get_term('issue', lang)) }}</strong>
+                                    <small>{{ (project.get_term('issue', lang) + ' erstellen') if lang == 'de' else ('Create ' + project.get_term('issue', lang)|lower) }}</small>
                                 </div>
                             </a>
                         </div>
                         
                         <!-- Navigation Actions -->
                         <div class="col-md-6 col-lg-4">
-                            <a href="{{ url_for('projects.issue_list', project_id=project.id) }}" class="action-card">
+                            <a href="{{ url_for('projects.item_list', project_id=project.id) }}" class="action-card">
                                 <div class="action-icon bg-light text-dark">
                                     <i class="bi bi-list-task"></i>
                                 </div>
                                 <div class="action-text">
-                                    <strong>{{ 'Alle Issues' if lang == 'de' else 'All Issues' }}</strong>
+                                    <strong>{{ ('Alle ' + project.get_term('issue_plural', lang)) if lang == 'de' else ('All ' + project.get_term('issue_plural', lang)) }}</strong>
                                     <small>{{ 'Liste anzeigen' if lang == 'de' else 'View list' }}</small>
                                 </div>
                             </a>
@@ -193,13 +193,13 @@
                         </div>
                         
                         <div class="col-md-6 col-lg-4">
-                            <a href="{{ url_for('projects.sprint_list', project_id=project.id) }}" class="action-card">
+                            <a href="{{ url_for('projects.iteration_list', project_id=project.id) }}" class="action-card">
                                 <div class="action-icon bg-light text-dark">
                                     <i class="bi bi-lightning"></i>
                                 </div>
                                 <div class="action-text">
-                                    <strong>Sprints</strong>
-                                    <small>{{ 'Sprint-Planung' if lang == 'de' else 'Sprint planning' }}</small>
+                                    <strong>{{ project.get_term('sprint_plural', lang) }}</strong>
+                                    <small>{{ (project.get_term('sprint', lang) + '-Planung') if lang == 'de' else (project.get_term('sprint', lang) + ' planning') }}</small>
                                 </div>
                             </a>
                         </div>
@@ -333,7 +333,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <div class="small">
-                                <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=activity.issue.key) }}" class="text-decoration-none fw-500">
+                                <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=activity.issue.key) }}" class="text-decoration-none fw-500">
                                     {{ activity.issue.key }}
                                 </a>
                                 <span class="text-muted mx-1">•</span>

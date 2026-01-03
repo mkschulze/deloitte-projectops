@@ -213,7 +213,7 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('projects.issue_list', project_id=project.id) }}">{{ project.get_term('issue_plural', lang) }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects.item_list', project_id=project.id) }}">{{ project.get_term('issue_plural', lang) }}</a></li>
                 <li class="breadcrumb-item active">{{ issue.key if issue else ('New' if lang == 'en' else 'Neu') }}</li>
             </ol>
         </nav>
@@ -253,7 +253,7 @@
                             <label for="summary" class="form-label">{{ 'Summary' if lang == 'en' else 'Zusammenfassung' }} <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="summary" name="summary" 
                                    value="{{ issue.summary if issue else '' }}" required maxlength="500" 
-                                   placeholder="{{ 'Brief description of the issue' if lang == 'en' else 'Kurze Beschreibung des Issues' }}">
+                                   placeholder="{{ 'Brief description' if lang == 'en' else 'Kurze Beschreibung' }}">
                         </div>
 
                         <!-- Description -->
@@ -282,18 +282,18 @@
                 {% if parent_issues %}
                 <div class="form-card card">
                     <div class="card-header">
-                        <i class="bi bi-diagram-3 me-2"></i>{{ 'Parent Issue' if lang == 'en' else 'Übergeordnetes Issue' }}
+                        <i class="bi bi-diagram-3 me-2"></i>{{ ('Parent ' + project.get_term('issue', lang)) if lang == 'en' else ('Übergeordnete ' + project.get_term('issue', lang)) }}
                     </div>
                     <div class="card-body">
                         <select name="parent_id" class="form-select">
-                            <option value="">{{ 'None (Top-level issue)' if lang == 'en' else 'Keines (Top-Level Issue)' }}</option>
+                            <option value="">{{ ('None (Top-level ' + project.get_term('issue', lang)|lower + ')') if lang == 'en' else ('Keine (Top-Level ' + project.get_term('issue', lang) + ')') }}</option>
                             {% for p in parent_issues %}
                             <option value="{{ p.id }}" {{ 'selected' if issue and issue.parent_id == p.id }}>
                                 {{ p.key }} - {{ p.summary[:60] }}{{ '...' if p.summary|length > 60 }}
                             </option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">{{ 'Link this issue as a sub-task of another issue' if lang == 'en' else 'Dieses Issue als Unteraufgabe eines anderen Issues verknüpfen' }}</div>
+                        <div class="form-text">{{ ('Link this ' + project.get_term('issue', lang)|lower + ' as a sub-task') if lang == 'en' else ('Als Unteraufgabe verknüpfen') }}</div>
                     </div>
                 </div>
                 {% endif %}
@@ -372,7 +372,7 @@
                     <button type="submit" class="btn btn-save action-btn">
                         <i class="bi bi-check-lg me-2"></i>{{ 'Save' if lang == 'en' else 'Speichern' }}
                     </button>
-                    <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) if issue else url_for('projects.issue_list', project_id=project.id) }}" 
+                    <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) if issue else url_for('projects.item_list', project_id=project.id) }}" 
                        class="btn btn-outline-secondary action-btn">
                         {{ 'Cancel' if lang == 'en' else 'Abbrechen' }}
                     </a>
@@ -399,7 +399,7 @@
                             </li>
                             <li>
                                 <i class="bi bi-check"></i>
-                                {{ 'Assign to a sprint for planning' if lang == 'en' else 'Weisen Sie einen Sprint zur Planung zu' }}
+                                {{ ('Assign to a ' + project.get_term('sprint', lang)|lower + ' for planning') if lang == 'en' else ('Weisen Sie ' + (('eine ' + project.get_term('sprint', lang)) if project.methodology == 'waterfall' else ('einen ' + project.get_term('sprint', lang))) + ' zur Planung zu') }}
                             </li>
                         </ul>
                     </div>

@@ -267,7 +267,7 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projects' if lang == 'en' else 'Projekte' }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.key }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('projects.issue_list', project_id=project.id) }}">Issues</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects.item_list', project_id=project.id) }}">Issues</a></li>
                 <li class="breadcrumb-item active">{{ issue.key }}</li>
             </ol>
         </nav>
@@ -281,7 +281,7 @@
                 <h1 class="issue-title">{{ issue.summary }}</h1>
             </div>
             <div class="d-flex gap-2 align-items-start">
-                <a href="{{ url_for('projects.issue_edit', project_id=project.id, issue_key=issue.key) }}" class="btn btn-outline-primary action-btn">
+                <a href="{{ url_for('projects.item_edit', project_id=project.id, issue_key=issue.key) }}" class="btn btn-outline-primary action-btn">
                     <i class="bi bi-pencil me-1"></i> {{ 'Edit' if lang == 'en' else 'Bearbeiten' }}
                 </a>
             </div>
@@ -309,7 +309,7 @@
                 <div class="card-body py-3">
                     <div class="d-flex align-items-center gap-3">
                         <span class="text-muted fw-500">Status:</span>
-                        <form method="post" action="{{ url_for('projects.issue_transition', project_id=project.id, issue_key=issue.key) }}" class="d-inline">
+                        <form method="post" action="{{ url_for('projects.item_transition', project_id=project.id, issue_key=issue.key) }}" class="d-inline">
                             <div class="status-btn-group">
                                 {% for s in available_statuses %}
                                 <button type="submit" name="status_id" value="{{ s.id }}" 
@@ -360,12 +360,12 @@
                     <table class="table table-hover mb-0">
                         <tbody>
                             {% for child in children %}
-                            <tr class="child-issue-row" onclick="window.location='{{ url_for('projects.issue_detail', project_id=project.id, issue_key=child.key) }}'">
+                            <tr class="child-issue-row" onclick="window.location='{{ url_for('projects.item_detail', project_id=project.id, issue_key=child.key) }}'">
                                 <td style="width: 40px;">
                                     <i class="{{ child.issue_type.icon }}" style="color: {{ child.issue_type.color }};"></i>
                                 </td>
                                 <td style="width: 100px;">
-                                    <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=child.key) }}" class="fw-500" onclick="event.stopPropagation();">{{ child.key }}</a>
+                                    <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=child.key) }}" class="fw-500" onclick="event.stopPropagation();">{{ child.key }}</a>
                                 </td>
                                 <td>{{ child.summary }}</td>
                                 <td style="width: 120px;">
@@ -492,7 +492,7 @@
                         <div class="d-flex justify-content-between align-items-center py-2 {{ 'border-bottom' if not loop.last or inward_links else '' }}">
                             <div>
                                 <span class="text-muted small">{{ link.get_link_display(lang) }}</span>
-                                <a href="{{ url_for('projects.issue_detail', project_id=link.target_issue.project_id, issue_key=link.target_issue.key) }}" class="ms-2 fw-500">
+                                <a href="{{ url_for('projects.item_detail', project_id=link.target_issue.project_id, issue_key=link.target_issue.key) }}" class="ms-2 fw-500">
                                     <i class="{{ link.target_issue.issue_type.icon }}" style="color: {{ link.target_issue.issue_type.color }};"></i>
                                     {{ link.target_issue.key }}
                                 </a>
@@ -507,7 +507,7 @@
                         <div class="d-flex justify-content-between align-items-center py-2 {{ 'border-bottom' if not loop.last else '' }}">
                             <div>
                                 <span class="text-muted small">{{ 'is ' + link.get_link_display(lang) if lang == 'en' else 'wird ' + link.get_link_display(lang) }}</span>
-                                <a href="{{ url_for('projects.issue_detail', project_id=link.source_issue.project_id, issue_key=link.source_issue.key) }}" class="ms-2 fw-500">
+                                <a href="{{ url_for('projects.item_detail', project_id=link.source_issue.project_id, issue_key=link.source_issue.key) }}" class="ms-2 fw-500">
                                     <i class="{{ link.source_issue.issue_type.icon }}" style="color: {{ link.source_issue.issue_type.color }};"></i>
                                     {{ link.source_issue.key }}
                                 </a>
@@ -716,7 +716,7 @@
             <div class="sidebar-card card">
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <form method="post" action="{{ url_for('projects.issue_delete', project_id=project.id, issue_key=issue.key) }}" onsubmit="return confirm('{{ 'Archive this issue?' if lang == 'en' else 'Dieses Issue archivieren?' }}')">
+                        <form method="post" action="{{ url_for('projects.item_delete', project_id=project.id, issue_key=issue.key) }}" onsubmit="return confirm('{{ 'Archive this issue?' if lang == 'en' else 'Dieses Issue archivieren?' }}')">
                             <button type="submit" class="btn btn-outline-secondary w-100 action-btn">
                                 <i class="bi bi-archive me-2"></i>{{ 'Archive' if lang == 'en' else 'Archivieren' }}
                             </button>
@@ -743,7 +743,7 @@
                     
                     <div class="collapse" id="addReviewerForm">
                         <div class="collapse-form">
-                            <form method="post" action="{{ url_for('projects.issue_reviewer_add', project_id=project.id, issue_key=issue.key) }}" class="row g-2 align-items-end">
+                            <form method="post" action="{{ url_for('projects.item_reviewer_add', project_id=project.id, issue_key=issue.key) }}" class="row g-2 align-items-end">
                                 <div class="col">
                                     <label class="form-label small text-muted mb-1">{{ 'Team member' if lang == 'en' else 'Teammitglied' }}</label>
                                     <select name="user_id" class="form-select form-select-sm" required style="border-radius: 6px;">
@@ -818,7 +818,7 @@
                             </span>
                         </div>
                         {% if project.is_admin(current_user) or issue.reporter_id == current_user.id %}
-                        <form method="post" action="{{ url_for('projects.issue_reviewer_remove', project_id=project.id, issue_key=issue.key, reviewer_id=reviewer.id) }}" class="d-inline">
+                        <form method="post" action="{{ url_for('projects.item_reviewer_remove', project_id=project.id, issue_key=issue.key, reviewer_id=reviewer.id) }}" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-x"></i></button>
                         </form>
                         {% endif %}
@@ -844,7 +844,7 @@
                     </div>
                     {% endif %}
                     <div class="d-flex gap-2">
-                        <form method="post" action="{{ url_for('projects.issue_approve', project_id=project.id, issue_key=issue.key) }}" class="flex-grow-1">
+                        <form method="post" action="{{ url_for('projects.item_approve', project_id=project.id, issue_key=issue.key) }}" class="flex-grow-1">
                             <button type="submit" class="btn btn-success btn-sm w-100 action-btn" {% if not is_in_review %}disabled{% endif %}>
                                 <i class="bi bi-check-lg me-1"></i>{{ 'Approve' if lang == 'en' else 'Genehmigen' }}
                             </button>
@@ -905,7 +905,7 @@
                         {% if issue.parent %}
                         <dt class="col-5">{{ 'Parent' if lang == 'en' else 'Übergeordnet' }}</dt>
                         <dd class="col-7">
-                            <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.parent.key) }}">{{ issue.parent.key }}</a>
+                            <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.parent.key) }}">{{ issue.parent.key }}</a>
                         </dd>
                         {% endif %}
 
@@ -1008,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius: 12px;">
-            <form method="post" action="{{ url_for('projects.issue_reject', project_id=project.id, issue_key=issue.key) }}">
+            <form method="post" action="{{ url_for('projects.item_reject', project_id=project.id, issue_key=issue.key) }}">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title">
                         <i class="bi bi-x-circle text-danger me-2"></i>

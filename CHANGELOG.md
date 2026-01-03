@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.0] - 2026-01-03
+
+### 🏷️ PM-11: Methodology-Agnostic Terminology
+
+#### Changed
+- **Neutrale URL-Pfade**:
+  - `/sprints/` → `/iterations/` (für alle Methodologien neutral)
+  - `/issues/` → `/items/` (für alle Methodologien neutral)
+  - Template-Ordner entsprechend umbenannt
+  - Alle `url_for()`-Aufrufe aktualisiert
+
+- **Dynamische Terminologie im UI**:
+  - Sprint → Phase (Waterfall), Zyklus (Kanban), Iteration (Custom)
+  - Issue → Aktivität (Waterfall), Aufgabe (Kanban), Eintrag (Custom)
+  - Story Points → Aufwand (PT) für Waterfall
+  - Burndown Chart → Fortschrittsdiagramm für Waterfall
+  - Velocity → Durchsatz für Waterfall/Kanban
+
+- **Templates aktualisiert**:
+  - Projektübersicht: "Neues Issue" → "Neue Aktivität" (Waterfall)
+  - Projektübersicht: "Alle Issues" → "Alle Aktivitäten" (Waterfall)
+  - Projektübersicht: "Issue-Typen" → "Aktivität-Typen" (Waterfall)
+  - Iteration-Report: Dynamische Chart-Titel und Labels
+  - Item-Formular: Dynamische Placeholders und Tipps
+  - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
+
+#### Added
+- **METHODOLOGY_CONFIG erweitert** in `models.py`:
+  - `issue` / `issue_plural` Keys für alle 4 Methodologien
+  - Deutsche und englische Übersetzungen für jeden Begriff
+
+- **Timeline-Vorschau** bei Iteration erstellen:
+  - Sidebar zeigt existierende Iterationen mit Datum
+  - Status-Badges (Aktiv, Abgeschlossen, Geplant)
+  - Vorgeschlagenes Startdatum für neue Iteration
+
+---
+
 ## [1.10.0] - 2026-01-03
 
 ### 🔄 PM-10: Workflow Transitions

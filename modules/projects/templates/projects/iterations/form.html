@@ -215,6 +215,82 @@
     .state-banner i {
         font-size: 1.25rem;
     }
+    
+    /* Timeline Preview */
+    .timeline-preview {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .timeline-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background 0.2s;
+    }
+    
+    .timeline-item:last-child {
+        border-bottom: none;
+    }
+    
+    .timeline-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .timeline-item.active {
+        background: linear-gradient(135deg, rgba(134, 188, 37, 0.08) 0%, rgba(134, 188, 37, 0.04) 100%);
+        border-left: 3px solid #86BC25;
+    }
+    
+    .timeline-item.closed {
+        opacity: 0.7;
+    }
+    
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
+    }
+    
+    .timeline-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9rem;
+    }
+    
+    .timeline-state-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+    
+    .timeline-state-badge.active {
+        background: #86BC25;
+        color: white;
+    }
+    
+    .timeline-state-badge.closed {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .timeline-state-badge.future {
+        background: #00A3E0;
+        color: white;
+    }
+    
+    .timeline-dates {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .timeline-suggestion {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        border-top: 1px solid #e9ecef;
+    }
 </style>
 {% endblock %}
 
@@ -226,7 +302,7 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_list') }}">{{ 'Projekte' if lang == 'de' else 'Projects' }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('projects.project_detail', project_id=project.id) }}">{{ project.name }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('projects.sprint_list', project_id=project.id) }}">{{ project.get_term('sprint_plural', lang) }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects.iteration_list', project_id=project.id) }}">{{ project.get_term('sprint_plural', lang) }}</a></li>
                 <li class="breadcrumb-item active">{{ ('Bearbeiten' if sprint else 'Neu') if lang == 'de' else ('Edit' if sprint else 'New') }}</li>
             </ol>
         </nav>
@@ -313,7 +389,7 @@
                                 <i class="bi bi-check-lg me-2"></i>
                                 {{ 'Speichern' if lang == 'de' else 'Save' }}
                             </button>
-                            <a href="{{ url_for('projects.sprint_list', project_id=project.id) }}" class="btn btn-outline-secondary action-btn">
+                            <a href="{{ url_for('projects.iteration_list', project_id=project.id) }}" class="btn btn-outline-secondary action-btn">
                                 {{ 'Abbrechen' if lang == 'de' else 'Cancel' }}
                             </a>
                         </div>
@@ -324,6 +400,64 @@
         
         <!-- Sidebar -->
         <div class="col-lg-4">
+            <!-- Existing Iterations Timeline -->
+            {% if existing_iterations and not sprint %}
+            <div class="info-card card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-calendar-range me-2 text-primary"></i>
+                    {{ ('Bestehende ' + project.get_term('sprint_plural', lang)) if lang == 'de' else ('Existing ' + project.get_term('sprint_plural', lang)) }}
+                </div>
+                <div class="card-body p-0">
+                    <div class="timeline-preview">
+                        {% for iter in existing_iterations %}
+                        <div class="timeline-item {{ iter.state }}">
+                            <div class="timeline-header">
+                                <span class="timeline-name">{{ iter.name }}</span>
+                                <span class="timeline-state-badge {{ iter.state }}">
+                                    {% if iter.state == 'active' %}
+                                        <i class="bi bi-play-circle-fill"></i> {{ 'Aktiv' if lang == 'de' else 'Active' }}
+                                    {% elif iter.state == 'closed' %}
+                                        <i class="bi bi-check-circle-fill"></i> {{ 'Abgeschlossen' if lang == 'de' else 'Closed' }}
+                                    {% else %}
+                                        <i class="bi bi-clock"></i> {{ 'Geplant' if lang == 'de' else 'Planned' }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="timeline-dates">
+                                {% if iter.start_date and iter.end_date %}
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    {{ iter.start_date.strftime('%d.%m.%Y') }} – {{ iter.end_date.strftime('%d.%m.%Y') }}
+                                {% elif iter.start_date %}
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    {{ 'Ab' if lang == 'de' else 'From' }} {{ iter.start_date.strftime('%d.%m.%Y') }}
+                                {% elif iter.end_date %}
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    {{ 'Bis' if lang == 'de' else 'Until' }} {{ iter.end_date.strftime('%d.%m.%Y') }}
+                                {% else %}
+                                    <span class="text-muted"><i class="bi bi-calendar-x me-1"></i>{{ 'Keine Termine' if lang == 'de' else 'No dates' }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Suggested next start date -->
+                    {% set last_end_date = none %}
+                    {% for iter in existing_iterations|reverse %}
+                        {% if iter.end_date and not last_end_date %}
+                            {% set last_end_date = iter.end_date %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if last_end_date %}
+                    <div class="timeline-suggestion">
+                        <i class="bi bi-lightbulb text-warning me-2"></i>
+                        <span>{{ 'Letzte ' + project.get_term('sprint', lang) + ' endet am' if lang == 'de' else 'Last ' + project.get_term('sprint', lang)|lower + ' ends on' }} <strong>{{ last_end_date.strftime('%d.%m.%Y') }}</strong></span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
             <!-- Tips -->
             <div class="info-card card mb-3">
                 <div class="card-header">
@@ -346,7 +480,7 @@
                         </li>
                         <li>
                             <i class="bi bi-check2"></i>
-                            <span>{{ ('Issues können im Backlog zur ' + project.get_term('sprint', lang) + ' hinzugefügt werden.') if lang == 'de' else ('Issues can be added to the ' + project.get_term('sprint', lang)|lower + ' from the backlog.') }}</span>
+                            <span>{{ (project.get_term('issue_plural', lang) + ' können im Backlog zur ' + project.get_term('sprint', lang) + ' hinzugefügt werden.') if lang == 'de' else (project.get_term('issue_plural', lang) + ' can be added to the ' + project.get_term('sprint', lang)|lower + ' from the backlog.') }}</span>
                         </li>
                     </ul>
                 </div>
@@ -366,7 +500,7 @@
                     <ul class="sprint-issues-list">
                         {% for issue in sprint.issues[:8] %}
                         <li>
-                            <a href="{{ url_for('projects.issue_detail', project_id=project.id, issue_key=issue.key) }}">
+                            <a href="{{ url_for('projects.item_detail', project_id=project.id, issue_key=issue.key) }}">
                                 <span class="issue-key-badge">{{ issue.key }}</span>
                                 <span>{{ issue.summary[:35] }}{% if issue.summary|length > 35 %}...{% endif %}</span>
                             </a>

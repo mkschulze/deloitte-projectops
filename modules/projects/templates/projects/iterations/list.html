@@ -34,7 +34,7 @@
                 </div>
             </div>
             <div class="col-auto">
-                <a href="{{ url_for('projects.sprint_create', project_id=project.id) }}" class="btn btn-deloitte-green">
+                <a href="{{ url_for('projects.iteration_create', project_id=project.id) }}" class="btn btn-deloitte-green">
                     <i class="bi bi-plus-lg me-1"></i>
                     {{ project.get_term('sprint_new', lang) }}
                 </a>
@@ -162,19 +162,19 @@
                     </div>
                     
                     <div class="sprint-actions">
-                        <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-deloitte-green">
+                        <a href="{{ url_for('projects.iteration_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-deloitte-green">
                             <i class="bi bi-kanban me-1"></i>
                             {{ project.get_term('sprint', lang) }} Board
                         </a>
-                        <a href="{{ url_for('projects.sprint_report', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('projects.iteration_report', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-outline-primary">
                             <i class="bi bi-graph-up me-1"></i>
                             {{ 'Report' if lang == 'de' else 'Report' }}
                         </a>
-                        <a href="{{ url_for('projects.sprint_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-outline-secondary">
+                        <a href="{{ url_for('projects.iteration_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-outline-secondary">
                             <i class="bi bi-pencil me-1"></i>
                             {{ 'Bearbeiten' if lang == 'de' else 'Edit' }}
                         </a>
-                        <form action="{{ url_for('projects.sprint_complete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline" 
+                        <form action="{{ url_for('projects.iteration_complete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline" 
                               onsubmit="return confirm('{{ (project.get_term('sprint', lang) + ' wirklich abschließen?') if lang == 'de' else ('Really complete this ' + project.get_term('sprint', lang)|lower + '?') }}')">
                             <button type="submit" class="btn btn-outline-success">
                                 <i class="bi bi-check-circle me-1"></i>
@@ -229,17 +229,17 @@
                         
                         <div class="sprint-actions-sm">
                             {% if not active_sprints %}
-                            <form action="{{ url_for('projects.sprint_start', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline">
+                            <form action="{{ url_for('projects.iteration_start', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-deloitte-green">
                                     <i class="bi bi-play-fill me-1"></i>
                                     {{ 'Starten' if lang == 'de' else 'Start' }}
                                 </button>
                             </form>
                             {% endif %}
-                            <a href="{{ url_for('projects.sprint_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary">
+                            <a href="{{ url_for('projects.iteration_edit', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <form action="{{ url_for('projects.sprint_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
+                            <form action="{{ url_for('projects.iteration_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
                                   onsubmit="return confirm('{{ (project.get_term('sprint', lang) + ' wirklich löschen?') if lang == 'de' else ('Really delete this ' + project.get_term('sprint', lang)|lower + '?') }}')">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-trash"></i>
@@ -312,13 +312,13 @@
                             </td>
                             <td>
                                 <div class="d-flex gap-1 justify-content-end">
-                                    <a href="{{ url_for('projects.sprint_report', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-primary" title="{{ 'Report' if lang == 'de' else 'Report' }}">
+                                    <a href="{{ url_for('projects.iteration_report', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-primary" title="{{ 'Report' if lang == 'de' else 'Report' }}">
                                         <i class="bi bi-graph-up"></i>
                                     </a>
-                                    <a href="{{ url_for('projects.sprint_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary" title="{{ 'Ansehen' if lang == 'de' else 'View' }}">
+                                    <a href="{{ url_for('projects.iteration_board', project_id=project.id, sprint_id=sprint.id) }}" class="btn btn-sm btn-outline-secondary" title="{{ 'Ansehen' if lang == 'de' else 'View' }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <form action="{{ url_for('projects.sprint_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
+                                    <form action="{{ url_for('projects.iteration_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
                                           onsubmit="return confirm('{{ (project.get_term('sprint', lang) + ' wirklich löschen?') if lang == 'de' else ('Really delete this ' + project.get_term('sprint', lang)|lower + '?') }}')">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="{{ 'Löschen' if lang == 'de' else 'Delete' }}">
                                             <i class="bi bi-trash"></i>
@@ -342,7 +342,7 @@
             <p class="text-muted mb-4">
                 {{ ('Erstellen Sie Ihre erste ' + project.get_term('sprint', lang) + ', um mit der Arbeit zu beginnen.') if lang == 'de' else ('Create your first ' + project.get_term('sprint', lang)|lower + ' to start working.') }}
             </p>
-            <a href="{{ url_for('projects.sprint_create', project_id=project.id) }}" class="btn btn-deloitte-green btn-lg">
+            <a href="{{ url_for('projects.iteration_create', project_id=project.id) }}" class="btn btn-deloitte-green btn-lg">
                 <i class="bi bi-plus-lg me-1"></i>
                 {{ ('Erste ' + project.get_term('sprint', lang) + ' erstellen') if lang == 'de' else ('Create First ' + project.get_term('sprint', lang)) }}
             </a>
