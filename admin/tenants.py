@@ -742,3 +742,102 @@ def tenant_export_excel(tenant_id):
         }
     )
     return response
+
+
+# ============================================================================
+# API KEY MANAGEMENT
+# ============================================================================
+
+@admin_tenants.route('/<int:tenant_id>/api-keys')
+@login_required
+@superadmin_required
+def tenant_api_keys(tenant_id):
+    """Manage API keys for a tenant"""
+    tenant = Tenant.query.get_or_404(tenant_id)
+    api_keys = TenantApiKey.query.filter_by(tenant_id=tenant_id).order_by(TenantApiKey.created_at.desc()).all()
+    
+    return render_template('admin/tenants/api_keys.html',
+                          tenant=tenant,
+                          api_keys=api_keys)
+
+
+@admin_tenants.route('/<int:tenant_id>/api-keys/create', methods=['POST'])
+@login_required
+@superadmin_required
+def tenant_api_key_create(tenant_id):
+    """Create a new API key for a tenant"""
+    import secrets
+    
+    tenant = Tenant.query.get_or_404(tenant_id)
+    
+    name = request.form.get('name', '').strip()
+    if not name:
+        name = f"API Key {datetime.utcnow().strftime('%Y-%m-%d')}"
+    
+    # Generate a secure API key
+    full_key = secrets.token_urlsafe(32)
+    key_prefix = full_key[:8]
+    
+    # Hash the key for storage (we'll show the full key once on creation)
+    import hashlib
+    key_hash = hashlib.sha256(full_key.encode()).hexdigest()
+    
+    api_key = TenantApiKey(
+        tenant_id=tenant_id,
+        name=name,
+        key_prefix=key_prefix,
+        key_hash=key_hash,
+        is_active=True,
+        created_by_id=current_user.id
+    )
+    
+    db.session.add(api_key)
+    db.session.commit()
+    
+    # Flash the full key - this is the only time it will be shown
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash(f'API-Schlüssel erstellt! Kopieren Sie diesen Schlüssel jetzt - er wird nicht wieder angezeigt: {full_key}', 'success')
+    else:
+        flash(f'API key created! Copy this key now - it will not be shown again: {full_key}', 'success')
+    
+    return redirect(url_for('admin_tenants.tenant_api_keys', tenant_id=tenant_id))
+
+
+@admin_tenants.route('/<int:tenant_id>/api-keys/<int:key_id>/toggle', methods=['POST'])
+@login_required
+@superadmin_required
+def tenant_api_key_toggle(tenant_id, key_id):
+    """Toggle API key active status"""
+    api_key = TenantApiKey.query.filter_by(id=key_id, tenant_id=tenant_id).first_or_404()
+    
+    api_key.is_active = not api_key.is_active
+    db.session.commit()
+    
+    lang = session.get('lang', 'de')
+    status = 'aktiviert' if api_key.is_active else 'deaktiviert'
+    if lang != 'de':
+        status = 'activated' if api_key.is_active else 'deactivated'
+    
+    flash(f'API-Schlüssel "{api_key.name}" wurde {status}.', 'success')
+    return redirect(url_for('admin_tenants.tenant_api_keys', tenant_id=tenant_id))
+
+
+@admin_tenants.route('/<int:tenant_id>/api-keys/<int:key_id>/delete', methods=['POST'])
+@login_required
+@superadmin_required
+def tenant_api_key_delete(tenant_id, key_id):
+    """Delete an API key"""
+    api_key = TenantApiKey.query.filter_by(id=key_id, tenant_id=tenant_id).first_or_404()
+    
+    name = api_key.name
+    db.session.delete(api_key)
+    db.session.commit()
+    
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash(f'API-Schlüssel "{name}" wurde gelöscht.', 'success')
+    else:
+        flash(f'API key "{name}" was deleted.', 'success')
+    
+    return redirect(url_for('admin_tenants.tenant_api_keys', tenant_id=tenant_id))

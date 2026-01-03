@@ -1043,7 +1043,12 @@ def project_methodology(project_id, project=None):
     if request.method == 'POST':
         # Update methodology
         new_methodology = request.form.get('methodology', 'scrum')
+        old_methodology = project.methodology
         project.methodology = new_methodology
+        
+        # Reset estimation scale to default when methodology changes
+        if old_methodology != new_methodology:
+            project.estimation_scale = None  # Will use methodology-based default
         
         # Update custom terminology overrides
         terminology = {}
@@ -1965,9 +1970,9 @@ def iteration_report(project_id, sprint_id, project=None):
     # Issue breakdown by type
     issues_by_type = {}
     for issue in issues:
-        type_name = issue.item_type.get_name(lang) if issue.item_type else 'Unknown'
+        type_name = issue.issue_type.get_name(lang) if issue.issue_type else 'Unknown'
         if type_name not in issues_by_type:
-            issues_by_type[type_name] = {'total': 0, 'completed': 0, 'color': issue.item_type.color if issue.item_type else '#666'}
+            issues_by_type[type_name] = {'total': 0, 'completed': 0, 'color': issue.issue_type.color if issue.issue_type else '#666'}
         issues_by_type[type_name]['total'] += 1
         if issue.status and issue.status.is_final:
             issues_by_type[type_name]['completed'] += 1
@@ -2960,6 +2965,134 @@ def api_search_recent():
         })
     
     return jsonify({'recent': results})
+
+
+# =============================================================================
+# ESTIMATION / SIZING
+# =============================================================================
+
+@bp.route('/<int:project_id>/estimation')
+@login_required
+@projects_module_required
+@project_access_required
+def estimation(project_id, project=None):
+    """Estimation helper - size unestimated issues"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    # Get unestimated issues (no story points)
+    unestimated = Issue.query.filter(
+        Issue.project_id == project_id,
+        Issue.is_archived == False,
+        db.or_(Issue.story_points == None, Issue.story_points == 0)
+    ).order_by(Issue.backlog_position, Issue.created_at.desc()).all()
+    
+    # Get recently estimated issues for reference
+    estimated = Issue.query.filter(
+        Issue.project_id == project_id,
+        Issue.is_archived == False,
+        Issue.story_points != None,
+        Issue.story_points > 0
+    ).order_by(Issue.updated_at.desc()).limit(10).all()
+    
+    # Get estimation scale config
+    scale_config = project.get_estimation_scale_config()
+    
+    return render_template('projects/estimation.html',
+        project=project,
+        unestimated_issues=unestimated,
+        estimated_issues=estimated,
+        scale_config=scale_config,
+        lang=lang
+    )
+
+
+@bp.route('/<int:project_id>/estimation/update', methods=['POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def estimation_update(project_id, project=None):
+    """Update story points for an issue via AJAX"""
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_manage_issues(current_user):
+        return jsonify({'success': False, 'error': 'No permission'}), 403
+    
+    data = request.get_json()
+    issue_id = data.get('issue_id')
+    story_points = data.get('story_points')
+    
+    if not issue_id:
+        return jsonify({'success': False, 'error': 'Missing issue_id'}), 400
+    
+    issue = Issue.query.filter_by(id=issue_id, project_id=project_id).first()
+    if not issue:
+        return jsonify({'success': False, 'error': 'Issue not found'}), 404
+    
+    try:
+        issue.story_points = float(story_points) if story_points else None
+        issue.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'issue_key': issue.key,
+            'story_points': issue.story_points
+        })
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid story points value'}), 400
+
+
+@bp.route('/<int:project_id>/settings/estimation', methods=['GET', 'POST'])
+@login_required
+@projects_module_required
+@project_access_required
+def project_estimation_settings(project_id, project=None):
+    """Configure project estimation scale"""
+    lang = session.get('lang', 'de')
+    
+    if project is None:
+        project = Project.query.get_or_404(project_id)
+    
+    if not project.can_user_edit(current_user):
+        flash('Keine Berechtigung.' if lang == 'de' else 'No permission.', 'danger')
+        return redirect(url_for('projects.project_detail', project_id=project_id))
+    
+    if request.method == 'POST':
+        scale = request.form.get('estimation_scale', 'fibonacci')
+        project.estimation_scale = scale
+        
+        # Handle custom values
+        if scale == 'custom':
+            custom_values = []
+            labels = request.form.getlist('custom_label[]')
+            points = request.form.getlist('custom_points[]')
+            descriptions = request.form.getlist('custom_description[]')
+            
+            for i, label in enumerate(labels):
+                if label.strip():
+                    try:
+                        pts = float(points[i]) if i < len(points) else i + 1
+                    except:
+                        pts = i + 1
+                    custom_values.append({
+                        'label': label.strip(),
+                        'points': pts,
+                        'description': {'de': descriptions[i] if i < len(descriptions) else '', 'en': ''}
+                    })
+            project.estimation_values = custom_values
+        
+        db.session.commit()
+        flash('Schätzskala aktualisiert.' if lang == 'de' else 'Estimation scale updated.', 'success')
+        return redirect(url_for('projects.project_estimation_settings', project_id=project_id))
+    
+    return render_template('projects/settings/estimation.html',
+        project=project,
+        lang=lang
+    )
 
 
 def register_routes(blueprint):

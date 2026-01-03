@@ -126,6 +126,7 @@
         border-bottom: 1px solid #f0f0f0;
         padding: 1rem 1.25rem;
         font-weight: 600;
+        color: #212529;
     }
     
     .info-card .card-body {
@@ -468,7 +469,7 @@
                     <ul class="tips-list">
                         <li>
                             <i class="bi bi-check2"></i>
-                            <span>{{ ('Eine typische ' + project.get_term('sprint', lang) + ' dauert 1-4 Wochen.') if lang == 'de' else ('A typical ' + project.get_term('sprint', lang)|lower + ' lasts 1-4 weeks.') }}</span>
+                            <span>{{ (project.get_article('sprint', 'nom')|capitalize + ' typische' + ('r ' if project.get_article('sprint', 'nom') == 'ein' else ' ') + project.get_term('sprint', lang) + ' dauert 1-4 Wochen.') if lang == 'de' else ('A typical ' + project.get_term('sprint', lang)|lower + ' lasts 1-4 weeks.') }}</span>
                         </li>
                         <li>
                             <i class="bi bi-check2"></i>
@@ -476,11 +477,11 @@
                         </li>
                         <li>
                             <i class="bi bi-check2"></i>
-                            <span>{{ ('Nur eine ' + project.get_term('sprint', lang) + ' kann gleichzeitig aktiv sein.') if lang == 'de' else ('Only one ' + project.get_term('sprint', lang)|lower + ' can be active at a time.') }}</span>
+                            <span>{{ ('Nur ' + project.get_article('sprint', 'nom') + ' ' + project.get_term('sprint', lang) + ' kann gleichzeitig aktiv sein.') if lang == 'de' else ('Only one ' + project.get_term('sprint', lang)|lower + ' can be active at a time.') }}</span>
                         </li>
                         <li>
                             <i class="bi bi-check2"></i>
-                            <span>{{ (project.get_term('issue_plural', lang) + ' können im Backlog zur ' + project.get_term('sprint', lang) + ' hinzugefügt werden.') if lang == 'de' else (project.get_term('issue_plural', lang) + ' can be added to the ' + project.get_term('sprint', lang)|lower + ' from the backlog.') }}</span>
+                            <span>{{ (project.get_term('issue_plural', lang) + ' können über den Bearbeiten-Dialog ' + project.get_article('sprint', 'dat') + ' ' + project.get_term('sprint', lang) + ' zugewiesen werden.') if lang == 'de' else (project.get_term('issue_plural', lang) + ' can be assigned to a ' + project.get_term('sprint', lang)|lower + ' via the edit dialog.') }}</span>
                         </li>
                     </ul>
                 </div>

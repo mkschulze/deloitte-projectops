@@ -58,7 +58,7 @@
                     </div>
                     <div class="quick-stat-content">
                         <div class="quick-stat-value">{{ active_sprints|length }}</div>
-                        <div class="quick-stat-label">{{ 'Aktiv' if lang == 'de' else 'Active' }}</div>
+                        <div class="quick-stat-label">{{ (project.get_term('sprint_plural', lang) + ' aktiv') if lang == 'de' else ('Active ' + project.get_term('sprint_plural', lang)) }}</div>
                     </div>
                 </div>
             </div>
@@ -69,7 +69,7 @@
                     </div>
                     <div class="quick-stat-content">
                         <div class="quick-stat-value">{{ future_sprints|length }}</div>
-                        <div class="quick-stat-label">{{ 'Geplant' if lang == 'de' else 'Planned' }}</div>
+                        <div class="quick-stat-label">{{ (project.get_term('sprint_plural', lang) + ' geplant') if lang == 'de' else ('Planned ' + project.get_term('sprint_plural', lang)) }}</div>
                     </div>
                 </div>
             </div>
@@ -80,7 +80,7 @@
                     </div>
                     <div class="quick-stat-content">
                         <div class="quick-stat-value">{{ closed_sprints|length }}</div>
-                        <div class="quick-stat-label">{{ 'Abgeschlossen' if lang == 'de' else 'Completed' }}</div>
+                        <div class="quick-stat-label">{{ (project.get_term('sprint_plural', lang) + ' abgeschlossen') if lang == 'de' else ('Completed ' + project.get_term('sprint_plural', lang)) }}</div>
                     </div>
                 </div>
             </div>
@@ -91,7 +91,7 @@
                     </div>
                     <div class="quick-stat-content">
                         <div class="quick-stat-value">{{ average_velocity }}</div>
-                        <div class="quick-stat-label">{{ ('Ø ' + project.get_term('velocity', lang)) if lang == 'de' else ('Avg ' + project.get_term('velocity', lang)) }}</div>
+                        <div class="quick-stat-label">{{ ('Ø ' + project.get_term('velocity', lang) + ' (Story Points)') if lang == 'de' else ('Avg ' + project.get_term('velocity', lang) + ' (Story Points)') }}</div>
                     </div>
                 </div>
             </div>

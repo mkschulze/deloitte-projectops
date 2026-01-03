@@ -322,6 +322,12 @@ class Project(db.Model):
     # Example: {"epic": "Initiative", "story": "Requirement", "sprint": "Iteration"}
     terminology = db.Column(db.JSON, default=dict)
     
+    # Estimation scale configuration
+    # Options: 'fibonacci', 'tshirt', 'linear', 'custom'
+    estimation_scale = db.Column(db.String(20), default='fibonacci')
+    # Custom scale values (JSON array) - used when estimation_scale='custom'
+    estimation_values = db.Column(db.JSON, default=list)
+    
     # Categorization
     category = db.Column(db.String(50))  # e.g., 'tax', 'audit', 'consulting'
     icon = db.Column(db.String(50), default='bi-folder')  # Bootstrap icon
@@ -392,6 +398,25 @@ class Project(db.Model):
         # Ultimate fallback to scrum terminology
         return METHODOLOGY_CONFIG['scrum']['terminology'].get(lang, {}).get(key, key)
     
+    def get_article(self, key, case='nom'):
+        """
+        Get the correct German article for a terminology key.
+        case: 'nom' (nominative: ein/eine), 'dat' (dative: einem/einer)
+        
+        Sprint is masculine → ein/einem
+        Iteration is feminine → eine/einer
+        """
+        term = self.get_term(key, 'de').lower()
+        
+        # Feminine terms (die)
+        feminine_terms = ['iteration', 'phase', 'aufgabe', 'story']
+        
+        if any(f in term for f in feminine_terms):
+            return 'eine' if case == 'nom' else 'einer'
+        else:
+            # Default to masculine (der) - Sprint, Meilenstein, etc.
+            return 'ein' if case == 'nom' else 'einem'
+    
     def has_feature(self, feature):
         """Check if a feature is enabled for this project's methodology"""
         config = self.get_methodology_config()
@@ -445,6 +470,91 @@ class Project(db.Model):
             project_id=self.id,
             is_initial=True
         ).first() or self.issue_statuses[0] if self.issue_statuses else None
+    
+    def get_estimation_scale_config(self):
+        """Get estimation scale configuration with labels and story point mappings"""
+        scales = {
+            'fibonacci': {
+                'name': {'de': 'Fibonacci', 'en': 'Fibonacci'},
+                'hint': {
+                    'de': 'Story Points messen relativen Aufwand (Komplexität + Unsicherheit + Umfang), nicht Zeitdauer.',
+                    'en': 'Story points measure relative effort (complexity + uncertainty + scope), not time.'
+                },
+                'values': [
+                    {'label': '1', 'points': 1, 'description': {'de': 'Trivial – wenige Stunden, klar definiert', 'en': 'Trivial – few hours, well defined'}},
+                    {'label': '2', 'points': 2, 'description': {'de': 'Einfach – überschaubar, kaum Unbekannte', 'en': 'Simple – straightforward, few unknowns'}},
+                    {'label': '3', 'points': 3, 'description': {'de': 'Klein – typische Aufgabe (Referenzgröße)', 'en': 'Small – typical task (reference size)'}},
+                    {'label': '5', 'points': 5, 'description': {'de': 'Mittel – mehrere Aspekte, etwas Komplexität', 'en': 'Medium – several aspects, some complexity'}},
+                    {'label': '8', 'points': 8, 'description': {'de': 'Groß – komplex, Abstimmung nötig', 'en': 'Large – complex, coordination needed'}},
+                    {'label': '13', 'points': 13, 'description': {'de': 'Sehr groß – viele Unbekannte, ggf. aufteilen', 'en': 'Very large – many unknowns, consider splitting'}},
+                    {'label': '21', 'points': 21, 'description': {'de': 'Riesig – zu groß, muss aufgeteilt werden!', 'en': 'Huge – too large, must be split!'}},
+                ]
+            },
+            'tshirt': {
+                'name': {'de': 'T-Shirt Größen', 'en': 'T-Shirt Sizes'},
+                'hint': {
+                    'de': 'Intuitive Größeneinteilung für schnelle, grobe Schätzungen ohne exakte Zahlen.',
+                    'en': 'Intuitive sizing for quick, rough estimates without exact numbers.'
+                },
+                'values': [
+                    {'label': 'XS', 'points': 1, 'description': {'de': 'Winzig – schnell erledigt', 'en': 'Tiny – done quickly'}},
+                    {'label': 'S', 'points': 2, 'description': {'de': 'Klein – überschaubar', 'en': 'Small – manageable'}},
+                    {'label': 'M', 'points': 3, 'description': {'de': 'Mittel – Standardaufgabe', 'en': 'Medium – standard task'}},
+                    {'label': 'L', 'points': 5, 'description': {'de': 'Groß – mehr Aufwand', 'en': 'Large – more effort'}},
+                    {'label': 'XL', 'points': 8, 'description': {'de': 'Sehr groß – komplex', 'en': 'Extra large – complex'}},
+                    {'label': 'XXL', 'points': 13, 'description': {'de': 'Riesig – aufteilen empfohlen', 'en': 'Huge – splitting recommended'}},
+                ]
+            },
+            'linear': {
+                'name': {'de': 'Linear (1-10)', 'en': 'Linear (1-10)'},
+                'hint': {
+                    'de': 'Einfache Skala von 1-10 für Teams, die mit gleichmäßigen Abstufungen arbeiten möchten.',
+                    'en': 'Simple 1-10 scale for teams preferring uniform increments.'
+                },
+                'values': [
+                    {'label': str(i), 'points': i, 'description': {'de': f'Aufwand {i}/10', 'en': f'Effort {i}/10'}}
+                    for i in range(1, 11)
+                ]
+            },
+            'persondays': {
+                'name': {'de': 'Personentage (PT)', 'en': 'Person Days (PD)'},
+                'hint': {
+                    'de': 'Direkte Aufwandsschätzung in Personentagen – ideal für klassische Projektplanung.',
+                    'en': 'Direct effort estimation in person days – ideal for traditional project planning.'
+                },
+                'values': [
+                    {'label': '0.5', 'points': 0.5, 'description': {'de': '½ Tag', 'en': '½ day'}},
+                    {'label': '1', 'points': 1, 'description': {'de': '1 Tag', 'en': '1 day'}},
+                    {'label': '2', 'points': 2, 'description': {'de': '2 Tage', 'en': '2 days'}},
+                    {'label': '3', 'points': 3, 'description': {'de': '3 Tage', 'en': '3 days'}},
+                    {'label': '5', 'points': 5, 'description': {'de': '1 Woche', 'en': '1 week'}},
+                    {'label': '10', 'points': 10, 'description': {'de': '2 Wochen', 'en': '2 weeks'}},
+                    {'label': '20', 'points': 20, 'description': {'de': '1 Monat', 'en': '1 month'}},
+                ]
+            },
+            'custom': {
+                'name': {'de': 'Benutzerdefiniert', 'en': 'Custom'},
+                'hint': {
+                    'de': 'Eigene Werte und Beschreibungen passend zu Ihrem Team.',
+                    'en': 'Custom values and descriptions tailored to your team.'
+                },
+                'values': self.estimation_values or []
+            }
+        }
+        
+        # Default scale based on methodology
+        default_scale = 'fibonacci'
+        if self.methodology == 'waterfall':
+            default_scale = 'persondays'
+        elif self.methodology == 'kanban':
+            default_scale = 'tshirt'
+        
+        return scales.get(self.estimation_scale or default_scale, scales['fibonacci'])
+    
+    def get_estimation_values(self):
+        """Get list of estimation values for this project"""
+        config = self.get_estimation_scale_config()
+        return config.get('values', [])
     
     @property
     def member_count(self):

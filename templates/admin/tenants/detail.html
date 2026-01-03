@@ -98,6 +98,7 @@
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         padding: 1rem 1.25rem;
         font-weight: 600;
+        color: #212529;
     }
     
     .member-row {
@@ -378,10 +379,16 @@
         <div class="col-lg-4">
             <!-- API Keys Card -->
             <div class="info-card card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-key me-2 text-warning"></i>
-                    <span>{{ 'API-Schlüssel' if lang == 'de' else 'API Keys' }}</span>
-                    <span class="badge bg-secondary ms-2">{{ api_keys|length }}</span>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-key me-2 text-warning"></i>
+                        <span>{{ 'API-Schlüssel' if lang == 'de' else 'API Keys' }}</span>
+                        <span class="badge bg-secondary ms-2">{{ api_keys|length }}</span>
+                    </div>
+                    <a href="{{ url_for('admin_tenants.tenant_api_keys', tenant_id=tenant.id) }}" 
+                       class="btn btn-sm btn-outline-warning" style="border-radius: 0.5rem;">
+                        <i class="bi bi-plus-lg me-1"></i>{{ 'Neu' if lang == 'de' else 'New' }}
+                    </a>
                 </div>
                 <div class="card-body">
                     {% if api_keys %}

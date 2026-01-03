@@ -204,6 +204,18 @@
                             </a>
                         </div>
                         
+                        <div class="col-md-6 col-lg-4">
+                            <a href="{{ url_for('projects.estimation', project_id=project.id) }}" class="action-card">
+                                <div class="action-icon bg-light text-dark">
+                                    <i class="bi bi-rulers"></i>
+                                </div>
+                                <div class="action-text">
+                                    <strong>{{ 'Schätzung' if lang == 'de' else 'Estimation' }}</strong>
+                                    <small>{{ (project.get_term('story_points', lang) + ' vergeben') if lang == 'de' else ('Assign ' + project.get_term('story_points', lang)|lower) }}</small>
+                                </div>
+                            </a>
+                        </div>
+                        
                         {% if project.can_user_edit(current_user) %}
                         <div class="col-md-6 col-lg-4">
                             <a href="{{ url_for('projects.project_members', project_id=project.id) }}" class="action-card">
@@ -373,6 +385,12 @@
 </div>
 
 <style>
+/* Card Headers - ensure readable text */
+.card-header.bg-white h5,
+.card-header.bg-white .mb-0 {
+    color: #212529 !important;
+}
+
 /* Hero Section */
 .project-hero {
     background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #86BC25 100%);

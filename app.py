@@ -360,8 +360,9 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Main dashboard with task overview"""
+    """Advanced Analytics Dashboard with project insights"""
     from datetime import date, timedelta
+    from modules.projects.models import Project, ProjectMember, Issue, Sprint
     
     # Get user's tasks based on role and entity permissions (exclude archived)
     if current_user.is_admin() or current_user.is_manager():
@@ -388,6 +389,7 @@ def dashboard():
     today = date.today()
     soon = today + timedelta(days=7)
     
+    # Task statistics
     stats = {
         'total': base_query.count(),
         'overdue': base_query.filter(Task.due_date < today, Task.status != 'completed').count(),
@@ -395,6 +397,12 @@ def dashboard():
         'in_review': base_query.filter_by(status='in_review').count(),
         'completed': base_query.filter_by(status='completed').count(),
     }
+    
+    # Calculate completion rate
+    if stats['total'] > 0:
+        stats['completion_rate'] = round((stats['completed'] / stats['total']) * 100, 1)
+    else:
+        stats['completion_rate'] = 0
     
     # My upcoming tasks
     my_tasks = base_query.filter(
@@ -407,10 +415,63 @@ def dashboard():
         Task.status != 'completed'
     ).order_by(Task.due_date).limit(5).all()
     
+    # ==================== PROJECT DATA ====================
+    # Get projects where user is a member
+    if current_user.is_admin():
+        user_projects = Project.query.filter_by(is_archived=False).order_by(Project.updated_at.desc()).limit(6).all()
+    else:
+        user_project_ids = db.session.query(ProjectMember.project_id).filter_by(user_id=current_user.id).subquery()
+        user_projects = Project.query.filter(
+            Project.id.in_(user_project_ids),
+            Project.is_archived == False
+        ).order_by(Project.updated_at.desc()).limit(6).all()
+    
+    # Build project insights
+    project_insights = []
+    for project in user_projects:
+        # Get issue counts
+        total_issues = Issue.query.filter_by(project_id=project.id, is_archived=False).count()
+        open_issues = Issue.query.join(project.issue_statuses[0].__class__).filter(
+            Issue.project_id == project.id,
+            Issue.is_archived == False,
+            Issue.status.has(is_final=False)
+        ).count() if project.issue_statuses else 0
+        my_issues = Issue.query.filter_by(project_id=project.id, assignee_id=current_user.id, is_archived=False).count()
+        
+        # Get active sprint if scrum
+        active_sprint = None
+        if project.methodology == 'scrum':
+            active_sprint = Sprint.query.filter_by(project_id=project.id, state='active').first()
+        
+        project_insights.append({
+            'project': project,
+            'total_issues': total_issues,
+            'open_issues': open_issues,
+            'my_issues': my_issues,
+            'active_sprint': active_sprint,
+            'completion_rate': round(((total_issues - open_issues) / total_issues * 100) if total_issues > 0 else 0, 1)
+        })
+    
+    # Get recent issues assigned to user
+    my_recent_issues = Issue.query.filter_by(
+        assignee_id=current_user.id,
+        is_archived=False
+    ).order_by(Issue.updated_at.desc()).limit(5).all()
+    
+    # Calculate productivity trends (last 7 days)
+    week_ago = today - timedelta(days=7)
+    tasks_completed_this_week = base_query.filter(
+        Task.status == 'completed',
+        Task.updated_at >= week_ago
+    ).count()
+    
     return render_template('dashboard.html', 
                          stats=stats, 
                          my_tasks=my_tasks, 
                          overdue_tasks=overdue_tasks,
+                         project_insights=project_insights,
+                         my_recent_issues=my_recent_issues,
+                         tasks_completed_this_week=tasks_completed_this_week,
                          today=today)
 
 
@@ -3868,6 +3929,174 @@ def api_team_chart():
     # Generate colors (Deloitte palette variations)
     base_colors = ['#86BC25', '#0D6EFD', '#0DCAF0', '#198754', '#FFC107', '#6C757D', '#DC3545', '#6610F2', '#D63384', '#20C997']
     colors = [base_colors[i % len(base_colors)] for i in range(len(labels))]
+    
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'colors': colors
+    })
+
+
+@app.route('/api/dashboard/project-velocity/<int:project_id>')
+@login_required
+def api_project_velocity(project_id):
+    """Get velocity chart data for a project (last 6 sprints)"""
+    from modules.projects.models import Project, Sprint, Issue
+    
+    project = Project.query.get_or_404(project_id)
+    
+    # Check access
+    if not project.is_member(current_user):
+        return jsonify({'error': 'Access denied'}), 403
+    
+    lang = session.get('lang', 'de')
+    
+    # Get last 6 completed sprints
+    sprints = Sprint.query.filter_by(
+        project_id=project_id,
+        state='closed'
+    ).order_by(Sprint.completed_at.desc()).limit(6).all()
+    
+    sprints.reverse()  # Oldest first
+    
+    labels = []
+    committed = []
+    completed = []
+    
+    for sprint in sprints:
+        labels.append(sprint.name)
+        committed.append(sprint.total_points or 0)
+        completed.append(sprint.completed_points or 0)
+    
+    return jsonify({
+        'labels': labels,
+        'datasets': [
+            {
+                'label': 'Geplant' if lang == 'de' else 'Committed',
+                'data': committed,
+                'backgroundColor': 'rgba(13, 110, 253, 0.5)',
+                'borderColor': '#0D6EFD',
+                'borderWidth': 2
+            },
+            {
+                'label': 'Abgeschlossen' if lang == 'de' else 'Completed',
+                'data': completed,
+                'backgroundColor': 'rgba(134, 188, 37, 0.5)',
+                'borderColor': '#86BC25',
+                'borderWidth': 2
+            }
+        ]
+    })
+
+
+@app.route('/api/dashboard/trends')
+@login_required
+def api_dashboard_trends():
+    """Get completion trends for the last 30 days"""
+    from datetime import date, timedelta
+    from collections import defaultdict
+    
+    lang = session.get('lang', 'de')
+    today = date.today()
+    
+    # Get tasks completed in last 30 days
+    days_back = 30
+    start_date = today - timedelta(days=days_back)
+    
+    # Build daily counts
+    daily_completed = defaultdict(int)
+    daily_created = defaultdict(int)
+    
+    # Get completed tasks
+    if current_user.is_admin() or current_user.is_manager():
+        completed_tasks = Task.query.filter(
+            Task.status == 'completed',
+            Task.updated_at >= start_date
+        ).all()
+        created_tasks = Task.query.filter(
+            Task.created_at >= start_date
+        ).all()
+    else:
+        completed_tasks = Task.query.filter(
+            Task.status == 'completed',
+            Task.updated_at >= start_date,
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        ).all()
+        created_tasks = Task.query.filter(
+            Task.created_at >= start_date,
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        ).all()
+    
+    for task in completed_tasks:
+        if task.updated_at:
+            day = task.updated_at.date() if hasattr(task.updated_at, 'date') else task.updated_at
+            daily_completed[day] += 1
+    
+    for task in created_tasks:
+        if task.created_at:
+            day = task.created_at.date() if hasattr(task.created_at, 'date') else task.created_at
+            daily_created[day] += 1
+    
+    # Build arrays for last 30 days
+    labels = []
+    completed_data = []
+    created_data = []
+    
+    for i in range(days_back):
+        day = start_date + timedelta(days=i)
+        labels.append(day.strftime('%d.%m'))
+        completed_data.append(daily_completed.get(day, 0))
+        created_data.append(daily_created.get(day, 0))
+    
+    return jsonify({
+        'labels': labels,
+        'datasets': [
+            {
+                'label': 'Abgeschlossen' if lang == 'de' else 'Completed',
+                'data': completed_data,
+                'borderColor': '#86BC25',
+                'backgroundColor': 'rgba(134, 188, 37, 0.1)',
+                'fill': True,
+                'tension': 0.4
+            },
+            {
+                'label': 'Erstellt' if lang == 'de' else 'Created',
+                'data': created_data,
+                'borderColor': '#0D6EFD',
+                'backgroundColor': 'rgba(13, 110, 253, 0.1)',
+                'fill': True,
+                'tension': 0.4
+            }
+        ]
+    })
+
+
+@app.route('/api/dashboard/project-distribution')
+@login_required
+def api_project_distribution():
+    """Get issue distribution across user's projects"""
+    from modules.projects.models import Project, ProjectMember, Issue
+    
+    lang = session.get('lang', 'de')
+    
+    # Get user's projects
+    if current_user.is_admin():
+        projects = Project.query.filter_by(is_archived=False).all()
+    else:
+        project_ids = db.session.query(ProjectMember.project_id).filter_by(user_id=current_user.id).all()
+        project_ids = [p[0] for p in project_ids]
+        projects = Project.query.filter(Project.id.in_(project_ids), Project.is_archived == False).all()
+    
+    labels = []
+    data = []
+    colors = []
+    
+    for project in projects:
+        issue_count = Issue.query.filter_by(project_id=project.id, is_archived=False).count()
+        if issue_count > 0:
+            labels.append(f"{project.key}: {project.get_name(lang)}")
+            data.append(issue_count)
+            colors.append(project.color or '#86BC25')
     
     return jsonify({
         'labels': labels,
