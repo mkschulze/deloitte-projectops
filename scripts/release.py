@@ -2,6 +2,17 @@
 """
 Release Script for Deloitte ProjectOps
 
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  🤖 AI REMINDER: AFTER RUNNING THIS SCRIPT, YOU MUST:                        ║
+║                                                                              ║
+║  1. Read the generated prompt: scripts/memory_bank_update_prompt.txt         ║
+║  2. Update docs/activeContext.md with new session info and accomplishments   ║
+║  3. Update docs/progress.md with new release section                         ║
+║  4. Commit and push the Memory Bank updates                                  ║
+║                                                                              ║
+║  A release is NOT complete until the Memory Bank is updated!                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
 This script automates the release process:
 1. Validates working directory is clean
 2. Updates version numbers in all files
