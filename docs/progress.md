@@ -5,11 +5,37 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
 **Last Updated:** 2026-01-03 (Session 16)  
-**Version:** 1.15.0
+**Version:** 1.16.0
 
 ---
 
 ## Recent Releases
+
+### v1.16.0 - Test Coverage Phase 2 (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **69 Middleware & Module Tests** (`test_phase2_middleware_modules.py`):
+  - TestLoadTenantContextLogic (8 tests) - auth, superadmin, regular user scenarios
+  - TestTenantRequiredDecoratorExecution (6 tests) - redirect behavior
+  - TestTenantAdminRequiredDecoratorExecution (5 tests) - admin role checks
+  - TestTenantManagerRequiredDecoratorExecution (6 tests) - manager role checks
+  - TestSuperadminRequiredDecoratorExecution (3 tests) - superadmin access
+  - TestCanEditInTenant (5 tests) - edit permissions
+  - TestCanManageInTenant (5 tests) - manage permissions
+  - TestIsTenantAdmin (4 tests) - admin status
+  - TestScopeQueryToTenant (3 tests) - query scoping
+  - TestModuleRegistryMethods (8 tests) - module registration
+  - TestBaseModuleMethods (8 tests) - base module class
+  - TestCoreModuleDetails (3 tests) - core module
+
+- **Coverage Improvements**:
+  - middleware/tenant.py: 28% → 98% (+70%)
+  - modules/core/__init__.py: 89% → 100%
+  - modules/__init__.py: 54% → 88% (+34%)
+
+- **Metrics**:
+  - Total tests: 467 → 536 (+69)
 
 ### v1.15.0 - Test Coverage Phase 1 (2026-01-03)
 
