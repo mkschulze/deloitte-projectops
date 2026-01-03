@@ -2,7 +2,7 @@
 
 > **Enterprise Project & Task Management Platform** — A centralized platform for managing projects, tasks, and deadlines across teams and organizations with multi-tenant support.
 
-![Version](https://img.shields.io/badge/Version-1.12.0-blue)
+![Version](https://img.shields.io/badge/Version-1.13.0-blue)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple?logo=bootstrap)

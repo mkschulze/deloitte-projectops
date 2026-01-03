@@ -59,6 +59,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.0] - 2026-01-03
+
+### 1.13.0
+
+#### Added
+- TODO: Add new features
+
+#### Changed
+- TODO: Add changes
+
+#### Fixed
+- TODO: Add fixes
+
+
+
 ## [1.11.0] - 2026-01-03
 
 ### 🏷️ PM-11: Methodology-Agnostic Terminology

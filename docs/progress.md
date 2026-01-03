@@ -5,7 +5,7 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
 
 **Last Updated:** 2026-01-03 (Session 15)  
-**Version:** 1.12.0
+**Version:** 1.13.0
 
 ---
 

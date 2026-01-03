@@ -4,29 +4,30 @@ You are updating the Memory Bank documentation for Deloitte ProjectOps after a n
 
 ## Release Information
 
-**New Version:** 1.12.0
-**Release Title:** Multi-Tenancy: Enterprise Client Separation
+**New Version:** 1.13.0
+**Release Title:** 1.13.0
 **Date:** 2026-01-03
-**Previous Version:** 1.11.0
+**Previous Version:** 1.12.0
 
 ## Changes Since Last Release
 
 ### Git Commits
 ```
+3dc4ce9 feat: Add unit test infrastructure with 125 tests
+85f2eda docs: add projectbrief.md and .rules for Memory Bank system
+81693e4 docs: add projectbrief.md as Memory Bank foundation document
+aa3a482 docs: update Memory Bank for v1.12.0 Multi-Tenancy release
 36599ca feat: enhanced release script with AI-powered Memory Bank updates
 212d0fc chore: add release automation script and fix config version
 b062347 feat: Multi-Tenancy v1.12.0 - Enterprise Client Separation
 de2c45f ui: update landing page with ProjectOps branding and features
-26b5e1e docs: update README for GitHub with v1.12.0 features, multi-tenancy, and project management module
-a7c3faa docs: update GitHub repository URLs to new name deloitte-projectops
-33dd867 Update memory bank for v1.11.0
-27759d5 Release v1.11.0: Methodology-Agnostic Terminology
 ```
 
 ### Changed Files
 ```
 M	CHANGELOG.md
-M	README.md
+M	Pipfile
+M	Pipfile.lock
 M	VERSION
 A	admin/__init__.py
 A	admin/tenants.py
@@ -37,123 +38,156 @@ A	docs/multiTenancyDesign.md
 M	docs/productContext.md
 M	docs/progress.md
 M	docs/projectManagementModule.md
+A	docs/projectbrief.md
 M	docs/systemPatterns.md
-M	docs/techContext.md
 M	docs/technicalConcept.md
 M	init_db.py
 A	middleware/__init__.py
 A	middleware/tenant.py
+A	migrations/versions/est001_add_estimation_scale.py
 A	migrations/versions/g1_rename_tax_type_to_category.py
 A	migrations/versions/mt001_add_multi_tenancy.py
 M	models.py
 M	modules/__init__.py
 M	modules/projects/models.py
 M	modules/projects/routes.py
-M	modules/projects/templates/projects/backlog.html
-M	modules/projects/templates/projects/board.html
 M	modules/projects/templates/projects/detail.html
+A	modules/projects/templates/projects/estimation.html
 M	modules/projects/templates/projects/form.html
-M	modules/projects/templates/projects/issues/form.html
-R096	modules/projects/templates/projects/issues/detail.html	modules/projects/templates/projects/items/detail.html
-A	modules/projects/templates/projects/items/form.html
-R097	modules/projects/templates/projects/issues/list.html	modules/projects/templates/projects/items/list.html
-A	modules/projects/templates/projects/iterations/board.html
-A	modules/projects/templates/projects/iterations/form.html
-A	modules/projects/templates/projects/iterations/list.html
-A	modules/projects/templates/projects/iterations/report.html
+M	modules/projects/templates/projects/iterations/board.html
+M	modules/projects/templates/projects/iterations/form.html
+M	modules/projects/templates/projects/iterations/list.html
 M	modules/projects/templates/projects/list.html
 M	modules/projects/templates/projects/members.html
+A	modules/projects/templates/projects/settings/estimation.html
 M	modules/projects/templates/projects/settings/methodology.html
-M	modules/projects/templates/projects/sprints/board.html
 M	modules/projects/templates/projects/sprints/form.html
-M	modules/projects/templates/projects/sprints/list.html
-M	modules/projects/templates/projects/sprints/report.html
 R075	modules/taxops/__init__.py	modules/tasks/__init__.py
+A	pytest.ini
+M	requirements.txt
+A	scripts/.rules
 A	scripts/create_demo_tenants.py
 A	scripts/create_full_demo_data.py
 A	scripts/memory_bank_prompt.md
+A	scripts/memory_bank_update_prompt.txt
 A	scripts/release.py
 A	scripts/update_memory_bank.py
 M	services.py
 A	templates/admin/categories.html
 A	templates/admin/category_form.html
 M	templates/admin/dashboard.html
+A	templates/admin/tenants/api_keys.html
 A	templates/admin/tenants/detail.html
 A	templates/admin/tenants/form.html
 A	templates/admin/tenants/list.html
 A	templates/admin/tenants/members.html
+A	templates/admin/tenants/members_old.html
 M	templates/base.html
 M	templates/calendar_subscription.html
+M	templates/dashboard.html
 M	templates/index.html
 A	templates/select_tenant.html
+A	tests/__init__.py
+A	tests/conftest.py
+A	tests/factories.py
+A	tests/integration/__init__.py
+A	tests/integration/test_routes.py
+A	tests/unit/__init__.py
+A	tests/unit/test_config.py
+A	tests/unit/test_extensions.py
+A	tests/unit/test_methodology.py
+A	tests/unit/test_models_notification.py
+A	tests/unit/test_models_project.py
+A	tests/unit/test_models_tenant.py
+A	tests/unit/test_models_user.py
+A	tests/unit/test_services.py
+A	tests/unit/test_sprint_board.py
+A	tests/unit/test_translations.py
 M	translations.py
 ```
 
 ### Git Diff Summary
 ```
-CHANGELOG.md                                       |   96 +-
- README.md                                          |   89 +-
+CHANGELOG.md                                       |   58 +-
+ Pipfile                                            |    4 +
+ Pipfile.lock                                       |  980 ++++----
  VERSION                                            |    2 +-
  admin/__init__.py                                  |    6 +
- admin/tenants.py                                   |  744 ++++++++++++
- app.py                                             |  229 +++-
+ admin/tenants.py                                   |  843 +++++++
+ app.py                                             |  460 +++-
  config.py                                          |    6 +-
- docs/activeContext.md                              |   86 +-
- docs/multiTenancyDesign.md                         | 1271 ++++++++++++++++++++
+ docs/activeContext.md                              |  225 +-
+ docs/multiTenancyDesign.md                         | 1271 ++++++++++
  docs/productContext.md                             |    4 +-
- docs/progress.md                                   |   79 +-
+ docs/progress.md                                   |   56 +-
  docs/projectManagementModule.md                    |   16 +-
+ docs/projectbrief.md                               |  153 ++
  docs/systemPatterns.md                             |    4 +-
- docs/techContext.md                                |    9 +-
  docs/technicalConcept.md                           |    2 +-
  init_db.py                                         |   51 +-
  middleware/__init__.py                             |   20 +
- middleware/tenant.py                               |  289 +++++
- .../versions/g1_rename_tax_type_to_category.py     |   71 ++
- migrations/versions/mt001_add_multi_tenancy.py     |  184 +++
- models.py                                          |  326 ++++-
+ middleware/tenant.py                               |  289 +++
+ migrations/versions/est001_add_estimation_scale.py |   29 +
+ .../versions/g1_rename_tax_type_to_category.py     |   71 +
+ migrations/versions/mt001_add_multi_tenancy.py     |  184 ++
+ models.py                                          |  326 ++-
  modules/__init__.py                                |    2 +-
- modules/projects/models.py                         |   47 +-
- modules/projects/routes.py                         |  314 ++---
- modules/projects/templates/projects/backlog.html   |   10 +-
- modules/projects/templates/projects/board.html     |    6 +-
- modules/projects/templates/projects/detail.html    |   28 +-
+ modules/projects/models.py                         |  117 +-
+ modules/projects/routes.py                         |  144 +-
+ modules/projects/templates/projects/detail.html    |   22 +-
+ .../projects/templates/projects/estimation.html    |  340 +++
  modules/projects/templates/projects/form.html      |    2 +-
- .../projects/templates/projects/issues/form.html   |   14 +-
- .../projects/{issues => items}/detail.html         |   26 +-
- .../projects/templates/projects/items/form.html    |  440 +++++++
- .../templates/projects/{issues => items}/list.html |   10 +-
- .../templates/projects/iterations/board.html       |  655 ++++++++++
- .../templates/projects/iterations/form.html        |  538 +++++++++
- .../templates/projects/iterations/list.html        |  667 ++++++++++
- .../templates/projects/iterations/report.html      |  634 ++++++++++
+ .../templates/projects/iterations/board.html       |    2 +-
+ .../templates/projects/iterations/form.html        |    7 +-
+ .../templates/projects/iterations/list.html        |    8 +-
  modules/projects/templates/projects/list.html      |    2 +-
- modules/projects/templates/projects/members.html   |    4 +-
+ modules/projects/templates/projects/members.html   |    2 +-
+ .../templates/projects/settings/estimation.html    |  406 ++++
  .../templates/projects/settings/methodology.html   |   65 +-
- .../projects/templates/projects/sprints/board.html |    4 +-
- .../projects/templates/projects/sprints/form.html  |   30 +-
- .../projects/templates/projects/sprints/list.html  |   26 +-
- .../templates/projects/sprints/report.html         |    8 +-
+ .../projects/templates/projects/sprints/form.html  |    7 +-
  modules/{taxops => tasks}/__init__.py              |   24 +-
- scripts/create_demo_tenants.py                     |  235 ++++
- scripts/create_full_demo_data.py                   |  597 +++++++++
- scripts/memory_bank_prompt.md                      |   97 ++
- scripts/release.py                                 |  583 +++++++++
- scripts/update_memory_bank.py                      |  196 +++
+ pytest.ini                                         |   32 +
+ requirements.txt                                   |    6 +
+ scripts/.rules                                     |  115 +
+ scripts/create_demo_tenants.py                     |  235 ++
+ scripts/create_full_demo_data.py                   |  597 +++++
+ scripts/memory_bank_prompt.md                      |   97 +
+ scripts/memory_bank_update_prompt.txt              | 2456 ++++++++++++++++++++
+ scripts/release.py                                 |  583 +++++
+ scripts/update_memory_bank.py                      |  196 ++
  services.py                                        |   24 +-
- templates/admin/categories.html                    |   68 ++
- templates/admin/category_form.html                 |  136 +++
+ templates/admin/categories.html                    |   68 +
+ templates/admin/category_form.html                 |  136 ++
  templates/admin/dashboard.html                     |   10 +-
- templates/admin/tenants/detail.html                |  464 +++++++
- templates/admin/tenants/form.html                  |  137 +++
- templates/admin/tenants/list.html                  |  235 ++++
- templates/admin/tenants/members.html               |  168 +++
+ templates/admin/tenants/api_keys.html              |  205 ++
+ templates/admin/tenants/detail.html                |  471 ++++
+ templates/admin/tenants/form.html                  |  137 ++
+ templates/admin/tenants/list.html                  |  235 ++
+ templates/admin/tenants/members.html               |  309 +++
+ templates/admin/tenants/members_old.html           |  168 ++
  templates/base.html                                |   30 +-
  templates/calendar_subscription.html               |    2 +-
+ templates/dashboard.html                           |  531 ++++-
  templates/index.html                               |   52 +-
- templates/select_tenant.html                       |  136 +++
+ templates/select_tenant.html                       |  136 ++
+ tests/__init__.py                                  |    3 +
+ tests/conftest.py                                  |  370 +++
+ tests/factories.py                                 |  219 ++
+ tests/integration/__init__.py                      |    1 +
+ tests/integration/test_routes.py                   |  123 +
+ tests/unit/__init__.py                             |    1 +
+ tests/unit/test_config.py                          |   83 +
+ tests/unit/test_extensions.py                      |   90 +
+ tests/unit/test_methodology.py                     |  167 ++
+ tests/unit/test_models_notification.py             |  105 +
+ tests/unit/test_models_project.py                  |  175 ++
+ tests/unit/test_models_tenant.py                   |  155 ++
+ tests/unit/test_models_user.py                     |   67 +
+ tests/unit/test_services.py                        |  135 ++
+ tests/unit/test_sprint_board.py                    |  204 ++
+ tests/unit/test_translations.py                    |   90 +
  translations.py                                    |   18 +-
- 62 files changed, 9801 insertions(+), 527 deletions(-)
+ 79 files changed, 14237 insertions(+), 810 deletions(-)
 ```
 
 ## Current Memory Bank Files
@@ -170,47 +204,68 @@ CHANGELOG.md                                       |   96 +-
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 14)  
-**Last Action:** PM-11 Methodology-Agnostic Terminology abgeschlossen  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + UI Redesign
-**Version:** 1.12.0
+**Date:** 2026-01-03 (Session 15)  
+**Last Action:** Multi-Tenancy v1.12.0 + Release Automation + GitHub Rename  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
+**Version:** 1.13.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 14)
+### ✅ What Was Accomplished (Session 15)
+
+1. **Multi-Tenancy v1.12.0** (Complete)
+
+   #### Tenant Infrastructure
+   - `Tenant` model with slug, name, logo (base64), is_active, is_archived
+   - `TenantMembership` model with per-tenant roles (admin, manager, member, viewer)
+   - `TenantApiKey` model for API access per tenant
+   - `tenant_id` column on all major tables (Task, Entity, Project, Issue, Sprint, Team)
+   - Tenant middleware for context switching
+   
+   #### Super-Admin Tenant Management (`/admin/tenants/`)
+   - Modern Deloitte-styled UI with gradient headers
+   - Tenant list with active/archived filters and stats
+   - Tenant detail page with member list, API keys, quick actions
+   - Full CRUD: create, edit, archive, restore, delete
+   - "Enter Tenant" to switch context as Super-Admin
+   
+   #### Tenant Selection (`/select-tenant`)
+   - Users with multiple memberships can switch between clients
+   - Modern card-based UI with Deloitte branding
+   - Super-Admin section to access Tenant Management
+   
+   #### Compliance Export
+   - JSON export of tenant data
+   - Excel export with 10 sheets (Mandant, Mitglieder, Projekte, Issues, etc.)
+   - Timestamped filenames for audit trail
+
+2. **Release Automation Script** (Complete)
+   - `scripts/release.py` for automated releases
+   - Version updates in all files (VERSION, config.py, README.md, docs/)
+   - CHANGELOG.md section generation
+   - Memory Bank prompt generation for AI updates
+   - Git commit and tag creation
+   - Push to remote
+   - `scripts/update_memory_bank.py` for AI-powered doc updates
+
+3. **GitHub Repository Rename** (Complete)
+   - Renamed from `deloitte-taxops-calendar` to `deloitte-projectops`
+   - Updated all documentation URLs
+   - Created v1.12.0 tag
+
+4. **Landing Page Update** (Complete)
+   - New branding: ProjectOps with rocket icon
+   - Features: Projects, Kanban, Iterations, Multi-Tenancy
+   - Updated hero section and feature cards
+
+### ✅ Previously Completed (Session 14)
 
 1. **PM-11: Methodology-Agnostic Terminology** (Complete)
-
-   #### Neutrale URL-Pfade
-   - `/sprints/` → `/iterations/` (neutral für alle Methodologien)
-   - `/issues/` → `/items/` (neutral für alle Methodologien)
-   - Template-Ordner umbenannt: `issues/` → `items/`, `sprints/` → `iterations/`
-   - Alle `url_for()` Aufrufe und Route-Endpunkte aktualisiert
-   
-   #### Dynamische Terminologie
-   - METHODOLOGY_CONFIG erweitert mit `issue` / `issue_plural` Keys
-   - Alle 4 Methodologien haben vollständige Terminologie (DE/EN):
-     - Scrum: Issue/Issues
-     - Kanban: Aufgabe/Aufgaben (DE), Item/Items (EN)
-     - Waterfall: Aktivität/Aktivitäten (DE), Activity/Activities (EN)
-     - Custom: Eintrag/Einträge (DE), Item/Items (EN)
-   
-   #### Templates aktualisiert
-   - Projektübersicht: "Neues Issue" → "Neue Aktivität" (Waterfall)
-   - Projektübersicht: "Alle Issues" → "Alle Aktivitäten"
-   - Projektübersicht: "Issue-Typen" → "Aktivität-Typen"
-   - Iteration-Report: Burndown → Fortschrittsdiagramm, Velocity → Durchsatz
-   - Item-Formular: Dynamische Placeholders und Tipps
-   - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
-
-### ✅ Previously Completed (Session 13)
-
-1. **PM-10: Workflow Transitions** (Complete)
-   - Tab-Navigation in Workflow Settings
-   - Interaktive Transition-Matrix
-   - Frontend/Backend Validation
+   - Neutral URL paths: `/sprints/` → `/iterations/`, `/issues/` → `/items/`
+   - Dynamic terminology per methodology
+   - METHODOLOGY_CONFIG with issue/issue_plural keys
 
 ---
 
@@ -219,12 +274,18 @@ CHANGELOG.md                                       |   96 +-
 ### Database Tables
 
 ```
+# Multi-Tenancy
+tenant                ✅ Client/organization separation
+tenant_membership     ✅ Per-tenant user roles
+tenant_api_key        ✅ API access per tenant
+
+# Core
 user                  ✅ Extended with roles, email preferences, calendar token
 audit_log             ✅ With action types
-entity                ✅ With group hierarchy
-tax_type              ✅ Tax categories
+entity                ✅ With group hierarchy + tenant_id
+category              ✅ Task categories (renamed from tax_type)
 task_template         ✅ Reusable templates
-task                  ✅ Core tasks with status, teams, preset_id, is_recurring_instance
+task                  ✅ Core tasks with status, teams, preset_id + tenant_id
 task_reviewer         ✅ Multi-reviewer tracking
 task_evidence         ✅ Files and links
 comment               ✅ Discussion threads
@@ -241,15 +302,19 @@ user_entity           ✅ Entity access with levels
 
 | Model | Purpose |
 |-------|---------|
+| `Tenant` | Multi-tenant client separation |
+| `TenantMembership` | Per-tenant user roles (admin, manager, member, viewer) |
+| `TenantApiKey` | API access tokens per tenant |
 | `User` | User accounts with roles, preferences |
-| `Task` | Core task with workflow, teams, recurrence |
-| `TaskPreset` | Predefined templates with recurrence config |
+| `Project` | Projects with methodology configuration |
+| `Issue` | Issue/task tracking with workflows |
+| `Sprint` | Iterations/phases for time-boxed work |
+| `Task` | Calendar tasks with workflow, teams, recurrence |
 | `Team` | User grouping with members |
-| `TaskReviewer` | Multi-reviewer approval tracking |
+| `Entity` | Legal entities with tenant scoping |
 | `Notification` | In-app notification system |
-| `UserEntity` | Entity access permissions |
 
-### Routes (app.py ~1850 lines)
+### Routes (app.py ~3900 lines)
 
 | Category | Routes | Description |
 |----------|--------|-------------|
@@ -257,8 +322,9 @@ user_entity           ✅ Entity access with levels
 | Dashboard | 1 | Main dashboard |
 | Tasks | 12 | CRUD, status, evidence, comments |
 | Calendar | 3 | Month, year, week views |
-| Admin | 19 | Users, entities, tax types, teams, presets |
-| CLI | 4 | initdb, createadmin, seed, loadpresets |
+| Admin | 25+ | Users, entities, categories, teams, presets, tenants |
+| Tenants | 8 | CRUD, members, API keys, compliance export |
+| CLI | 6 | initdb, createadmin, seed, loadpresets, due reminders, recurring tasks |
 
 ---
 
@@ -325,44 +391,45 @@ team.get_member_count()      # Count members
 ## File Structure
 
 ```
-deloitte-projectops-calendar/
-├── app.py                  # ~3100 lines - All routes + CLI commands
-├── models.py               # ~850 lines - All models
+deloitte-projectops/
+├── app.py                  # ~3900 lines - All routes + CLI commands
+├── models.py               # ~1200 lines - All models incl. Multi-Tenancy
 ├── services.py             # ~650 lines - Business logic services
 ├── config.py               # Configuration
 ├── translations.py         # i18n (DE/EN)
 │
+├── admin/                  # Admin blueprints
+│   └── tenants.py          # Tenant management routes
+│
+├── middleware/             # Request middleware
+│   └── tenant.py           # Tenant context middleware
+│
+├── modules/                # Feature modules
+│   ├── projects/           # Project management module
+│   └── tasks/              # Tasks module
+│
+├── scripts/                # Automation scripts
+│   ├── release.py          # Release automation
+│   ├── update_memory_bank.py  # AI-powered doc updates
+│   └── create_full_demo_data.py
+│
 ├── templates/
-│   ├── base.html           # Master layout with navbar + notification bell
-│   ├── dashboard.html      # KPI cards, my tasks, Chart.js charts
-│   ├── calendar.html       # Month view with popovers
-│   ├── calendar_year.html  # Year view with popovers
-│   ├── profile_notifications.html  # Email preferences
-│   ├── calendar_sync.html  # iCal subscription instructions
-│   ├── tasks/
-│   │   ├── list.html       # Filterable list with bulk ops, preview
-│   │   ├── detail.html     # Tabs, evidence, comments, recurring badge
-│   │   └── form.html       # Create/edit with multi-reviewer
-│   └── admin/
-│       ├── presets.html    # Preset management
-│       ├── preset_form.html # With recurrence settings
-│       ├── teams.html      # Team management
-│       └── team_form.html  # Team create/edit
+│   ├── base.html           # Master layout with tenant switcher
+│   ├── select_tenant.html  # Tenant selection page
+│   ├── index.html          # Landing page (ProjectOps branding)
+│   ├── admin/
+│   │   └── tenants/        # Tenant management UI
+│   └── ...
 │
-├── uploads/                # Evidence files
-│   └── task_*/             # Per-task folders
-│
-├── data/                   # JSON data files
-│   ├── steuerarten_aufgaben.json
-│   └── Antraege.json
+├── migrations/versions/
+│   ├── mt001_add_multi_tenancy.py
+│   └── ...
 │
 └── docs/                   # Memory Bank
-    ├── progress.md         # Development checklist
-    ├── activeContext.md    # Current session state
-    ├── technicalConcept.md # Architecture
-    ├── techContext.md      # Tech stack
-    ├── systemPatterns.md   # Design patterns
-    └── productContext.md   # Product requirements
+    ├── progress.md
+    ├── activeContext.md
+    ├── multiTenancyDesign.md  # NEW: Multi-tenancy architecture
+    └── ...
 ```
 
 ---
@@ -371,7 +438,7 @@ deloitte-projectops-calendar/
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@deloitte.de | password | admin |
+| admin@deloitte.de | password | admin (Super-Admin) |
 | manager@deloitte.de | password | manager |
 | reviewer@deloitte.de | password | reviewer |
 | preparer@deloitte.de | password | preparer |
@@ -395,65 +462,55 @@ deloitte-projectops-calendar/
 
 | URL | Purpose |
 |-----|---------|
-| `/` | Landing page |
+| `/` | Landing page (ProjectOps branding) |
 | `/login` | Login form |
+| `/select-tenant` | Tenant selection for multi-tenant users |
 | `/dashboard` | Main dashboard with KPIs + charts |
 | `/tasks` | Task list with filters + bulk operations |
-| `/tasks/new` | Create new task |
-| `/tasks/<id>` | Task detail (tabs: overview, evidence, comments, audit) |
-| `/tasks/<id>/edit` | Edit task |
 | `/calendar` | Month calendar |
 | `/calendar/year` | Year calendar |
-| `/calendar/feed/<token>.ics` | iCal feed (subscriptions) |
-| `/profile/notifications` | Email preferences |
-| `/profile/calendar-sync` | Calendar sync settings |
+| `/projects` | Project Management module |
+| `/projects/<key>/board` | Kanban board |
+| `/projects/<key>/iterations` | Iterations/Sprints |
 | `/admin` | Admin dashboard |
+| `/admin/tenants` | **NEW:** Tenant management (Super-Admin) |
+| `/admin/tenants/<id>` | Tenant detail with members, API keys |
+| `/admin/tenants/<id>/export` | Compliance export (JSON/Excel) |
 | `/admin/entities` | Entity management |
-| `/admin/entities/<id>/users` | Entity user permissions |
-| `/admin/users/<id>/entities` | User entity permissions |
-| `/admin/tax-types` | Tax type management |
+| `/admin/categories` | Category management (renamed from tax-types) |
 | `/admin/teams` | Team management |
-| `/admin/presets` | Task preset management (with recurrence) |
 
 ---
 
 ## Next Steps (If Continuing Development)
 
-### Remaining Project Management Phases
-1. **Phase PM-4:** Backlog (Priorisierte Issue-Liste, Drag & Drop Ranking)
-2. **Phase PM-5:** Sprint-Management (Sprint starten/beenden, Sprint-Board)
-3. **Phase PM-6:** Kommentare, Attachments, Links
-4. **Phase PM-7:** Epics & Progress-Tracking
-5. **Phase PM-8:** Suche & Filter (erweitert)
-6. **Phase PM-9:** Charts (Burndown, Velocity, Cumulative Flow)
-7. **Phase PM-10:** Konfigurierbare Workflows (Workflow-Designer)
-
 ### Future Considerations
 1. OIDC/Entra ID SSO integration
 2. MS Teams notifications via webhooks
-3. Virus scanning for uploads
-4. WebSocket Real-time Updates für Board
+3. Advanced analytics dashboard
+4. Template builder UI
+5. Mobile-responsive improvements
 
 ---
 
 ## Blockers
 
-None currently. All Phase A-J + PM-0/PM-1/PM-2/PM-3 features are complete and functional.
+None currently. All features through v1.12.0 are complete and functional.
 
 ---
 
 ## Technical Notes
 
-- **MIME Type Detection:** Use `mimetypes.guess_type()` for file uploads
-- **Jinja2 Limitation:** `startswith()` doesn't work in templates, use string slicing: `mime[:6] == 'image/'`
-- **SQLite FK Constraints:** Must provide constraint names explicitly in migrations
-- **Multi-Reviewer Query:** For SQL queries checking reviewer access, need subquery join on `task_reviewer` table
+- **Multi-Tenancy:** All queries must be scoped by `tenant_id` for data isolation
+- **Tenant Middleware:** `middleware/tenant.py` handles tenant context from session
+- **Release Script:** `python scripts/release.py` automates version bumps, tags, and docs
+- **Memory Bank Updates:** Use generated prompt in `scripts/memory_bank_update_prompt.txt`
 - **SortableJS:** CDN für Kanban Board Drag & Drop (Version 1.15.0)
 - **marked.js:** CDN für Markdown-Rendering in Issue-Beschreibungen
 
 ---
 
-*Last updated: 2026-01-02 Session 9*
+*Last updated: 2026-01-03 Session 15*
 
 ```
 
@@ -463,24 +520,24 @@ None currently. All Phase A-J + PM-0/PM-1/PM-2/PM-3 features are complete and fu
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy Phase 1-3
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
 
-**Last Updated:** 2026-01-03 (Session 14)  
-**Version:** 1.12.0
+**Last Updated:** 2026-01-03 (Session 15)  
+**Version:** 1.13.0
 
 ---
 
 ## Recent Releases
 
-### v1.12.0 - Multi-Tenancy: Enterprise Client Separation
+### v1.12.0 - Multi-Tenancy: Enterprise Client Separation (2026-01-03)
 
-**Status: ✅ Phase 1-3 Complete**
+**Status: ✅ Complete**
 
 - **Tenant Model & Infrastructure**:
-  - `Tenant` model with slug, name, logo, is_active, is_archived
+  - `Tenant` model with slug, name, logo (base64), is_active, is_archived
   - `TenantMembership` for per-tenant roles (admin, manager, member, viewer)
-  - `TenantApiKey` for API access
-  - `tenant_id` on all major tables
+  - `TenantApiKey` for API access per tenant
+  - `tenant_id` column on all major tables
 
 - **Super-Admin Tenant Management** (`/admin/tenants/`):
   - Modern Deloitte-styled UI with gradient headers
@@ -497,7 +554,22 @@ None currently. All Phase A-J + PM-0/PM-1/PM-2/PM-3 features are complete and fu
   - JSON and Excel export (10 sheets)
   - Full audit trail documentation
 
-- **Demo Data Script**: 
+- **Release Automation** (`scripts/release.py`):
+  - Automated version updates across all files
+  - CHANGELOG.md section generation
+  - Memory Bank prompt generation for AI updates
+  - Git commit and tag creation
+  - Push to remote
+
+- **GitHub Repository Rename**:
+  - `deloitte-taxops-calendar` → `deloitte-projectops`
+  - All documentation URLs updated
+
+- **Landing Page Update**:
+  - ProjectOps branding with rocket icon
+  - Features: Projects, Kanban, Iterations, Multi-Tenancy
+
+- **Demo Data Scripts**: 
   - Full demo data for all tenants
   - Issues, Sprints, Tasks, Teams, Entities
 
@@ -2418,7 +2490,7 @@ Please update each Memory Bank file with the new release information:
 
 ### 1. activeContext.md
 - Update **Date** to 2026-01-03
-- Update **Version** to 1.12.0
+- Update **Version** to 1.13.0
 - Update **Last Action** with the main feature from this release
 - Update **Status** to reflect completed work
 - Add a new section under "What Was Accomplished" with the release changes
@@ -2426,7 +2498,7 @@ Please update each Memory Bank file with the new release information:
 
 ### 2. progress.md
 - Update **Last Updated** date
-- Update **Version** to 1.12.0
+- Update **Version** to 1.13.0
 - Add new release section at the top of "Recent Releases"
 - Include all Added/Changed/Fixed items from the release
 
