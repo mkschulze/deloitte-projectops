@@ -4,190 +4,38 @@ You are updating the Memory Bank documentation for Deloitte ProjectOps after a n
 
 ## Release Information
 
-**New Version:** 1.13.0
-**Release Title:** 1.13.0
+**New Version:** 1.15.0
+**Release Title:** Test Coverage Phase 1
 **Date:** 2026-01-03
-**Previous Version:** 1.12.0
+**Previous Version:** 1.14.1
 
 ## Changes Since Last Release
 
 ### Git Commits
 ```
-3dc4ce9 feat: Add unit test infrastructure with 125 tests
-85f2eda docs: add projectbrief.md and .rules for Memory Bank system
-81693e4 docs: add projectbrief.md as Memory Bank foundation document
-aa3a482 docs: update Memory Bank for v1.12.0 Multi-Tenancy release
-36599ca feat: enhanced release script with AI-powered Memory Bank updates
-212d0fc chore: add release automation script and fix config version
-b062347 feat: Multi-Tenancy v1.12.0 - Enterprise Client Separation
-de2c45f ui: update landing page with ProjectOps branding and features
+b89ef63 docs: Update Memory Bank for v1.15.0 release
+cbc9a8f feat(tests): Phase 1 - Add .coveragerc and 43 model tests
 ```
 
 ### Changed Files
 ```
-M	CHANGELOG.md
-M	Pipfile
-M	Pipfile.lock
-M	VERSION
-A	admin/__init__.py
-A	admin/tenants.py
-M	app.py
-M	config.py
+A	.coveragerc
 M	docs/activeContext.md
-A	docs/multiTenancyDesign.md
-M	docs/productContext.md
 M	docs/progress.md
-M	docs/projectManagementModule.md
-A	docs/projectbrief.md
-M	docs/systemPatterns.md
-M	docs/technicalConcept.md
-M	init_db.py
-A	middleware/__init__.py
-A	middleware/tenant.py
-A	migrations/versions/est001_add_estimation_scale.py
-A	migrations/versions/g1_rename_tax_type_to_category.py
-A	migrations/versions/mt001_add_multi_tenancy.py
-M	models.py
-M	modules/__init__.py
-M	modules/projects/models.py
-M	modules/projects/routes.py
-M	modules/projects/templates/projects/detail.html
-A	modules/projects/templates/projects/estimation.html
-M	modules/projects/templates/projects/form.html
-M	modules/projects/templates/projects/iterations/board.html
-M	modules/projects/templates/projects/iterations/form.html
-M	modules/projects/templates/projects/iterations/list.html
-M	modules/projects/templates/projects/list.html
-M	modules/projects/templates/projects/members.html
-A	modules/projects/templates/projects/settings/estimation.html
-M	modules/projects/templates/projects/settings/methodology.html
-M	modules/projects/templates/projects/sprints/form.html
-R075	modules/taxops/__init__.py	modules/tasks/__init__.py
-A	pytest.ini
-M	requirements.txt
-A	scripts/.rules
-A	scripts/create_demo_tenants.py
-A	scripts/create_full_demo_data.py
-A	scripts/memory_bank_prompt.md
-A	scripts/memory_bank_update_prompt.txt
-A	scripts/release.py
-A	scripts/update_memory_bank.py
-M	services.py
-A	templates/admin/categories.html
-A	templates/admin/category_form.html
-M	templates/admin/dashboard.html
-A	templates/admin/tenants/api_keys.html
-A	templates/admin/tenants/detail.html
-A	templates/admin/tenants/form.html
-A	templates/admin/tenants/list.html
-A	templates/admin/tenants/members.html
-A	templates/admin/tenants/members_old.html
-M	templates/base.html
-M	templates/calendar_subscription.html
-M	templates/dashboard.html
-M	templates/index.html
-A	templates/select_tenant.html
-A	tests/__init__.py
-A	tests/conftest.py
-A	tests/factories.py
-A	tests/integration/__init__.py
-A	tests/integration/test_routes.py
-A	tests/unit/__init__.py
-A	tests/unit/test_config.py
-A	tests/unit/test_extensions.py
-A	tests/unit/test_methodology.py
-A	tests/unit/test_models_notification.py
-A	tests/unit/test_models_project.py
-A	tests/unit/test_models_tenant.py
-A	tests/unit/test_models_user.py
-A	tests/unit/test_services.py
-A	tests/unit/test_sprint_board.py
-A	tests/unit/test_translations.py
-M	translations.py
+M	docs/projectbrief.md
+M	tests/conftest.py
+A	tests/unit/test_phase1_models.py
 ```
 
 ### Git Diff Summary
 ```
-CHANGELOG.md                                       |   58 +-
- Pipfile                                            |    4 +
- Pipfile.lock                                       |  980 ++++----
- VERSION                                            |    2 +-
- admin/__init__.py                                  |    6 +
- admin/tenants.py                                   |  843 +++++++
- app.py                                             |  460 +++-
- config.py                                          |    6 +-
- docs/activeContext.md                              |  225 +-
- docs/multiTenancyDesign.md                         | 1271 ++++++++++
- docs/productContext.md                             |    4 +-
- docs/progress.md                                   |   56 +-
- docs/projectManagementModule.md                    |   16 +-
- docs/projectbrief.md                               |  153 ++
- docs/systemPatterns.md                             |    4 +-
- docs/technicalConcept.md                           |    2 +-
- init_db.py                                         |   51 +-
- middleware/__init__.py                             |   20 +
- middleware/tenant.py                               |  289 +++
- migrations/versions/est001_add_estimation_scale.py |   29 +
- .../versions/g1_rename_tax_type_to_category.py     |   71 +
- migrations/versions/mt001_add_multi_tenancy.py     |  184 ++
- models.py                                          |  326 ++-
- modules/__init__.py                                |    2 +-
- modules/projects/models.py                         |  117 +-
- modules/projects/routes.py                         |  144 +-
- modules/projects/templates/projects/detail.html    |   22 +-
- .../projects/templates/projects/estimation.html    |  340 +++
- modules/projects/templates/projects/form.html      |    2 +-
- .../templates/projects/iterations/board.html       |    2 +-
- .../templates/projects/iterations/form.html        |    7 +-
- .../templates/projects/iterations/list.html        |    8 +-
- modules/projects/templates/projects/list.html      |    2 +-
- modules/projects/templates/projects/members.html   |    2 +-
- .../templates/projects/settings/estimation.html    |  406 ++++
- .../templates/projects/settings/methodology.html   |   65 +-
- .../projects/templates/projects/sprints/form.html  |    7 +-
- modules/{taxops => tasks}/__init__.py              |   24 +-
- pytest.ini                                         |   32 +
- requirements.txt                                   |    6 +
- scripts/.rules                                     |  115 +
- scripts/create_demo_tenants.py                     |  235 ++
- scripts/create_full_demo_data.py                   |  597 +++++
- scripts/memory_bank_prompt.md                      |   97 +
- scripts/memory_bank_update_prompt.txt              | 2456 ++++++++++++++++++++
- scripts/release.py                                 |  583 +++++
- scripts/update_memory_bank.py                      |  196 ++
- services.py                                        |   24 +-
- templates/admin/categories.html                    |   68 +
- templates/admin/category_form.html                 |  136 ++
- templates/admin/dashboard.html                     |   10 +-
- templates/admin/tenants/api_keys.html              |  205 ++
- templates/admin/tenants/detail.html                |  471 ++++
- templates/admin/tenants/form.html                  |  137 ++
- templates/admin/tenants/list.html                  |  235 ++
- templates/admin/tenants/members.html               |  309 +++
- templates/admin/tenants/members_old.html           |  168 ++
- templates/base.html                                |   30 +-
- templates/calendar_subscription.html               |    2 +-
- templates/dashboard.html                           |  531 ++++-
- templates/index.html                               |   52 +-
- templates/select_tenant.html                       |  136 ++
- tests/__init__.py                                  |    3 +
- tests/conftest.py                                  |  370 +++
- tests/factories.py                                 |  219 ++
- tests/integration/__init__.py                      |    1 +
- tests/integration/test_routes.py                   |  123 +
- tests/unit/__init__.py                             |    1 +
- tests/unit/test_config.py                          |   83 +
- tests/unit/test_extensions.py                      |   90 +
- tests/unit/test_methodology.py                     |  167 ++
- tests/unit/test_models_notification.py             |  105 +
- tests/unit/test_models_project.py                  |  175 ++
- tests/unit/test_models_tenant.py                   |  155 ++
- tests/unit/test_models_user.py                     |   67 +
- tests/unit/test_services.py                        |  135 ++
- tests/unit/test_sprint_board.py                    |  204 ++
- tests/unit/test_translations.py                    |   90 +
- translations.py                                    |   18 +-
- 79 files changed, 14237 insertions(+), 810 deletions(-)
+.coveragerc                      |  62 ++++
+ docs/activeContext.md            |  27 +-
+ docs/progress.md                 |  27 +-
+ docs/projectbrief.md             |   2 +-
+ tests/conftest.py                |  64 +++-
+ tests/unit/test_phase1_models.py | 625 +++++++++++++++++++++++++++++++++++++++
+ 6 files changed, 801 insertions(+), 6 deletions(-)
 ```
 
 ## Current Memory Bank Files
@@ -204,65 +52,68 @@ CHANGELOG.md                                       |   58 +-
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 15)  
-**Last Action:** Multi-Tenancy v1.12.0 + Release Automation + GitHub Rename  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
-**Version:** 1.13.0
+**Date:** 2026-01-03 (Session 16)  
+**Last Action:** Test Coverage Phase 1 v1.15.0  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
+**Version:** 1.15.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 15)
+### ✅ What Was Accomplished (Session 16)
 
-1. **Multi-Tenancy v1.12.0** (Complete)
+1. **Test Coverage Phase 1 v1.15.0** (Complete)
 
-   #### Tenant Infrastructure
-   - `Tenant` model with slug, name, logo (base64), is_active, is_archived
-   - `TenantMembership` model with per-tenant roles (admin, manager, member, viewer)
-   - `TenantApiKey` model for API access per tenant
-   - `tenant_id` column on all major tables (Task, Entity, Project, Issue, Sprint, Team)
-   - Tenant middleware for context switching
+   #### Phase 1 Implementation
+   - Created `.coveragerc` to exclude scripts/, migrations/, tests/, demo files
+   - Added 43 new tests for User, Team, TaskReviewer, UserEntity models
+   - Total tests: 424 → 467 (+43)
+   - models.py coverage: 63% → 70% (+7%)
    
-   #### Super-Admin Tenant Management (`/admin/tenants/`)
-   - Modern Deloitte-styled UI with gradient headers
-   - Tenant list with active/archived filters and stats
-   - Tenant detail page with member list, API keys, quick actions
-   - Full CRUD: create, edit, archive, restore, delete
-   - "Enter Tenant" to switch context as Super-Admin
+   #### New Test File: `test_phase1_models.py`
+   - TestUserTenantMethods (13 tests)
+   - TestUserCalendarToken (3 tests)
+   - TestUserTeamMethods (1 test)
+   - TestTeamModel (13 tests)
+   - TestTaskReviewerModel (6 tests)
+   - TestUserEntityModel (5 tests)
+   - TestEntityAccessLevelEnum (2 tests)
    
-   #### Tenant Selection (`/select-tenant`)
-   - Users with multiple memberships can switch between clients
-   - Modern card-based UI with Deloitte branding
-   - Super-Admin section to access Tenant Management
+   #### Infrastructure Updates
+   - Updated conftest.py cleanup to include team_members, Entity, Task tables
+   - Added entity and task fixtures for Task model testing
+
+2. **Test Coverage Expansion v1.14.0** (Complete)
+
+   #### Test Suite Expansion
+   - Expanded from 125 to 424 tests (+299 tests)
+   - Code coverage increased from 34% to 43% (+9%)
    
-   #### Compliance Export
-   - JSON export of tenant data
-   - Excel export with 10 sheets (Mandant, Mitglieder, Projekte, Issues, etc.)
-   - Timestamped filenames for audit trail
+   #### New Test Files
+   - `test_task_model.py` - 56 tests for Task, User, Tenant, Notification models
+   - `test_project_methods.py` - 42 tests for Project model getters
+   - `test_all_services.py` - 36 tests for all service classes
+   - `test_middleware_advanced.py` - 18 tests for middleware functions
+   - `test_middleware.py` - 35 tests for tenant middleware
+   - `test_models_advanced.py` - Extended model tests
+   - `test_project_models_advanced.py` - Project model edge cases
+   - `test_services_advanced.py` - Service method testing
+   - `test_modules.py` - Module system tests
+   
+   #### Infrastructure Improvements
+   - Fixed database isolation issues in `conftest.py`
+   - Added autouse `clean_db_tables` fixture for proper test cleanup
+   - Resolved intermittent test failures from database state leaking
+   
+   #### Test Coverage Plan
+   - Created `docs/testCoveragePlan.md` with roadmap to 100% coverage
+   - 5-phase implementation plan with time estimates
+   - Target: ~920 tests for full coverage
 
-2. **Release Automation Script** (Complete)
-   - `scripts/release.py` for automated releases
-   - Version updates in all files (VERSION, config.py, README.md, docs/)
-   - CHANGELOG.md section generation
-   - Memory Bank prompt generation for AI updates
-   - Git commit and tag creation
-   - Push to remote
-   - `scripts/update_memory_bank.py` for AI-powered doc updates
+### ✅ Previously Completed (Session 15)
 
-3. **GitHub Repository Rename** (Complete)
-   - Renamed from `deloitte-taxops-calendar` to `deloitte-projectops`
-   - Updated all documentation URLs
-   - Created v1.12.0 tag
-
-4. **Landing Page Update** (Complete)
-   - New branding: ProjectOps with rocket icon
-   - Features: Projects, Kanban, Iterations, Multi-Tenancy
-   - Updated hero section and feature cards
-
-### ✅ Previously Completed (Session 14)
-
-1. **PM-11: Methodology-Agnostic Terminology** (Complete)
+1. **Unit Test Infrastructure v1.13.0** (Complete)
    - Neutral URL paths: `/sprints/` → `/iterations/`, `/issues/` → `/items/`
    - Dynamic terminology per methodology
    - METHODOLOGY_CONFIG with issue/issue_plural keys
@@ -520,14 +371,106 @@ None currently. All features through v1.12.0 are complete and functional.
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-03 (Session 15)  
-**Version:** 1.13.0
+**Last Updated:** 2026-01-03 (Session 16)  
+**Version:** 1.15.0
 
 ---
 
 ## Recent Releases
+
+### v1.15.0 - Test Coverage Phase 1 (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Coverage Infrastructure**:
+  - Created `.coveragerc` to exclude scripts/, migrations/, tests/, demo files
+  - Proper coverage configuration for meaningful metrics
+
+- **43 New Model Tests** (`test_phase1_models.py`):
+  - TestUserTenantMethods (13 tests) - tenant access, roles, switching
+  - TestUserCalendarToken (3 tests) - token creation, regeneration
+  - TestUserTeamMethods (1 test) - team retrieval
+  - TestTeamModel (13 tests) - member management, multilingual names
+  - TestTaskReviewerModel (6 tests) - approve, reject, reset workflows
+  - TestUserEntityModel (5 tests) - entity permission levels
+  - TestEntityAccessLevelEnum (2 tests) - enum values and choices
+
+- **Test Fixture Improvements**:
+  - Added entity and task fixtures for Task model testing
+  - Updated cleanup to include team_members, Entity, Task tables
+
+- **Metrics**:
+  - Total tests: 424 → 467 (+43)
+  - models.py coverage: 63% → 70% (+7%)
+
+### v1.14.1 - Release Script Enhancement (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Mandatory Memory Bank Verification**:
+  - Added verification step requiring explicit confirmation before releases
+  - AI must type 'yes' to confirm all Memory Bank files were read
+  - Lists all 7 Memory Bank files with descriptions
+  - Blocks release if verification not confirmed
+
+### v1.14.0 - Test Coverage Expansion (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Comprehensive Unit Test Suite**:
+  - Expanded from 125 to 424 tests (+299 tests)
+  - Code coverage increased from 34% to 43% (+9%)
+  - Test Coverage Plan documented in `docs/testCoveragePlan.md`
+
+- **New Test Files**:
+  - `test_task_model.py` - 56 tests for Task, User, Tenant, Notification models
+  - `test_project_methods.py` - 42 tests for Project model getters
+  - `test_all_services.py` - 36 tests for all service classes
+  - `test_middleware_advanced.py` - 18 tests for middleware functions
+  - `test_middleware.py` - 35 tests for tenant middleware
+  - `test_models_advanced.py` - Extended model tests
+  - `test_project_models_advanced.py` - Project model edge cases
+  - `test_services_advanced.py` - Service method testing
+  - `test_modules.py` - Module system tests
+
+- **Infrastructure Improvements**:
+  - Fixed database isolation issues in `conftest.py`
+  - Added autouse `clean_db_tables` fixture for proper test cleanup
+  - Resolved test failures from database state leaking
+
+### v1.13.0 - Unit Test Infrastructure (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Test Framework Setup**:
+  - `pytest.ini` with markers (unit, integration, slow, api, models, services)
+  - `tests/conftest.py` with fixtures (app, db, user, tenant, project, sprint, issue)
+  - `tests/factories.py` with Factory Boy factories for test data
+  - pipenv dev dependencies (pytest, pytest-cov, pytest-flask, factory-boy)
+
+- **125 Unit Tests (34% Coverage)**:
+  - User model tests (9): creation, password, roles, authentication
+  - Project/Sprint/Issue models (18): CRUD, relationships, methodology
+  - Tenant/Membership models (14): creation, roles, members
+  - Notification model (9): types, preferences
+  - Services tests (13): NotificationService, CalendarService, etc.
+  - Translations tests (10): DE/EN support
+  - Config tests (10): Config classes
+  - Extensions tests (8): Flask extensions
+  - Methodology/Estimation tests (17): scales, terminology
+  - Sprint/Board tests (17): status, priority, labels, time tracking
+
+- **Bug Fixes**:
+  - Waterfall projects now default to Personentage (PT) scale
+  - Template fix in settings/estimation.html
+  - Reset estimation_scale when methodology changes
+
+- **UI Improvements**:
+  - Estimation scale settings UI for projects
+  - Dashboard improvements with project insights and trends
+  - README badges for tests and coverage
 
 ### v1.12.0 - Multi-Tenancy: Enterprise Client Separation (2026-01-03)
 
@@ -1518,7 +1461,7 @@ When multiple reviewers are assigned to a task:
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Framework** | Flask 2.x | Web application framework |
+| **Framework** | Flask 3.x | Web application framework |
 | **ORM** | SQLAlchemy (Flask-SQLAlchemy) | Database abstraction |
 | **Migrations** | Alembic (Flask-Migrate) | Schema version control |
 | **Authentication** | Flask-Login | Session management |
@@ -1597,6 +1540,19 @@ deloitte-projectops-calendar/
 │   ├── productContext.md
 │   ├── progress.md
 │   └── activeContext.md
+│
+├── tests/                  # Unit test suite
+│   ├── conftest.py         # Pytest fixtures & test app
+│   ├── factories.py        # Factory Boy model factories
+│   └── unit/               # Unit tests (424 tests)
+│       ├── test_models.py
+│       ├── test_task_model.py
+│       ├── test_project_methods.py
+│       ├── test_services.py
+│       ├── test_all_services.py
+│       ├── test_middleware.py
+│       ├── test_translations.py
+│       └── ...
 │
 ├── data/                   # JSON data files for presets
 │   ├── steuerarten_aufgaben.json
@@ -1697,9 +1653,13 @@ eventlet = "*"
 icalendar = "*"
 
 [dev-packages]
+pytest = "*"              # Testing framework
+pytest-cov = "*"          # Coverage reporting
+pytest-flask = "*"        # Flask test helpers
+factory-boy = "*"         # Test data factories
 
 [requires]
-python_version = "3.9"
+python_version = "3.14"
 ```
 
 ### Production Additions (Deployment)
@@ -1779,14 +1739,36 @@ flask db downgrade
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (424 tests, 43% coverage as of v1.14.0)
 pytest
 
 # Run with coverage
-pytest --cov=app
+pytest --cov=. --cov-report=term-missing
 
 # Run specific test file
-pytest tests/test_tasks.py
+pytest tests/unit/test_models.py
+
+# Run with verbose output
+pytest -v
+```
+
+### Test Structure
+
+```
+tests/
+├── conftest.py           # App, db, user fixtures
+├── factories.py          # Factory Boy factories for models
+└── unit/
+    ├── test_models.py          # Model tests
+    ├── test_services.py        # Business logic tests
+    ├── test_translations.py    # i18n tests
+    ├── test_config.py          # Configuration tests
+    ├── test_methodology.py     # Project methodology tests
+    ├── test_sprint_board.py    # Sprint & board tests
+    ├── test_issue_workflow.py  # Issue workflow tests
+    ├── test_tenancy.py         # Multi-tenant tests
+    ├── test_permissions.py     # RBAC tests
+    └── test_calendar.py        # Calendar feature tests
 ```
 
 ### Environment Variables
@@ -2482,6 +2464,121 @@ def log_audit(action, entity_type, entity_id, entity_name=None,
 | `UPLOAD` | File uploaded |
 | `IMPORT` | Excel data imported |
 
+---
+
+## Testing Patterns
+
+> Added in v1.13.0 - Unit test infrastructure with pytest
+
+### Test Configuration (pytest.ini)
+
+```ini
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = -v --tb=short
+filterwarnings = 
+    ignore::DeprecationWarning
+```
+
+### Factory Pattern for Test Data
+
+```python
+# tests/factories.py
+import factory
+from models import User, Tenant, Project, Task
+
+class TenantFactory(factory.Factory):
+    class Meta:
+        model = Tenant
+    
+    name = factory.Sequence(lambda n: f'Test Tenant {n}')
+    subdomain = factory.Sequence(lambda n: f'tenant{n}')
+
+class UserFactory(factory.Factory):
+    class Meta:
+        model = User
+    
+    email = factory.Sequence(lambda n: f'user{n}@test.com')
+    name = factory.Faker('name')
+    role = 'user'
+    tenant = factory.SubFactory(TenantFactory)
+```
+
+### Test Fixtures (conftest.py)
+
+```python
+# tests/conftest.py
+import pytest
+from app import create_app
+from extensions import db
+
+@pytest.fixture
+def app():
+    """Create test application."""
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'WTF_CSRF_ENABLED': False,
+        'SERVER_NAME': 'localhost'
+    })
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+@pytest.fixture
+def db_session(app):
+    """Provide database session."""
+    with app.app_context():
+        yield db.session
+
+@pytest.fixture
+def client(app):
+    """Create test client."""
+    return app.test_client()
+```
+
+### Test Categories
+
+| Category | Purpose | Example Tests |
+|----------|---------|---------------|
+| **Unit Tests** | Individual functions/methods | Model validation, service logic |
+| **Integration Tests** | Component interactions | Database operations, workflows |
+| **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
+
+### Current Coverage (v1.14.0)
+
+| Module | Coverage | Tests |
+|--------|----------|-------|
+| models.py | ~71% | 145 tests |
+| services.py | ~40% | 72 tests |
+| translations.py | 100% | 57 tests |
+| middleware/tenant.py | ~28% | 53 tests |
+| config.py | 78% | 12 tests |
+| **Total** | **43%** | **424 tests** |
+
+> See [testCoveragePlan.md](testCoveragePlan.md) for the roadmap to 100% coverage.
+
+### Running Tests
+
+```bash
+# Full test suite
+pytest
+
+# With coverage report
+pytest --cov=. --cov-report=term-missing
+
+# Specific test file
+pytest tests/unit/test_models.py
+
+# Specific test function
+pytest tests/unit/test_models.py::TestTask::test_task_creation
+```
+
 ```
 
 ## Instructions
@@ -2490,7 +2587,7 @@ Please update each Memory Bank file with the new release information:
 
 ### 1. activeContext.md
 - Update **Date** to 2026-01-03
-- Update **Version** to 1.13.0
+- Update **Version** to 1.15.0
 - Update **Last Action** with the main feature from this release
 - Update **Status** to reflect completed work
 - Add a new section under "What Was Accomplished" with the release changes
@@ -2498,7 +2595,7 @@ Please update each Memory Bank file with the new release information:
 
 ### 2. progress.md
 - Update **Last Updated** date
-- Update **Version** to 1.13.0
+- Update **Version** to 1.15.0
 - Add new release section at the top of "Recent Releases"
 - Include all Added/Changed/Fixed items from the release
 
