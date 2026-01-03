@@ -225,8 +225,146 @@ def update_changelog(version: str, title: str, dry_run: bool = False) -> bool:
     return True
 
 
+def get_git_changes_since_tag(previous_version: str) -> dict:
+    """Get all changes since the previous version tag."""
+    tag = f"v{previous_version}"
+    
+    # Get commits since last tag
+    commits_result = run_command(f"git log {tag}..HEAD --oneline 2>/dev/null || git log --oneline -20", check=False)
+    commits = commits_result.stdout.strip() if commits_result.returncode == 0 else "No previous tag found"
+    
+    # Get changed files since last tag
+    files_result = run_command(f"git diff --name-status {tag}..HEAD 2>/dev/null || git diff --name-status HEAD~10..HEAD", check=False)
+    changed_files = files_result.stdout.strip() if files_result.returncode == 0 else ""
+    
+    # Get diff summary (stats)
+    diff_result = run_command(f"git diff --stat {tag}..HEAD 2>/dev/null || git diff --stat HEAD~10..HEAD", check=False)
+    diff_summary = diff_result.stdout.strip() if diff_result.returncode == 0 else ""
+    
+    return {
+        'commits': commits,
+        'changed_files': changed_files,
+        'diff_summary': diff_summary
+    }
+
+
+def read_memory_bank_docs() -> dict:
+    """Read all Memory Bank documentation files."""
+    docs = {}
+    doc_files = [
+        'activeContext.md',
+        'progress.md', 
+        'productContext.md',
+        'techContext.md',
+        'systemPatterns.md',
+        'technicalConcept.md'
+    ]
+    
+    for doc_file in doc_files:
+        doc_path = PROJECT_ROOT / 'docs' / doc_file
+        if doc_path.exists():
+            docs[doc_file] = doc_path.read_text()
+        else:
+            docs[doc_file] = f"# {doc_file}\n\nFile not found."
+    
+    return docs
+
+
+def generate_memory_bank_prompt(version: str, title: str, previous_version: str) -> str:
+    """Generate a prompt for AI to update Memory Bank docs."""
+    
+    # Read the prompt template
+    template_path = PROJECT_ROOT / 'scripts' / 'memory_bank_prompt.md'
+    if not template_path.exists():
+        print_error("memory_bank_prompt.md template not found!")
+        return ""
+    
+    template = template_path.read_text()
+    
+    # Get git changes
+    changes = get_git_changes_since_tag(previous_version)
+    
+    # Read current docs
+    docs = read_memory_bank_docs()
+    
+    # Format the prompt
+    prompt = template.format(
+        version=version,
+        title=title,
+        date=datetime.now().strftime('%Y-%m-%d'),
+        previous_version=previous_version,
+        git_commits=changes['commits'],
+        changed_files=changes['changed_files'],
+        git_diff_summary=changes['diff_summary'],
+        active_context=docs.get('activeContext.md', ''),
+        progress=docs.get('progress.md', ''),
+        product_context=docs.get('productContext.md', ''),
+        tech_context=docs.get('techContext.md', ''),
+        system_patterns=docs.get('systemPatterns.md', '')
+    )
+    
+    return prompt
+
+
+def update_memory_bank(version: str, title: str, previous_version: str, dry_run: bool = False) -> bool:
+    """Update Memory Bank docs - generates prompt or calls AI API."""
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Generate the prompt
+    prompt = generate_memory_bank_prompt(version, title, previous_version)
+    
+    if not prompt:
+        return False
+    
+    # Save the prompt to a file for manual use or AI API call
+    prompt_output_path = PROJECT_ROOT / 'scripts' / 'memory_bank_update_prompt.txt'
+    
+    if not dry_run:
+        prompt_output_path.write_text(prompt)
+    
+    print_success(f"Generated Memory Bank update prompt")
+    print(f"           Saved to: {Colors.CYAN}scripts/memory_bank_update_prompt.txt{Colors.ENDC}")
+    
+    # Update basic fields that can be done automatically
+    docs_to_update = {
+        'docs/activeContext.md': [
+            (r'\*\*Date:\*\* \d{4}-\d{2}-\d{2}', f'**Date:** {today}'),
+            (r'\*\*Version:\*\* [\d.]+', f'**Version:** {version}'),
+        ],
+        'docs/progress.md': [
+            (r'\*\*Last Updated:\*\* \d{4}-\d{2}-\d{2}', f'**Last Updated:** {today}'),
+            (r'\*\*Version:\*\* [\d.]+', f'**Version:** {version}'),
+        ]
+    }
+    
+    for filepath, patterns in docs_to_update.items():
+        full_path = PROJECT_ROOT / filepath
+        if full_path.exists():
+            content = full_path.read_text()
+            for pattern, replacement in patterns:
+                content = re.sub(pattern, replacement, content)
+            if not dry_run:
+                full_path.write_text(content)
+    
+    print_success(f"Updated dates and versions in Memory Bank docs")
+    
+    # Check if we should try to call an AI API
+    api_key = os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('OPENAI_API_KEY')
+    
+    if api_key:
+        print_warning("AI API key found - automatic update available")
+        print(f"           Run: {Colors.CYAN}python scripts/update_memory_bank.py{Colors.ENDC}")
+    else:
+        print_warning("No AI API key found - manual update required")
+        print(f"           1. Copy prompt from: scripts/memory_bank_update_prompt.txt")
+        print(f"           2. Paste into Claude/ChatGPT")
+        print(f"           3. Apply the generated updates to docs/")
+    
+    return True
+
+
 def update_memory_bank_date(dry_run: bool = False):
-    """Update date in Memory Bank docs."""
+    """Update date in Memory Bank docs. (Legacy - use update_memory_bank instead)"""
     today = datetime.now().strftime('%Y-%m-%d')
     
     # Update activeContext.md date
@@ -404,9 +542,9 @@ def main():
         print_step(4, "Updating CHANGELOG.md...")
         update_changelog(new_version, title, args.dry_run)
     
-    # Step 5: Update Memory Bank dates
+    # Step 5: Update Memory Bank docs (full update with AI prompt generation)
     print_step(5, "Updating Memory Bank docs...")
-    update_memory_bank_date(args.dry_run)
+    update_memory_bank(new_version, title, current_version, args.dry_run)
     
     # Step 6: Create commit
     print_step(6, "Creating release commit...")
@@ -433,9 +571,11 @@ def main():
   
 {Colors.CYAN}Next steps:{Colors.ENDC}
   1. Update CHANGELOG.md with actual changes
-  2. Create GitHub Release at:
+  2. Update Memory Bank docs using the generated prompt:
+     {Colors.CYAN}scripts/memory_bank_update_prompt.txt{Colors.ENDC}
+  3. Create GitHub Release at:
      https://github.com/mkschulze/deloitte-projectops/releases/new?tag=v{new_version}
-  3. Update GitHub 'About' description if needed
+  4. Update GitHub 'About' description if needed
 """)
 
 
