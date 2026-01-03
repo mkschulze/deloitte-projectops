@@ -70,7 +70,11 @@ def clean_db_tables(db):
     """Clean up all data after each test to ensure test isolation."""
     yield
     # Clean up in reverse order of dependencies
-    from models import User, Tenant, TenantMembership, TenantApiKey, Notification
+    from models import (
+        User, Tenant, TenantMembership, TenantApiKey, Notification,
+        Task, TaskReviewer, Team, Entity, UserEntity, TaskEvidence, Comment,
+        team_members
+    )
     from modules.projects.models import (
         Project, ProjectMember, Sprint, Issue, IssueType, IssueStatus,
         IssueComment, IssueActivity, IssueAttachment
@@ -90,6 +94,15 @@ def clean_db_tables(db):
         db.session.query(Notification).delete()
         db.session.query(TenantApiKey).delete()
         db.session.query(TenantMembership).delete()
+        db.session.query(TaskReviewer).delete()
+        db.session.query(Comment).delete()
+        db.session.query(TaskEvidence).delete()
+        db.session.query(Task).delete()
+        db.session.query(UserEntity).delete()
+        # Clean team_members association table
+        db.session.execute(team_members.delete())
+        db.session.query(Team).delete()
+        db.session.query(Entity).delete()
         db.session.query(Tenant).delete()
         db.session.query(User).delete()
         db.session.commit()
@@ -350,6 +363,55 @@ def issue(db, project, issue_type, issue_status, user, tenant):
     db.session.commit()
     
     yield issue
+    # Cleanup handled by clean_db_tables fixture
+
+
+# =============================================================================
+# TASK FIXTURES (Calendar Tasks)
+# =============================================================================
+
+@pytest.fixture
+def entity(db, tenant):
+    """Create a test entity (legal entity for tasks)."""
+    from models import Entity
+    
+    entity = Entity(
+        name='Test GmbH',
+        name_de='Test GmbH',
+        name_en='Test Ltd',
+        tenant_id=tenant.id,
+        is_active=True
+    )
+    
+    db.session.add(entity)
+    db.session.commit()
+    
+    yield entity
+    # Cleanup handled by clean_db_tables fixture
+
+
+@pytest.fixture
+def task(db, tenant, entity, user):
+    """Create a test task (calendar item)."""
+    from models import Task
+    from datetime import date, timedelta
+    
+    task = Task(
+        tenant_id=tenant.id,
+        entity_id=entity.id,
+        title='Test Tax Filing',
+        description='Test task description',
+        year=2026,
+        period='Q1',
+        due_date=date.today() + timedelta(days=30),
+        status='draft',
+        owner_id=user.id
+    )
+    
+    db.session.add(task)
+    db.session.commit()
+    
+    yield task
     # Cleanup handled by clean_db_tables fixture
 
 
