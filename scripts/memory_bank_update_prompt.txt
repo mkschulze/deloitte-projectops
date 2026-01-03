@@ -1,0 +1,2456 @@
+# Memory Bank Update Prompt Template
+
+You are updating the Memory Bank documentation for Deloitte ProjectOps after a new release.
+
+## Release Information
+
+**New Version:** 1.12.0
+**Release Title:** Multi-Tenancy: Enterprise Client Separation
+**Date:** 2026-01-03
+**Previous Version:** 1.11.0
+
+## Changes Since Last Release
+
+### Git Commits
+```
+36599ca feat: enhanced release script with AI-powered Memory Bank updates
+212d0fc chore: add release automation script and fix config version
+b062347 feat: Multi-Tenancy v1.12.0 - Enterprise Client Separation
+de2c45f ui: update landing page with ProjectOps branding and features
+26b5e1e docs: update README for GitHub with v1.12.0 features, multi-tenancy, and project management module
+a7c3faa docs: update GitHub repository URLs to new name deloitte-projectops
+33dd867 Update memory bank for v1.11.0
+27759d5 Release v1.11.0: Methodology-Agnostic Terminology
+```
+
+### Changed Files
+```
+M	CHANGELOG.md
+M	README.md
+M	VERSION
+A	admin/__init__.py
+A	admin/tenants.py
+M	app.py
+M	config.py
+M	docs/activeContext.md
+A	docs/multiTenancyDesign.md
+M	docs/productContext.md
+M	docs/progress.md
+M	docs/projectManagementModule.md
+M	docs/systemPatterns.md
+M	docs/techContext.md
+M	docs/technicalConcept.md
+M	init_db.py
+A	middleware/__init__.py
+A	middleware/tenant.py
+A	migrations/versions/g1_rename_tax_type_to_category.py
+A	migrations/versions/mt001_add_multi_tenancy.py
+M	models.py
+M	modules/__init__.py
+M	modules/projects/models.py
+M	modules/projects/routes.py
+M	modules/projects/templates/projects/backlog.html
+M	modules/projects/templates/projects/board.html
+M	modules/projects/templates/projects/detail.html
+M	modules/projects/templates/projects/form.html
+M	modules/projects/templates/projects/issues/form.html
+R096	modules/projects/templates/projects/issues/detail.html	modules/projects/templates/projects/items/detail.html
+A	modules/projects/templates/projects/items/form.html
+R097	modules/projects/templates/projects/issues/list.html	modules/projects/templates/projects/items/list.html
+A	modules/projects/templates/projects/iterations/board.html
+A	modules/projects/templates/projects/iterations/form.html
+A	modules/projects/templates/projects/iterations/list.html
+A	modules/projects/templates/projects/iterations/report.html
+M	modules/projects/templates/projects/list.html
+M	modules/projects/templates/projects/members.html
+M	modules/projects/templates/projects/settings/methodology.html
+M	modules/projects/templates/projects/sprints/board.html
+M	modules/projects/templates/projects/sprints/form.html
+M	modules/projects/templates/projects/sprints/list.html
+M	modules/projects/templates/projects/sprints/report.html
+R075	modules/taxops/__init__.py	modules/tasks/__init__.py
+A	scripts/create_demo_tenants.py
+A	scripts/create_full_demo_data.py
+A	scripts/memory_bank_prompt.md
+A	scripts/release.py
+A	scripts/update_memory_bank.py
+M	services.py
+A	templates/admin/categories.html
+A	templates/admin/category_form.html
+M	templates/admin/dashboard.html
+A	templates/admin/tenants/detail.html
+A	templates/admin/tenants/form.html
+A	templates/admin/tenants/list.html
+A	templates/admin/tenants/members.html
+M	templates/base.html
+M	templates/calendar_subscription.html
+M	templates/index.html
+A	templates/select_tenant.html
+M	translations.py
+```
+
+### Git Diff Summary
+```
+CHANGELOG.md                                       |   96 +-
+ README.md                                          |   89 +-
+ VERSION                                            |    2 +-
+ admin/__init__.py                                  |    6 +
+ admin/tenants.py                                   |  744 ++++++++++++
+ app.py                                             |  229 +++-
+ config.py                                          |    6 +-
+ docs/activeContext.md                              |   86 +-
+ docs/multiTenancyDesign.md                         | 1271 ++++++++++++++++++++
+ docs/productContext.md                             |    4 +-
+ docs/progress.md                                   |   79 +-
+ docs/projectManagementModule.md                    |   16 +-
+ docs/systemPatterns.md                             |    4 +-
+ docs/techContext.md                                |    9 +-
+ docs/technicalConcept.md                           |    2 +-
+ init_db.py                                         |   51 +-
+ middleware/__init__.py                             |   20 +
+ middleware/tenant.py                               |  289 +++++
+ .../versions/g1_rename_tax_type_to_category.py     |   71 ++
+ migrations/versions/mt001_add_multi_tenancy.py     |  184 +++
+ models.py                                          |  326 ++++-
+ modules/__init__.py                                |    2 +-
+ modules/projects/models.py                         |   47 +-
+ modules/projects/routes.py                         |  314 ++---
+ modules/projects/templates/projects/backlog.html   |   10 +-
+ modules/projects/templates/projects/board.html     |    6 +-
+ modules/projects/templates/projects/detail.html    |   28 +-
+ modules/projects/templates/projects/form.html      |    2 +-
+ .../projects/templates/projects/issues/form.html   |   14 +-
+ .../projects/{issues => items}/detail.html         |   26 +-
+ .../projects/templates/projects/items/form.html    |  440 +++++++
+ .../templates/projects/{issues => items}/list.html |   10 +-
+ .../templates/projects/iterations/board.html       |  655 ++++++++++
+ .../templates/projects/iterations/form.html        |  538 +++++++++
+ .../templates/projects/iterations/list.html        |  667 ++++++++++
+ .../templates/projects/iterations/report.html      |  634 ++++++++++
+ modules/projects/templates/projects/list.html      |    2 +-
+ modules/projects/templates/projects/members.html   |    4 +-
+ .../templates/projects/settings/methodology.html   |   65 +-
+ .../projects/templates/projects/sprints/board.html |    4 +-
+ .../projects/templates/projects/sprints/form.html  |   30 +-
+ .../projects/templates/projects/sprints/list.html  |   26 +-
+ .../templates/projects/sprints/report.html         |    8 +-
+ modules/{taxops => tasks}/__init__.py              |   24 +-
+ scripts/create_demo_tenants.py                     |  235 ++++
+ scripts/create_full_demo_data.py                   |  597 +++++++++
+ scripts/memory_bank_prompt.md                      |   97 ++
+ scripts/release.py                                 |  583 +++++++++
+ scripts/update_memory_bank.py                      |  196 +++
+ services.py                                        |   24 +-
+ templates/admin/categories.html                    |   68 ++
+ templates/admin/category_form.html                 |  136 +++
+ templates/admin/dashboard.html                     |   10 +-
+ templates/admin/tenants/detail.html                |  464 +++++++
+ templates/admin/tenants/form.html                  |  137 +++
+ templates/admin/tenants/list.html                  |  235 ++++
+ templates/admin/tenants/members.html               |  168 +++
+ templates/base.html                                |   30 +-
+ templates/calendar_subscription.html               |    2 +-
+ templates/index.html                               |   52 +-
+ templates/select_tenant.html                       |  136 +++
+ translations.py                                    |   18 +-
+ 62 files changed, 9801 insertions(+), 527 deletions(-)
+```
+
+## Current Memory Bank Files
+
+### docs/activeContext.md
+```markdown
+# Active Context
+
+> Current session state for Deloitte ProjectOps development
+> 
+> **Purpose:** This file captures the active working context so development can continue seamlessly after context resets.
+
+---
+
+## Session Information
+
+**Date:** 2026-01-03 (Session 14)  
+**Last Action:** PM-11 Methodology-Agnostic Terminology abgeschlossen  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + UI Redesign
+**Version:** 1.12.0
+
+---
+
+## Current State
+
+### ✅ What Was Accomplished (Session 14)
+
+1. **PM-11: Methodology-Agnostic Terminology** (Complete)
+
+   #### Neutrale URL-Pfade
+   - `/sprints/` → `/iterations/` (neutral für alle Methodologien)
+   - `/issues/` → `/items/` (neutral für alle Methodologien)
+   - Template-Ordner umbenannt: `issues/` → `items/`, `sprints/` → `iterations/`
+   - Alle `url_for()` Aufrufe und Route-Endpunkte aktualisiert
+   
+   #### Dynamische Terminologie
+   - METHODOLOGY_CONFIG erweitert mit `issue` / `issue_plural` Keys
+   - Alle 4 Methodologien haben vollständige Terminologie (DE/EN):
+     - Scrum: Issue/Issues
+     - Kanban: Aufgabe/Aufgaben (DE), Item/Items (EN)
+     - Waterfall: Aktivität/Aktivitäten (DE), Activity/Activities (EN)
+     - Custom: Eintrag/Einträge (DE), Item/Items (EN)
+   
+   #### Templates aktualisiert
+   - Projektübersicht: "Neues Issue" → "Neue Aktivität" (Waterfall)
+   - Projektübersicht: "Alle Issues" → "Alle Aktivitäten"
+   - Projektübersicht: "Issue-Typen" → "Aktivität-Typen"
+   - Iteration-Report: Burndown → Fortschrittsdiagramm, Velocity → Durchsatz
+   - Item-Formular: Dynamische Placeholders und Tipps
+   - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
+
+### ✅ Previously Completed (Session 13)
+
+1. **PM-10: Workflow Transitions** (Complete)
+   - Tab-Navigation in Workflow Settings
+   - Interaktive Transition-Matrix
+   - Frontend/Backend Validation
+
+---
+
+## Project State
+
+### Database Tables
+
+```
+user                  ✅ Extended with roles, email preferences, calendar token
+audit_log             ✅ With action types
+entity                ✅ With group hierarchy
+tax_type              ✅ Tax categories
+task_template         ✅ Reusable templates
+task                  ✅ Core tasks with status, teams, preset_id, is_recurring_instance
+task_reviewer         ✅ Multi-reviewer tracking
+task_evidence         ✅ Files and links
+comment               ✅ Discussion threads
+task_preset           ✅ Extended with recurrence fields
+reference_application ✅ Anträge library
+entity_user_access    ✅ Association table
+team                  ✅ User grouping
+team_members          ✅ Team-User many-to-many
+notification          ✅ In-app notifications
+user_entity           ✅ Entity access with levels
+```
+
+### Key Models
+
+| Model | Purpose |
+|-------|---------|
+| `User` | User accounts with roles, preferences |
+| `Task` | Core task with workflow, teams, recurrence |
+| `TaskPreset` | Predefined templates with recurrence config |
+| `Team` | User grouping with members |
+| `TaskReviewer` | Multi-reviewer approval tracking |
+| `Notification` | In-app notification system |
+| `UserEntity` | Entity access permissions |
+
+### Routes (app.py ~1850 lines)
+
+| Category | Routes | Description |
+|----------|--------|-------------|
+| Auth | 3 | login, logout, set_language |
+| Dashboard | 1 | Main dashboard |
+| Tasks | 12 | CRUD, status, evidence, comments |
+| Calendar | 3 | Month, year, week views |
+| Admin | 19 | Users, entities, tax types, teams, presets |
+| CLI | 4 | initdb, createadmin, seed, loadpresets |
+
+---
+
+## Multi-Reviewer Workflow
+
+### How It Works
+
+1. **Assignment:** When creating/editing a task, select multiple reviewers via multi-select dropdown
+2. **Tracking:** Each reviewer has their own `TaskReviewer` record with approval status
+3. **Review:** When task is "in_review", each reviewer sees their own approval panel
+4. **Approval:** Clicking "Approve" marks that reviewer as approved with timestamp
+5. **Rejection:** Clicking "Reject" immediately rejects the entire task
+6. **Completion:** When ALL reviewers approve, task auto-transitions to "approved"
+
+### Key Methods (Task model)
+
+```python
+task.set_reviewers([user_ids])      # Assign multiple reviewers
+task.is_reviewer(user)               # Check if user is a reviewer
+task.get_reviewer_status(user)       # Get TaskReviewer record
+task.approve_by_reviewer(user, note) # Mark user as approved
+task.reject_by_reviewer(user, note)  # Mark user as rejected
+task.all_reviewers_approved()        # Check if all approved
+task.any_reviewer_rejected()         # Check if any rejected
+task.get_approval_count()            # Returns (approved, total) tuple
+```
+
+---
+
+## Team Management
+
+### How It Works
+
+1. **Create Teams:** Admins can create teams with name, description, color, and optional manager
+2. **Assign Members:** Multi-select users to add as team members
+3. **Task Assignment:** Tasks can be assigned to:
+   - Individual owner (owner_id) OR owner team (owner_team_id)
+   - Individual reviewers (TaskReviewer) AND/OR reviewer team (reviewer_team_id)
+4. **Access Control:** `is_reviewer()` checks both direct assignment AND team membership
+
+### Key Methods (Task model)
+
+```python
+task.owner_team              # Get owner Team object
+task.reviewer_team           # Get reviewer Team object
+task.is_reviewer(user)       # Check direct OR team membership
+task.is_reviewer_via_team(user)  # Check team membership only
+task.get_owner_display()     # Returns user or team name
+task.is_assigned_to_user(user)   # Check any assignment
+task.get_all_assigned_users()    # All users via direct + teams
+```
+
+### Key Methods (Team model)
+
+```python
+team.add_member(user)        # Add user to team
+team.remove_member(user)     # Remove user from team
+team.is_member(user)         # Check membership
+team.get_member_count()      # Count members
+```
+
+---
+
+## File Structure
+
+```
+deloitte-projectops-calendar/
+├── app.py                  # ~3100 lines - All routes + CLI commands
+├── models.py               # ~850 lines - All models
+├── services.py             # ~650 lines - Business logic services
+├── config.py               # Configuration
+├── translations.py         # i18n (DE/EN)
+│
+├── templates/
+│   ├── base.html           # Master layout with navbar + notification bell
+│   ├── dashboard.html      # KPI cards, my tasks, Chart.js charts
+│   ├── calendar.html       # Month view with popovers
+│   ├── calendar_year.html  # Year view with popovers
+│   ├── profile_notifications.html  # Email preferences
+│   ├── calendar_sync.html  # iCal subscription instructions
+│   ├── tasks/
+│   │   ├── list.html       # Filterable list with bulk ops, preview
+│   │   ├── detail.html     # Tabs, evidence, comments, recurring badge
+│   │   └── form.html       # Create/edit with multi-reviewer
+│   └── admin/
+│       ├── presets.html    # Preset management
+│       ├── preset_form.html # With recurrence settings
+│       ├── teams.html      # Team management
+│       └── team_form.html  # Team create/edit
+│
+├── uploads/                # Evidence files
+│   └── task_*/             # Per-task folders
+│
+├── data/                   # JSON data files
+│   ├── steuerarten_aufgaben.json
+│   └── Antraege.json
+│
+└── docs/                   # Memory Bank
+    ├── progress.md         # Development checklist
+    ├── activeContext.md    # Current session state
+    ├── technicalConcept.md # Architecture
+    ├── techContext.md      # Tech stack
+    ├── systemPatterns.md   # Design patterns
+    └── productContext.md   # Product requirements
+```
+
+---
+
+## Test Credentials
+
+| Email | Password | Role |
+|-------|----------|------|
+| admin@deloitte.de | password | admin |
+| manager@deloitte.de | password | manager |
+| reviewer@deloitte.de | password | reviewer |
+| preparer@deloitte.de | password | preparer |
+
+---
+
+## CLI Commands
+
+| Command | Purpose |
+|---------|---------|
+| `flask initdb` | Initialize database tables |
+| `flask createadmin` | Create admin user |
+| `flask seed` | Seed sample data |
+| `flask loadpresets` | Load presets from JSON files |
+| `flask send_due_reminders --days=7` | Send reminder emails |
+| `flask generate-recurring-tasks --year --dry-run` | Generate tasks from presets |
+
+---
+
+## App URLs
+
+| URL | Purpose |
+|-----|---------|
+| `/` | Landing page |
+| `/login` | Login form |
+| `/dashboard` | Main dashboard with KPIs + charts |
+| `/tasks` | Task list with filters + bulk operations |
+| `/tasks/new` | Create new task |
+| `/tasks/<id>` | Task detail (tabs: overview, evidence, comments, audit) |
+| `/tasks/<id>/edit` | Edit task |
+| `/calendar` | Month calendar |
+| `/calendar/year` | Year calendar |
+| `/calendar/feed/<token>.ics` | iCal feed (subscriptions) |
+| `/profile/notifications` | Email preferences |
+| `/profile/calendar-sync` | Calendar sync settings |
+| `/admin` | Admin dashboard |
+| `/admin/entities` | Entity management |
+| `/admin/entities/<id>/users` | Entity user permissions |
+| `/admin/users/<id>/entities` | User entity permissions |
+| `/admin/tax-types` | Tax type management |
+| `/admin/teams` | Team management |
+| `/admin/presets` | Task preset management (with recurrence) |
+
+---
+
+## Next Steps (If Continuing Development)
+
+### Remaining Project Management Phases
+1. **Phase PM-4:** Backlog (Priorisierte Issue-Liste, Drag & Drop Ranking)
+2. **Phase PM-5:** Sprint-Management (Sprint starten/beenden, Sprint-Board)
+3. **Phase PM-6:** Kommentare, Attachments, Links
+4. **Phase PM-7:** Epics & Progress-Tracking
+5. **Phase PM-8:** Suche & Filter (erweitert)
+6. **Phase PM-9:** Charts (Burndown, Velocity, Cumulative Flow)
+7. **Phase PM-10:** Konfigurierbare Workflows (Workflow-Designer)
+
+### Future Considerations
+1. OIDC/Entra ID SSO integration
+2. MS Teams notifications via webhooks
+3. Virus scanning for uploads
+4. WebSocket Real-time Updates für Board
+
+---
+
+## Blockers
+
+None currently. All Phase A-J + PM-0/PM-1/PM-2/PM-3 features are complete and functional.
+
+---
+
+## Technical Notes
+
+- **MIME Type Detection:** Use `mimetypes.guess_type()` for file uploads
+- **Jinja2 Limitation:** `startswith()` doesn't work in templates, use string slicing: `mime[:6] == 'image/'`
+- **SQLite FK Constraints:** Must provide constraint names explicitly in migrations
+- **Multi-Reviewer Query:** For SQL queries checking reviewer access, need subquery join on `task_reviewer` table
+- **SortableJS:** CDN für Kanban Board Drag & Drop (Version 1.15.0)
+- **marked.js:** CDN für Markdown-Rendering in Issue-Beschreibungen
+
+---
+
+*Last updated: 2026-01-02 Session 9*
+
+```
+
+### docs/progress.md
+```markdown
+# Progress Tracker
+
+> Development progress for Deloitte ProjectOps
+
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy Phase 1-3
+
+**Last Updated:** 2026-01-03 (Session 14)  
+**Version:** 1.12.0
+
+---
+
+## Recent Releases
+
+### v1.12.0 - Multi-Tenancy: Enterprise Client Separation
+
+**Status: ✅ Phase 1-3 Complete**
+
+- **Tenant Model & Infrastructure**:
+  - `Tenant` model with slug, name, logo, is_active, is_archived
+  - `TenantMembership` for per-tenant roles (admin, manager, member, viewer)
+  - `TenantApiKey` for API access
+  - `tenant_id` on all major tables
+
+- **Super-Admin Tenant Management** (`/admin/tenants/`):
+  - Modern Deloitte-styled UI with gradient headers
+  - Tenant list with stats overview
+  - Tenant detail with members, API keys, quick actions
+  - Full CRUD: create, edit, archive, restore, delete
+  - "Enter Tenant" to switch context
+
+- **Tenant Selection** (`/select-tenant`):
+  - Multi-tenant users can switch between clients
+  - Card-based UI with Super-Admin access
+
+- **Compliance Export**:
+  - JSON and Excel export (10 sheets)
+  - Full audit trail documentation
+
+- **Demo Data Script**: 
+  - Full demo data for all tenants
+  - Issues, Sprints, Tasks, Teams, Entities
+
+### v1.11.0 - PM-11: Methodology-Agnostic Terminology
+
+- **Neutrale URL-Pfade**:
+  - `/sprints/` → `/iterations/` (neutral für alle Methodologien)
+  - `/issues/` → `/items/` (neutral für alle Methodologien)
+  - Template-Ordner entsprechend umbenannt
+  - Alle `url_for()`-Aufrufe aktualisiert
+- **Dynamische Terminologie im gesamten UI**:
+  - Sprint → Phase (Waterfall), Zyklus (Kanban), Iteration (Custom)
+  - Issue → Aktivität (Waterfall), Aufgabe (Kanban), Eintrag (Custom)
+  - Story Points → Aufwand (PT) für Waterfall
+  - Burndown Chart → Fortschrittsdiagramm für Waterfall
+  - Velocity → Durchsatz für Waterfall/Kanban
+- **METHODOLOGY_CONFIG erweitert**:
+  - `issue` / `issue_plural` Keys für alle 4 Methodologien
+  - Deutsche und englische Übersetzungen
+- **Templates aktualisiert**:
+  - Projektübersicht: Dynamische Action-Cards und Stat-Labels
+  - Iteration-Report: Dynamische Chart-Titel und Labels
+  - Item-Formular: Dynamische Placeholders und Tipps
+  - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
+  - Dropdown-Menü: Dynamische Typ-Bezeichnung
+- **Helper-Methoden auf Project Model**:
+  - `get_term(key, lang)`: 3-stufige Fallback-Kette (Projekt → Methodik → Scrum)
+  - `has_feature(feature)`: Prüfung ob Feature für Methodik aktiviert
+
+### v1.10.0 - PM-10: Workflow Transitions
+
+- **Konfigurierbare Status-Übergänge**:
+  - Tab-Ansicht in Workflow Settings: "Status" und "Übergänge"
+  - Interaktive Transition-Matrix zum Aktivieren/Deaktivieren
+  - Visuelle Legende (grün = erlaubt, grau = nicht erlaubt)
+- **API Endpoint**: `POST /settings/workflow/transitions`
+- **Frontend Validation**:
+  - Issue-Detail zeigt nur erlaubte Status-Transitions
+  - Kanban-Board blockiert ungültige Drops mit visuellem Feedback
+- **Backend Validation**: `can_transition_to()` Check in kanban_move_issue
+
+### v1.9.0 - PM-8: Quick Search
+
+- **Global Quick Search** (⌘K / Ctrl+K):
+  - Globale Issue-Suche über alle zugänglichen Projekte
+  - Suche nach Issue-Key, Titel, Beschreibung
+  - Live-Typeahead ab 2 Zeichen
+  - Keyboard-Navigation (↑↓ + Enter)
+  - Recent Issues beim Öffnen
+- **Search API Endpoints**:
+  - `GET /projects/api/search?q=...` - Globale Issue-Suche
+  - `GET /projects/api/search/recent` - Zuletzt bearbeitete Issues
+- **UI Enhancements**: Search-Button in Navbar, Modal Design, Issue-Type Icons
+
+### v1.8.0 - PM-6: Issue Details Enhancement
+
+- **Activity Log für Issues**: Vollständige Aktivitätsverfolgung
+  - IssueActivity Model mit activity_type (created, status_change, comment, attachment, link, worklog, reviewer_added, reviewer_removed, approved, rejected)
+  - log_activity() Helper-Funktion
+  - Icons und formatierte Texte für Aktivitäten
+- **Approval Workflow Verbesserungen**:
+  - Genehmigung/Ablehnung nur im Status "In Prüfung"
+  - UI-Hinweis und deaktivierte Buttons wenn nicht im Review-Status
+  - Automatischer Status "Done" bei vollständiger Genehmigung
+  - Ablehnungsgrund im Activity Log
+- **Projekt Activity Log**: Echte Aktivitäten von allen Issues auf Projektdetailseite
+- **Modul-Zugriffskontrolle**: Nur Benutzer mit projects-Modul als Reviewer/Mitglieder
+- **Bug-Fix**: `user.username` → `user.name`
+
+### v1.7.0 - PM-5: Sprint Reports & Analytics
+
+- **Sprint Report Route** mit Burndown und Velocity Charts
+- **Velocity Calculation** für Sprint-Planung
+- **Bug-Fixes**: issue.type → issue.issue_type, resolved_at → resolution_date
+
+### v1.6.0 - UI Redesign: Deloitte Design System
+
+- **Projekt Detail Seite**: Hero-Header, Stat-Cards, Action-Cards, Team-Sidebar
+- **Issue-Liste**: Blauer Gradient-Hero, Quick-Stats, gestylte Tabelle
+- **Sprint-Übersicht**: Teal Gradient-Hero, aktiver Sprint als große Card
+- **Backlog**: Grüner Gradient-Hero, schwebende Bulk-Actions-Leiste
+- **Kanban Board**: Light-Blue Gradient-Hero, moderne Spalten, Hover-Animationen
+- **Bug-Fix**: Backlog Links (`issue.key` statt `issue.issue_key`)
+
+---
+
+## Existing Features (From Template)
+
+### ✅ Completed (Inherited)
+
+- [x] Flask application factory pattern
+- [x] SQLAlchemy integration with SQLite
+- [x] User model with password hashing
+- [x] Flask-Login authentication
+- [x] Admin role decorator (`@admin_required`)
+- [x] AuditLog model for activity tracking
+- [x] Bootstrap 5 base template with Deloitte branding
+- [x] Complete Deloitte 2024 color palette CSS variables
+- [x] Internationalization (DE/EN) with session storage
+- [x] Login/logout functionality
+- [x] Flash message system
+- [x] Error pages (404, 500)
+- [x] Responsive navbar with language switcher
+- [x] Admin dashboard (basic)
+- [x] Admin users list (read-only)
+- [x] CLI commands (`flask initdb`, `flask createadmin`)
+
+---
+
+## MVP Checklist
+
+### Phase 1: Foundation ✅
+
+- [x] Memory Bank documentation created
+- [x] Install Flask-Migrate for Alembic
+- [x] Install openpyxl for Excel processing
+- [x] Install python-dateutil for date handling
+- [x] Initialize migrations (`flask db init`)
+- [ ] Restructure to blueprints (deferred)
+
+### Phase 2: Core Models ✅
+
+- [x] Entity model (with self-referential groups)
+- [x] TaxType model
+- [x] TaskTemplate model
+- [x] Task model with status enum
+- [x] TaskEvidence model (file + link types)
+- [x] Comment model
+- [x] ReferenceApplication model (Anträge)
+- [x] TaskPreset model (predefined task templates)
+- [x] **TaskReviewer model (multi-reviewer support)**
+- [x] **Team model (user grouping)**
+- [x] UserRole enum (admin, manager, reviewer, preparer, readonly)
+- [x] TaskStatus enum (draft, submitted, in_review, approved, completed, rejected)
+- [x] Entity-User access association table
+- [x] team_members association table
+- [x] Create migration for all models
+- [x] Apply migration (`flask db upgrade`)
+
+### Phase 3: User & Entity Management ✅
+
+- [x] User CRUD (admin) - create/edit forms
+- [x] Extended user roles (manager, reviewer, preparer, readonly)
+- [x] Entity CRUD (admin) - full CRUD with parent selection
+- [x] TaxType CRUD (admin) - full CRUD
+- [x] **Team Management (admin) - full CRUD with member assignment**
+- [ ] User-Entity permission scoping (deferred)
+
+### Phase 4: Task Presets ✅
+
+- [x] TaskPreset model for predefined tasks
+- [x] JSON data files (steuerarten_aufgaben.json, Antraege.json)
+- [x] Admin preset management (list, create, edit, delete)
+- [x] `flask loadpresets` CLI command
+- [x] Preset selection in task creation form
+- [x] Auto-fill form from preset data
+
+### Phase 5: Task Management ✅
+
+- [x] Task list view with filters
+- [x] Task detail view with tabs (overview, evidence, comments, audit)
+- [x] Status change functionality
+- [x] Status badge CSS classes (Deloitte colors)
+- [x] Evidence upload (file upload with unique names)
+- [x] Evidence link addition
+- [x] Evidence preview modal (PDF, images, text)
+- [x] Evidence download
+- [x] Comment thread (add/delete)
+- [x] Audit log display (color-coded by action type)
+
+### Phase 6: Multi-Reviewer Approval ✅
+
+- [x] TaskReviewer model with approval tracking
+- [x] Multi-select reviewer field in task form
+- [x] Individual reviewer approval/rejection
+- [x] Approval progress bar
+- [x] Auto-transition to approved when all approve
+- [x] Auto-transition to rejected if any rejects
+- [x] Reviewer-specific action buttons
+- [x] Per-reviewer approval timestamps and notes
+
+### Phase 6b: Team Management ✅
+
+- [x] Team model with name, description, color, manager
+- [x] team_members many-to-many association table
+- [x] Task.owner_team_id for team-based ownership
+- [x] Task.reviewer_team_id for team-based review
+- [x] Team admin CRUD (list, create, edit, delete)
+- [x] Multi-select member assignment
+- [x] Team selection in task create/edit forms
+- [x] Team display in task detail view
+- [x] is_reviewer() checks team membership
+- [x] Navigation link in admin menu
+
+### Phase 7: Calendar & Dashboard ✅
+
+- [x] Calendar month view
+- [x] Calendar year view
+- [x] Calendar status colors
+- [x] Task preview popovers on hover
+- [x] Task click opens detail
+- [x] Dashboard KPI cards
+- [x] "My Tasks" panel
+- [x] Due soon / Overdue automatic marking (via Task properties)
+
+### Phase 8: Reports & Export ✅
+
+- [x] Task list Excel export
+- [x] Task PDF export (weasyprint)
+- [x] Status summary report (multi-sheet Excel)
+- [x] Filtering preserved in exports
+
+---
+
+## Phase 2 Backlog (Post-MVP) — Feature Roadmap
+
+### Phase A: In-App Notifications (WebSocket) ✅
+- [x] Flask-SocketIO + eventlet dependencies
+- [x] Notification model with NotificationType enum
+- [x] NotificationService with helper methods
+- [x] WebSocket events (connect, disconnect, emit)
+- [x] Notification API routes
+- [x] Notification triggers in task/comment routes
+- [x] Navbar notification bell with dropdown
+- [x] Real-time WebSocket JavaScript client
+- [x] Translations (DE/EN)
+- [x] Database migration
+
+### Phase B: Bulk Operations ✅
+- [x] Bulk selection UI (checkboxes in task list)
+- [x] "Select all" toggle
+- [x] Bulk status change
+- [x] Bulk reassign owner
+- [x] Bulk delete (hard delete with related records)
+- [x] Confirmation modals
+- [x] Loading spinners during operations
+- [x] Success/error handling
+
+### Phase C: Excel/PDF Export ✅
+- [x] Task list Excel export with filters
+- [x] Task detail PDF export (weasyprint)
+- [x] Status summary report (Excel with charts)
+- [x] Export buttons in UI (dropdown in task list, button in task detail)
+- [x] Deloitte branding in exports (colors, logo)
+
+### Phase D: Calendar Sync (iCal) ✅
+- [x] iCal feed endpoint per user (`/calendar/feed/<token>.ics`)
+- [x] Task deadlines as calendar events with alarms
+- [x] Secure token-based subscription URL generation
+- [x] User settings for calendar sync (subscription page)
+- [x] Instructions for Outlook, Google Calendar, Apple Calendar
+- [x] Token regeneration for security
+
+### Phase E: E-Mail Notifications ✅
+- [x] Email service abstraction (SMTP/SendGrid/SES providers)
+- [x] Email configuration in config.py
+- [x] HTML email templates with Deloitte branding (inline CSS)
+- [x] Task assignment email notification
+- [x] Status change email notification
+- [x] Due reminder email (via CLI command)
+- [x] New comment email notification
+- [x] User email preferences (profile_notifications.html)
+- [x] Master toggle + per-notification-type settings
+- [x] CLI command: `flask send_due_reminders --days=7`
+- [x] Database migration for User email preferences
+
+### Phase F: Dashboard Extensions (Chart.js) ✅
+- [x] Chart.js integration (CDN)
+- [x] Tasks by status doughnut chart (pie chart with cutout)
+- [x] Tasks by month stacked bar chart (with year selector)
+- [x] Team workload horizontal bar chart
+- [x] API endpoints for chart data
+- [x] Responsive chart containers
+
+### Phase G: Entity Scoping ✅
+- [x] UserEntity model with access levels (view, edit, manage)
+- [x] EntityAccessLevel enum
+- [x] Entity-based task filtering in dashboard and task list
+- [x] Entity hierarchy access inheritance (inherit_to_children flag)
+- [x] User.get_accessible_entities() and get_accessible_entity_ids() methods
+- [x] User.can_access_entity() and get_entity_access_level() methods
+- [x] Admin UI: User entity permissions (/admin/users/<id>/entities)
+- [x] Admin UI: Entity user permissions (/admin/entities/<id>/users)
+- [x] Links in admin users and entities lists
+- [x] Auto-access for admins and managers (bypass permissions)
+- [x] Database migration for user_entity table
+
+### Phase H: Recurring Tasks (RRULE) ✅
+- [x] TaskPreset extended with recurrence fields (is_recurring, frequency, rrule, day_offset, end_date)
+- [x] Task model extended with preset_id and is_recurring_instance
+- [x] RECURRENCE_FREQUENCIES constant (monthly, quarterly, semi_annual, annual, custom)
+- [x] RecurrenceService with get_period_dates(), generate_tasks_from_preset(), parse_rrule()
+- [x] CLI command: `flask generate-recurring-tasks --year --preset-id --entity-id --dry-run --force`
+- [x] Admin preset form with recurrence configuration UI
+- [x] Frequency selector, day offset, RRULE input, default entity/owner
+- [x] Task detail shows recurring badge with preset reference
+- [x] Database migration for recurrence fields
+
+### Phase I: Archival & Soft-Delete ✅
+- [x] Soft-delete for tasks (is_archived, archived_at, archived_by_id, archive_reason)
+- [x] Task model extended with archive() and restore() methods
+- [x] Archive/Restore routes (single and bulk)
+- [x] Archived tasks hidden from dashboard, task list, calendar views
+- [x] Archive view page with filters and pagination (/tasks/archive)
+- [x] Archive button in task detail with reason modal
+- [x] Restore button for archived tasks (admin/manager only)
+- [x] Bulk archive functionality in task list
+- [x] Bulk restore functionality in archive view
+- [x] Navigation dropdown for tasks with archive link
+- [x] Archived banner on task detail page
+- [x] Translations for archive features (DE/EN)
+- [x] Database migration for archive fields
+
+### 🆕 Projektmanagement-Modul (Jira-ähnlich)
+
+> **Detaillierter Plan:** [docs/projectManagementModule.md](projectManagementModule.md)
+
+#### Phase PM-0: Infrastruktur ✅
+- [x] Blueprint-Refactoring (extensions.py, modules/)
+- [x] ModuleRegistry Pattern
+- [x] Module & UserModule Models
+- [x] Admin Modul-Verwaltung (/admin/modules)
+- [x] User Module-Zuweisungen (/admin/users/<id>/modules)
+- [x] flask sync-modules CLI command
+- [ ] Dynamische Navigation (deferred)
+
+#### Phase PM-1: Projekt-Basis ✅
+- [x] Project Model mit Key (TAX, AUD)
+- [x] ProjectMember für Mitgliedschaft
+- [x] ProjectRole enum (admin, lead, member, viewer)
+- [x] Projekt-CRUD Routes & Templates
+- [x] Mitglieder-Verwaltung
+- [x] Projekt-Archivierung
+- [x] Sample Projects Script (scripts/create_sample_projects.py)
+- [x] 3 Demo-Projekte: TAX, AUD, INT
+
+#### Phase PM-2: Issue-Management ✅ (Flexibler Ansatz)
+- [x] **Flexible Architektur** für verschiedene Methodologien
+- [x] ProjectMethodology enum (scrum, kanban, waterfall, custom)
+- [x] StatusCategory enum (todo, in_progress, done)
+- [x] Project.methodology und Project.terminology Felder
+- [x] Project.get_term() für lokalisierte/überschriebene Terminologie
+- [x] **IssueType Model** (konfigurierbar pro Projekt)
+  - name, name_en, icon, color
+  - hierarchy_level (0=Epic, 1=Story, 2=Task, 3=SubTask)
+  - can_have_children, is_subtask, is_default
+- [x] **IssueStatus Model** (konfigurierbar pro Projekt)
+  - name, name_en, category, color
+  - is_initial, is_final, allowed_transitions
+- [x] **Issue Model** mit Auto-Key (TAX-1, TAX-2)
+  - Vollständige Jira-ähnliche Felder
+  - priority, story_points, time_tracking
+  - parent_id für Hierarchie
+  - labels, custom_fields (JSON)
+- [x] **Sprint Model** für Scrum-Projekte
+- [x] create_default_issue_types() pro Methodologie
+- [x] create_default_issue_statuses() pro Methodologie
+- [x] Issue-CRUD Routes (list, new, edit, detail, delete)
+- [x] Status-Transition Route
+- [x] Issue Types & Statuses Admin-Seiten
+- [x] Templates: list.html, form.html, detail.html
+- [x] Settings: issue_types.html, issue_statuses.html
+- [x] Alembic Migration (pm2_issue_system)
+
+#### Phase PM-3: Kanban Board ✅
+- [x] Kanban Board Route (kanban_board) mit Status als Spalten
+- [x] Move-API (kanban_move_issue) für Status-Änderungen
+- [x] Quick-Create API (kanban_quick_create) für Inline-Erstellung
+- [x] board.html Template mit responsivem Spalten-Layout
+- [x] SortableJS Drag & Drop zwischen Spalten
+- [x] Issue-Cards mit Typ-Icon, Key, Summary, Priorität, Bearbeiter
+- [x] Priorität-Indikatoren (farbige Leiste links)
+- [x] Filter (Typ, Bearbeiter, Priorität, Suche)
+- [x] View-Switcher (Liste/Board) in beiden Views
+- [x] _macros.html für wiederverwendbare Template-Komponenten
+- [x] Toast-Benachrichtigungen für Move/Create-Aktionen
+- [x] Leere-Spalten-Placeholder
+
+#### Phase PM-4: Backlog ✅
+- [x] Backlog Route mit Filter (Typ, Status, Bearbeiter, Priorität, Suche)
+- [x] Reorder-API für Drag & Drop Reihenfolge
+- [x] Bulk-Action-API (Status, Zuweisung, Priorität, Archivieren, Löschen)
+- [x] backlog.html Template mit SortableJS Drag & Drop
+- [x] Checkbox-Selection für Bulk-Aktionen
+- [x] Bulk-Actions-Toolbar (sticky am oberen Rand)
+- [x] View-Switcher (Liste/Board/Backlog) in allen Views
+- [x] Navigation Links in Project Detail
+- [x] Delete-Bestätigungs-Modal
+- [x] Toast-Benachrichtigungen für Aktionen
+
+#### Phase PM-5: Sprint-Management
+- [ ] Sprint Model (name, goal, dates)
+- [ ] Sprint starten/beenden
+- [ ] Sprint-Board
+
+#### Phase PM-6 bis PM-10: Erweitert
+- [ ] Kommentare, Attachments, Links
+- [ ] Epics & Progress-Tracking
+- [ ] Suche & Filter
+- [ ] Charts (Burndown, Velocity)
+- [ ] Konfigurierbare Workflows
+
+### Phase J: Template Builder UI ✅
+**Full Form Builder (Option C) implementation**
+
+#### C1: Enhanced Preset Form ✅
+- [x] Live preview panel showing task card with current form values
+- [x] Recurrence wizard with visual calendar date preview
+- [x] Tax type search dropdown with filtering
+- [x] Due date calculator showing next occurrences
+
+#### C2: Visual Category Tree ✅
+- [x] 3 views: Tree (grouped by tax type), Card (grid), Table (classic)
+- [x] Drag & drop reordering (SortableJS)
+- [x] Bulk selection with floating action bar
+- [x] Quick edit slide-out panel
+- [x] JSON export (includes custom fields)
+- [x] View persistence in localStorage
+
+#### C3: Custom Fields ✅
+- [x] PresetCustomField model (name, labels, type, required, options, conditions)
+- [x] TaskCustomFieldValue model for storing values
+- [x] CustomFieldType enum (text, textarea, number, date, select, checkbox)
+- [x] Custom Fields UI section in preset form
+- [x] Modal dialog for field creation/editing
+- [x] API endpoints for CRUD operations
+- [x] Template variables support ({{year}}, {{entity}}, etc.)
+
+#### C4: Import/Export Enhancement ✅
+- [x] Enhanced JSON export includes custom fields
+- [x] JSON import handles enhanced format with custom fields
+- [x] Import counts imported fields in message
+- [x] Conditional visibility fields (condition_field, condition_operator, condition_value)
+
+### Future Considerations
+- [ ] OIDC/Entra ID integration
+- [ ] Role mapping from Azure AD groups
+- [ ] Virus scanning for uploads
+- [ ] MS Teams notifications
+
+---
+
+## Session Log
+
+### 2025-12-28 — Session 1: Initial Setup
+
+**Completed:**
+- Reviewed existing Flask template codebase
+- Created Memory Bank documentation structure
+- Installed new dependencies (flask-migrate, openpyxl, python-dateutil)
+- Created all ProjectOps models
+- Added enums: TaskStatus, UserRole, EvidenceType, RecurrenceType
+- Extended User model with new roles and relationships
+- Initialized Alembic migrations
+- Generated and applied first migration
+
+### 2025-12-28 — Session 2: Core Features
+
+**Completed:**
+- Entity CRUD admin interface
+- TaxType CRUD admin interface  
+- User CRUD admin interface
+- Main dashboard with KPI cards
+- Task list view with filters
+- Task detail view with 4 tabs
+- Status change functionality
+- Calendar month view
+- Updated navigation
+- Seed command with sample data
+
+### 2025-12-28 — Session 3: Advanced Features
+
+**Completed:**
+- **Evidence Upload System:**
+  - File upload route with secure filename handling
+  - Link addition route
+  - File preview modal (PDF, images, text inline)
+  - Download route with proper MIME types
+  - Evidence deletion
+
+- **Comments System:**
+  - Add comment route
+  - Delete comment route (owner/admin only)
+  - User avatars and timestamps
+
+- **Audit Log Enhancement:**
+  - Color-coded action badges
+  - Icons for different action types
+  - Entity-scoped logging for evidence/comments
+
+- **UI Improvements:**
+  - Navbar with "ProjectOps" app name
+  - Green separator between logo and title
+  - Calendar preview popovers on month/year views
+  - Task list preview column with hover popovers
+
+- **Task Presets System:**
+  - TaskPreset model
+  - Admin management interface
+  - JSON data import (loadpresets command)
+  - Preset selection in task form
+
+- **Multi-Reviewer Approval System:**
+  - TaskReviewer model with approval tracking
+  - Multi-select reviewer field
+  - Individual approval/rejection workflow
+  - Approval progress bars
+  - Auto-transition logic
+  - Updated permission checks
+
+- **Documentation:**
+  - Updated Memory Bank docs
+  - Comprehensive README.md for GitHub
+
+### 2025-12-28 — Session 4: Team Management
+
+**Completed:**
+- **Team Model & Database:**
+  - Created Team model with name, description, color, manager
+  - Created team_members association table (many-to-many)
+  - Added owner_team_id and reviewer_team_id to Task model
+  - Generated and applied migration
+
+- **Admin Team Management:**
+  - Team list view with color indicators
+  - Team create/edit form with multi-select members
+  - Team soft-delete (deactivation)
+  - Added Teams link to admin navigation menu
+
+- **Task-Team Integration:**
+  - Task form with owner team and reviewer team selection
+  - Task detail shows team assignments
+  - is_reviewer() checks team membership for access control
+
+### 2025-12-31 — Session 6: Recurring Tasks (Phase H)
+
+**Completed:**
+- **TaskPreset Model Extended:**
+  - Added is_recurring, recurrence_frequency, recurrence_rrule fields
+  - Added recurrence_day_offset (day of period when task is due)
+  - Added recurrence_end_date for optional end date
+  - Added last_generated_date for tracking
+  - Added default_owner_id and default_entity_id with relationships
+  - RECURRENCE_FREQUENCIES constant with labels (DE/EN)
+
+- **Task Model Extended:**
+  - Added preset_id foreign key to task_preset
+  - Added is_recurring_instance boolean flag
+  - Added preset relationship with backref 'generated_tasks'
+
+- **RecurrenceService:**
+  - get_period_dates(frequency, year, day_offset) - generates period labels and due dates
+  - generate_tasks_from_preset(preset, year, entities, owner_id, force) - creates task instances
+  - generate_all_recurring_tasks(year, dry_run) - batch generation from all presets
+  - parse_rrule(rrule_string, start_date, count) - RRULE parsing via python-dateutil
+
+- **CLI Command:**
+  - `flask generate-recurring-tasks` with --year, --preset-id, --entity-id, --dry-run, --force options
+  - Dry-run shows what would be created without changes
+  - Supports single preset or all recurring presets
+
+- **Admin UI:**
+  - Preset form extended with recurrence settings card
+  - Toggle to enable recurring generation
+  - Frequency dropdown (monthly, quarterly, semi-annual, annual, custom RRULE)
+  - Day offset input, RRULE field for custom patterns
+  - Default entity and owner selection
+  - End date picker
+  - Shows last generated date and task count
+
+- **Task Detail:**
+  - Shows "Recurring" badge for is_recurring_instance tasks
+  - Links to source preset on hover
+
+- **Database Migration:**
+  - c3d4e5f6g7h8_add_recurring_task_fields.py applied
+
+---
+
+## Known Issues
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| None currently | — | — |
+
+---
+
+## Files Modified (Session 3 & 4)
+
+### Models
+- `models.py` — Added TaskReviewer model, Task multi-reviewer methods, Team model, team_members table, Task team fields
+
+### Routes (app.py)
+- `task_upload_evidence` — File upload handler
+- `task_add_link` — Link addition handler
+- `task_preview_evidence` — Inline file preview
+- `task_download_evidence` — File download
+- `task_delete_evidence` — Evidence deletion
+- `task_add_comment` — Comment creation
+- `task_delete_comment` — Comment deletion
+- `task_reviewer_action` — Individual reviewer approve/reject
+- `admin_teams` — Team list view
+- `admin_team_new` — Team creation
+- `admin_team_edit` — Team editing with member management
+- `admin_team_delete` — Team soft-delete
+- Updated `task_create` / `task_edit` for multi-reviewer and teams
+
+### Templates
+- `templates/tasks/form.html` — Multi-select reviewers, team selection
+- `templates/tasks/detail.html` — Evidence upload, comments, multi-reviewer display, team display
+- `templates/tasks/list.html` — Preview column with popovers
+- `templates/calendar.html` — Task preview popovers
+- `templates/calendar_year.html` — Task preview popovers
+- `templates/base.html` — App name in navbar, Teams link in admin menu
+- `templates/admin/presets.html` — Task preset management
+- `templates/admin/preset_form.html` — Preset create/edit
+- `templates/admin/teams.html` — Team list view (NEW)
+- `templates/admin/team_form.html` — Team create/edit form (NEW)
+
+### Migrations
+- `f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py`
+- `76a36e71cb1c_add_team_model_and_task_team_assignments.py` (NEW)
+
+### Translations
+- `translations.py` — Added team-related translations
+
+---
+
+## Notes
+
+- Using Alembic for database migrations (Flask-Migrate wrapper)
+- Local Flask-Login auth for MVP, OIDC planned for Phase 2
+- PostgreSQL recommended for production, SQLite for development
+- Evidence files stored locally in uploads/ folder
+- Multi-reviewer requires ALL reviewers to approve before task is approved
+- ANY reviewer rejection immediately rejects the entire task
+
+```
+
+### docs/productContext.md
+```markdown
+# Product Context
+
+> Deloitte ProjectOps — Tax Compliance Calendar & Deadline Tracking
+
+## Purpose
+
+The **Deloitte ProjectOps** is a web application designed to centralize tax compliance deadline management for enterprises. It provides a single platform to:
+
+- **Plan** annual tax compliance calendars with all relevant deadlines
+- **Assign** tasks to responsible owners and **multiple reviewers**
+- **Track** progress against due dates with visual status indicators
+- **Review** submitted work through a structured **multi-reviewer approval process**
+- **Evidence** compliance with document uploads and audit trails
+
+### Core Promise
+
+> One place to plan, assign, track, review, and evidence tax compliance deadlines across entities and tax types.
+
+---
+
+## Target Users
+
+### Primary Personas
+
+| Role | Responsibilities | Key Needs |
+|------|------------------|-----------|
+| **Tax Manager (Owner)** | Accountable for compliance calendar completeness and reporting | Dashboard overview, KPIs, assignment tools, status reports |
+| **Contributor (Preparer)** | Prepares tasks, uploads evidence, submits for review | Task list, clear due dates, easy upload, status updates |
+| **Reviewer (Four-Eyes)** | Reviews submissions, requests changes, completes tasks | Review queue, comparison tools, approval workflow |
+| **Admin** | Configures entities, templates, tax types, users, permissions | CRUD interfaces, import tools, user management |
+| **Read-Only/Audit** | Views status and evidence, cannot modify | Read-only access, export capability |
+
+### User Roles (RBAC)
+
+```
+admin       Full access to all features and settings
+manager     Can assign tasks, view all entities, run reports
+reviewer    Can review and complete tasks (four-eyes)
+preparer    Can work on assigned tasks, upload evidence
+readonly    View-only access to task status and evidence
+```
+
+### Permission Scopes
+
+Access can be scoped by:
+- **Entity** — Which legal entities the user can see/manage
+- **Jurisdiction** — Country or regional filtering
+- **Tax Type** — Specific tax categories (KSt, USt, GewSt, etc.)
+
+---
+
+## Problems Solved
+
+### Current Pain Points (Without the App)
+
+| Problem | Impact | Solution |
+|---------|--------|----------|
+| **Scattered Excel files** | Deadlines missed, no single source of truth | Centralized database with web access |
+| **No visibility** | Managers don't know status until it's too late | Real-time dashboard with KPIs |
+| **Missing evidence** | Cannot prove compliance during audits | Attached documents with immutable log |
+| **Unclear ownership** | Tasks fall through the cracks | Explicit owner/reviewer assignment |
+| **Manual tracking** | Time-consuming status updates | Automatic due-soon/overdue detection |
+| **No audit trail** | Cannot explain what happened and when | Complete activity logging |
+| **Email chaos** | Evidence buried in inboxes | Centralized evidence storage |
+
+### Value Proposition
+
+1. **Reduce compliance risk** — Never miss a tax deadline again
+2. **Save time** — Automated status tracking and reminders
+3. **Prove compliance** — Immutable audit trail for regulators
+4. **Improve visibility** — Dashboard shows real-time status
+5. **Enable collaboration** — Clear handoffs between preparer/reviewer
+
+---
+
+## Key Features
+
+### Data Management (CRUD)
+
+#### Entities (Gesellschaften)
+
+| Field | Description |
+|-------|-------------|
+| Name | Legal entity name |
+| Country | Jurisdiction (DE, AT, CH, etc.) |
+| Group | Optional parent entity grouping |
+| Active | Soft delete flag |
+
+#### Tax Types (Steuerarten)
+
+| Field | Description |
+|-------|-------------|
+| Code | Short identifier (KSt, USt, GewSt) |
+| Name | Full name (Körperschaftsteuer) |
+
+#### Task Templates
+
+| Field | Description |
+|-------|-------------|
+| Tax Type | Associated tax category |
+| Keyword | Short task identifier |
+| Description | Detailed task description |
+| Default Recurrence | monthly, quarterly, annual |
+| Default Due Rule | Day of month, end of month, etc. |
+
+#### Tasks (Calendar Items)
+
+| Field | Description |
+|-------|-------------|
+| Template | Source template |
+| Entity | Associated legal entity |
+| Year | Fiscal year |
+| Due Date | Deadline |
+| Status | Draft, Submitted, In Review, Completed |
+| Owner | Responsible user |
+| Reviewer | Four-eyes reviewer |
+| Submitted At | Timestamp of submission |
+| Completed At | Timestamp of completion |
+
+#### Evidence
+
+| Field | Description |
+|-------|-------------|
+| Task | Parent task |
+| Type | File or Link |
+| Path/URL | File location or external URL |
+| Uploaded By | User who added |
+| Uploaded At | Timestamp |
+
+#### References
+
+- **Anträge** — Law-based applications library
+- **Kommentare** — Structured notes mapped to law references
+
+---
+
+### User Experience
+
+#### Dashboard
+
+- **KPI Cards**: #Overdue, #Due Soon, Completion Rate, Awaiting Review
+- **Filters**: Year/Period, Entity, Tax Type, Owner
+- **My Tasks Panel**: User's assigned tasks with quick actions
+- **Recent Activity**: Latest changes across the organization
+
+#### Calendar View
+
+- **Month/Week Toggle**: Switch between views
+- **Color-Coded Events**: Status indicated by Deloitte colors
+- **Click-to-Open**: Task drawer with quick actions
+- **Entity Filter**: Show tasks for specific entities
+
+#### Task List
+
+- **Sortable Columns**: Due date, status, owner, entity
+- **Filters**: Status, tax type, entity, date range
+- **Batch Operations**: Reassign, change due date, export
+- **Row Details**: Entity, tax type, keyword, due date, status badge, owner, reviewer
+
+#### Task Detail
+
+- **Header**: Status badge, due date, entity, tax type
+- **Tabs**:
+  - Overview: Description, checklist, recurrence info
+  - Evidence: Upload files, add links
+  - Comments: Discussion thread
+  - Audit Log: Read-only activity history
+
+#### Admin Interfaces
+
+- **User Management**: Create, edit, deactivate users
+- **Entity Management**: Add/edit legal entities
+- **Tax Type Catalog**: Manage tax categories
+- **Template Management**: View/edit task templates
+- **Excel Import**: Upload and process YEAR/Anträge/Kommentare
+
+---
+
+## Status Workflow
+
+### Task Lifecycle
+
+```
+┌─────────┐     ┌───────────┐     ┌───────────┐     ┌──────────┐     ┌───────────┐
+│  Draft  │────▶│ Submitted │────▶│ In Review │────▶│ Approved │────▶│ Completed │
+└─────────┘     └───────────┘     └─────┬─────┘     └──────────┘     └───────────┘
+                      ▲                 │
+                      │                 │
+                      └─────────────────┘
+                       (Rework Required)
+```
+
+### Multi-Reviewer Approval (NEW)
+
+When multiple reviewers are assigned to a task:
+
+1. **All Must Approve:** Task only transitions to "Approved" when every assigned reviewer has approved
+2. **Any Can Reject:** If any single reviewer rejects, the entire task is rejected
+3. **Progress Tracking:** Visual progress bar shows `X/Y` reviewers approved
+4. **Individual Actions:** Each reviewer has their own approve/reject buttons
+5. **Audit Trail:** Each approval/rejection is logged with timestamp and optional note
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        In Review                             │
+│                                                              │
+│  Reviewer 1: ✅ Approved (28.12.2025 14:30)                 │
+│  Reviewer 2: ⏳ Pending                                      │
+│  Reviewer 3: ⏳ Pending                                      │
+│                                                              │
+│  Progress: [████░░░░░░] 1/3 approved                        │
+│                                                              │
+│  → When all 3 approve → Auto-transition to "Approved"       │
+│  → If any rejects → Immediate transition to "Rejected"      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Automatic Overlays
+
+| Overlay | Condition | Color |
+|---------|-----------|-------|
+| **Due Soon** | Due date within 7 days | Orange |
+| **Overdue** | Past due date, not completed | Red |
+
+---
+
+## Reporting
+
+### MVP Reports
+
+| Report | Description |
+|--------|-------------|
+| **Task Export** | Filtered task list to Excel |
+| **Status Summary** | Count by status and entity |
+
+### Phase 2 Reports
+
+| Report | Description |
+|--------|-------------|
+| **Compliance Heatmap** | Entity × Month grid with status colors |
+| **Overdue Aging** | Tasks grouped by days overdue (0-7, 8-30, 31+) |
+| **On-Time Rate** | Completion rate by tax type |
+| **Workload Report** | Tasks due in next 30/60/90 days by owner |
+
+---
+
+## Import/Export
+
+### Excel Import
+
+**Source Sheets:**
+- **YEAR**: Task catalog with tax types, keywords, due dates
+- **Anträge**: Law-based applications library
+- **Kommentare**: Reference notes
+
+**Import Process:**
+1. Upload workbook
+2. Validate expected headers
+3. Normalize task rows
+4. Create/update templates
+5. Generate tasks for selected year + entities
+6. Display import report
+
+### Excel Export
+
+- Filtered task list download
+- Includes: Entity, Tax Type, Keyword, Due Date, Status, Owner, Reviewer
+- Format: XLSX with Deloitte branding
+
+---
+
+## Localization
+
+### Supported Languages
+
+| Code | Language | Status |
+|------|----------|--------|
+| `de` | German | Default |
+| `en` | English | Available |
+
+### Key UI Terms
+
+| German | English |
+|--------|---------|
+| Aufgaben | Tasks |
+| Fällig | Due |
+| Überfällig | Overdue |
+| Eingereicht | Submitted |
+| In Prüfung | In Review |
+| Abgeschlossen | Completed |
+| Gesellschaft | Entity |
+| Steuerart | Tax Type |
+
+```
+
+### docs/techContext.md
+```markdown
+# Technical Context
+
+> Development environment, dependencies, and project structure for Deloitte ProjectOps
+
+## Tech Stack
+
+### Backend
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Framework** | Flask 2.x | Web application framework |
+| **ORM** | SQLAlchemy (Flask-SQLAlchemy) | Database abstraction |
+| **Migrations** | Alembic (Flask-Migrate) | Schema version control |
+| **Authentication** | Flask-Login | Session management |
+| **Forms** | Flask-WTF + WTForms | Form handling & CSRF |
+| **Password Hashing** | Werkzeug | Secure password storage |
+| **Excel Processing** | openpyxl | Import/export Excel files |
+| **PDF Export** | WeasyPrint | HTML to PDF conversion |
+| **Environment** | python-dotenv | Configuration management |
+| **WebSocket** | Flask-SocketIO + eventlet | Real-time notifications |
+| **Date Handling** | python-dateutil | RRULE parsing, date calculations |
+| **iCal Generation** | icalendar | Calendar feed generation |
+
+### Frontend
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **CSS Framework** | Bootstrap 5.3 | Responsive UI components |
+| **Icons** | Bootstrap Icons + Deloitte Icons | UI iconography |
+| **Templating** | Jinja2 | Server-side rendering |
+| **JavaScript** | Vanilla JS + Socket.IO Client | Interactivity, WebSocket |
+| **Charts** | Chart.js 4.x (CDN) | Dashboard visualizations |
+
+### Database
+
+| Environment | Database | Notes |
+|-------------|----------|-------|
+| Development | SQLite | File-based, no setup |
+| Production | PostgreSQL | Recommended for enterprise |
+
+### Internationalization
+
+| Component | Implementation |
+|-----------|----------------|
+| **Translation System** | Custom `translations.py` dictionary |
+| **Supported Languages** | German (de), English (en) |
+| **Default Language** | German (de) |
+| **Language Storage** | Flask session (`session['lang']`) |
+| **Template Access** | `{{ t('key') }}` via context processor |
+
+---
+
+## Project Structure
+
+```
+deloitte-projectops-calendar/
+├── app.py                  # Application factory & routes (~3100 lines)
+├── config.py               # Configuration classes
+├── models.py               # SQLAlchemy models (~850 lines)
+├── services.py             # Business logic services (~650 lines)
+├── translations.py         # i18n dictionary (DE/EN)
+├── init_db.py              # Database initialization
+├── Pipfile                 # Dependencies (Pipenv)
+├── Pipfile.lock            # Locked dependencies
+├── .env                    # Environment variables (not in git)
+├── .flaskenv               # Flask CLI configuration
+│
+├── instance/               # Instance-specific files
+│   └── app.db              # SQLite database (dev)
+│
+├── migrations/             # Alembic migrations
+│   ├── alembic.ini
+│   ├── env.py
+│   └── versions/
+│       ├── ff00c7cfda61_add_projectops_calendar_models.py
+│       ├── ebe34cad8512_add_multi_stage_approval_workflow_fields.py
+│       ├── 76fd77636f22_add_taskpreset_model_for_predefined_.py
+│       ├── f34a3101bc19_add_taskreviewer_many_to_many_table_for_.py
+│       ├── 76a36e71cb1c_add_team_model_and_task_team_assignments.py
+│       ├── bc78eb8f008d_add_multilingual_name_fields_to_team_.py
+│       └── c3d4e5f6g7h8_add_recurring_task_fields.py
+│
+├── docs/                   # Memory Bank documentation
+│   ├── technicalConcept.md
+│   ├── techContext.md
+│   ├── systemPatterns.md
+│   ├── productContext.md
+│   ├── progress.md
+│   └── activeContext.md
+│
+├── data/                   # JSON data files for presets
+│   ├── steuerarten_aufgaben.json
+│   └── Antraege.json
+│
+├── static/                 # Static assets
+│   ├── Color Guide/        # Deloitte color documentation
+│   ├── Deloitte Special Case Web Icons/
+│   │   ├── SVG files/
+│   │   └── Web font/
+│   ├── Deloitte-Master-Logo/
+│   │   └── DIGITAL/
+│   ├── favicon/
+│   └── Mobile App Icons/
+│
+├── templates/              # Jinja2 templates
+│   ├── base.html           # Master layout
+│   ├── index.html          # Home page
+│   ├── login.html          # Authentication
+│   ├── dashboard.html      # Main dashboard
+│   ├── calendar.html       # Month calendar
+│   ├── calendar_year.html  # Year calendar
+│   ├── calendar_week.html  # Week calendar
+│   ├── tasks/
+│   │   ├── list.html       # Task list with filters
+│   │   ├── detail.html     # Task detail with tabs
+│   │   └── form.html       # Create/edit form
+│   ├── admin/
+│   │   ├── dashboard.html
+│   │   ├── users.html
+│   │   ├── user_form.html
+│   │   ├── entities.html
+│   │   ├── entity_form.html
+│   │   ├── tax_types.html
+│   │   ├── tax_type_form.html
+│   │   ├── presets.html
+│   │   └── preset_form.html
+│   └── errors/
+│       ├── 404.html
+│       └── 500.html
+│
+└── uploads/                # User uploads (evidence files)
+    └── task_*/             # Per-task folders with unique filenames
+```
+
+### Planned Structure Additions
+
+```
+├── blueprints/             # Modular route handlers
+│   ├── __init__.py
+│   ├── auth.py             # Login/logout routes
+│   ├── main.py             # Dashboard, calendar
+│   ├── tasks.py            # Task CRUD, status changes
+│   ├── admin.py            # Entity, user, template management
+│   └── api.py              # REST endpoints (optional)
+│
+├── services/               # Business logic layer
+│   ├── __init__.py
+│   ├── task_service.py     # Task lifecycle management
+│   ├── import_service.py   # Excel import logic
+│   ├── export_service.py   # Excel export logic
+│   └── audit_service.py    # Audit logging
+│
+├── forms/                  # WTForms form classes
+│   ├── __init__.py
+│   ├── auth_forms.py
+│   ├── task_forms.py
+│   ├── entity_forms.py
+│   └── import_forms.py
+│
+└── utils/                  # Helper utilities
+    ├── __init__.py
+    ├── decorators.py       # Custom decorators
+    ├── helpers.py          # Utility functions
+    └── validators.py       # Custom validators
+```
+
+---
+
+## Dependencies
+
+### Current (Installed)
+
+```toml
+[packages]
+flask = "*"
+flask-sqlalchemy = "*"
+flask-login = "*"
+flask-wtf = "*"
+flask-migrate = "*"
+flask-socketio = "*"
+werkzeug = "*"
+python-dotenv = "*"
+openpyxl = "*"
+python-dateutil = "*"
+weasyprint = "*"
+eventlet = "*"
+icalendar = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
+```
+
+### Production Additions (Deployment)
+
+```toml
+[packages]
+# Production database
+psycopg2-binary = "*"        # PostgreSQL adapter
+
+# Production server
+gunicorn = "*"
+
+# Background jobs (Phase 2)
+apscheduler = "*"            # Simple scheduler
+# OR
+# celery = "*"               # Distributed tasks
+# redis = "*"                # Message broker
+```
+
+---
+
+## Development Setup
+
+### Prerequisites
+
+- Python 3.9+
+- Pipenv (`pip install pipenv`)
+- Git
+
+### Initial Setup
+
+```bash
+# Clone repository
+git clone https://github.com/mkschulze/deloitte-projectops.git
+cd deloitte-projectops
+
+# Install dependencies
+pipenv install
+
+# Activate virtual environment
+pipenv shell
+
+# Create .env file
+cat > .env << EOF
+FLASK_APP=app.py
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+DATABASE_URL=sqlite:///instance/app.db
+EOF
+
+# Initialize database
+flask initdb
+
+# Create admin user
+flask createadmin
+
+# Run development server
+flask run
+```
+
+### Database Migrations (Alembic)
+
+```bash
+# Initialize migrations (first time only)
+flask db init
+
+# Create migration after model changes
+flask db migrate -m "Description of changes"
+
+# Apply migrations
+flask db upgrade
+
+# Rollback one version
+flask db downgrade
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=app
+
+# Run specific test file
+pytest tests/test_tasks.py
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FLASK_APP` | Application entry point | `app.py` |
+| `FLASK_ENV` | Environment mode | `development` |
+| `SECRET_KEY` | Session encryption key | (required) |
+| `DATABASE_URL` | Database connection string | SQLite |
+| `UPLOAD_FOLDER` | Path for file uploads | `uploads/` |
+| `MAX_CONTENT_LENGTH` | Max upload size (bytes) | 16MB |
+
+---
+
+## Deloitte Branding Integration
+
+### CSS Variables Available
+
+The base template includes the complete Deloitte 2024 color palette:
+
+```css
+/* Primary */
+--dtt-green: #86BC25;
+--dtt-black: #000000;
+
+/* Status Colors */
+--dtt-danger-red: #DA291C;      /* Overdue */
+--dtt-warning-orange: #ED8B00;  /* Due Soon */
+--dtt-sec-blue-4: #0076A8;      /* Submitted */
+--dtt-sec-teal-6: #007680;      /* In Review */
+--dtt-sec-green-5: #009A44;     /* Completed */
+
+/* Bootstrap Mapped */
+--bs-primary: var(--dtt-green);
+--bs-danger: var(--dtt-danger-red);
+--bs-success: var(--dtt-sec-green-5);
+```
+
+### Status Badge Classes (Implemented)
+
+```css
+/* Status colors using Deloitte palette */
+.badge-status--draft { background-color: var(--dtt-cool-gray-6); }
+.badge-status--due-soon { background-color: var(--dtt-warning-orange); }
+.badge-status--overdue { background-color: var(--dtt-danger-red); }
+.badge-status--submitted { background-color: var(--dtt-sec-blue-4); }
+.badge-status--in-review { background-color: var(--dtt-sec-teal-6); }
+.badge-status--approved { background-color: var(--dtt-sec-green-5); }
+.badge-status--completed { background-color: var(--dtt-sec-green-5); }
+.badge-status--rejected { background-color: var(--dtt-danger-red); }
+```
+
+---
+
+## Database Models
+
+### Core Models (models.py ~650 lines)
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| `User` | User accounts | email, name, role, password_hash |
+| `Entity` | Legal entities | name, country, group_id, is_active |
+| `TaxType` | Tax categories | code, name, description |
+| `TaskTemplate` | Reusable templates | keyword, tax_type_id, description |
+| `Task` | Core tasks | title, entity_id, due_date, status, owner_id |
+| `TaskReviewer` | Multi-reviewer tracking | task_id, user_id, has_approved, approved_at |
+| `TaskEvidence` | File/link attachments | task_id, evidence_type, file_path, url |
+| `Comment` | Discussion threads | task_id, text, created_by_id |
+| `TaskPreset` | Predefined templates | title, category, tax_type, description |
+| `AuditLog` | Activity logging | action, entity_type, entity_id, user_id |
+| `Team` | User grouping | name, description, color, manager_id, is_active |
+
+### TaskReviewer Model (Multi-Reviewer Support)
+
+```python
+class TaskReviewer(db.Model):
+    __tablename__ = 'task_reviewer'
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    order = db.Column(db.Integer, default=1)
+    has_approved = db.Column(db.Boolean, default=False)
+    approved_at = db.Column(db.DateTime)
+    approval_note = db.Column(db.Text)
+    has_rejected = db.Column(db.Boolean, default=False)
+    rejected_at = db.Column(db.DateTime)
+    rejection_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User')
+    
+    # Unique constraint: one reviewer per task
+    __table_args__ = (db.UniqueConstraint('task_id', 'user_id', name='unique_task_reviewer'),)
+```
+
+### Team Model (User Grouping)
+
+```python
+# Association table for team members
+team_members = db.Table('team_members',
+    db.Column('team_id', db.Integer, db.ForeignKey('team.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('joined_at', db.DateTime, default=datetime.utcnow),
+    db.Column('is_team_lead', db.Boolean, default=False)
+)
+
+class Team(db.Model):
+    __tablename__ = 'team'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    color = db.Column(db.String(7), default='#86BC25')  # Deloitte Green
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relationships
+    manager = db.relationship('User', foreign_keys=[manager_id])
+    members = db.relationship('User', secondary=team_members, lazy='dynamic',
+                             backref=db.backref('teams', lazy='dynamic'))
+    owned_tasks = db.relationship('Task', back_populates='owner_team', 
+                                  foreign_keys='Task.owner_team_id')
+    
+    # Methods
+    def add_member(self, user, is_lead=False): ...
+    def remove_member(self, user): ...
+    def is_member(self, user): ...
+    def get_member_count(self): ...
+```
+
+### Task Team Fields
+
+```python
+# Added to Task model
+owner_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True, index=True)
+reviewer_team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=True)
+
+owner_team = db.relationship('Team', back_populates='owned_tasks', foreign_keys=[owner_team_id])
+reviewer_team = db.relationship('Team', foreign_keys=[reviewer_team_id])
+
+# Methods
+def is_reviewer(self, user):
+    """Check if user is a direct reviewer OR member of reviewer_team"""
+def is_reviewer_via_team(self, user):
+    """Check if user can review via team membership"""
+def get_owner_display(self):
+    """Return owner user name or team name"""
+def is_assigned_to_user(self, user):
+    """Check if user is assigned directly or via team"""
+```
+
+---
+
+## IDE Configuration
+
+### VSCode Recommended Extensions
+
+- Python (Microsoft)
+- Pylance
+- Flask Snippets
+- Jinja2 Snippet Kit
+- SQLite Viewer
+- GitLens
+
+### VSCode Settings (`.vscode/settings.json`)
+
+```json
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.formatting.provider": "black",
+  "editor.formatOnSave": true,
+  "files.associations": {
+    "*.html": "jinja-html"
+  }
+}
+```
+
+```
+
+### docs/systemPatterns.md
+```markdown
+# System Patterns
+
+> Architecture patterns, conventions, and implementation guidelines for Deloitte ProjectOps
+
+## Architecture Overview
+
+### Application Factory Pattern
+
+The application uses Flask's application factory pattern for flexibility and testability:
+
+```python
+# app.py
+def create_app(config_name='default'):
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    
+    # Initialize extensions
+    db.init_app(app)
+    login_manager.init_app(app)
+    
+    # Register blueprints
+    # from blueprints.auth import auth_bp
+    # app.register_blueprint(auth_bp)
+    
+    return app
+
+app = create_app()
+```
+
+### Blueprint Structure (Planned)
+
+```python
+# blueprints/tasks.py
+from flask import Blueprint
+
+tasks_bp = Blueprint('tasks', __name__, url_prefix='/tasks')
+
+@tasks_bp.route('/')
+@login_required
+def task_list():
+    # ...
+
+@tasks_bp.route('/<int:task_id>')
+@login_required
+def task_detail(task_id):
+    # ...
+```
+
+---
+
+## Design Patterns
+
+### Decorator Pattern for Authorization
+
+```python
+# Current implementation in app.py
+from functools import wraps
+from flask import flash, redirect, url_for
+from flask_login import current_user
+
+def admin_required(f):
+    """Decorator that requires admin role."""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if current_user.role != 'admin':
+            flash('Zugriff verweigert.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Usage
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    # ...
+```
+
+### Extended RBAC Decorators (Planned)
+
+```python
+# utils/decorators.py
+def role_required(*roles):
+    """Decorator requiring one of the specified roles."""
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated_function(*args, **kwargs):
+            if current_user.role not in roles:
+                flash('Zugriff verweigert.', 'danger')
+                return redirect(url_for('main.index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# Usage
+@tasks_bp.route('/<int:task_id>/complete', methods=['POST'])
+@role_required('admin', 'reviewer', 'manager')
+def complete_task(task_id):
+    # ...
+```
+
+### Service Layer Pattern
+
+```python
+# services/task_service.py
+class TaskService:
+    """Business logic for task operations."""
+    
+    @staticmethod
+    def change_status(task_id, new_status, user):
+        """Change task status with validation and audit logging."""
+        task = Task.query.get_or_404(task_id)
+        
+        # Validate transition
+        if not TaskService._is_valid_transition(task.status, new_status):
+            raise ValueError(f"Invalid transition: {task.status} → {new_status}")
+        
+        old_status = task.status
+        task.status = new_status
+        
+        # Update timestamps
+        if new_status == 'submitted':
+            task.submitted_at = datetime.utcnow()
+        elif new_status == 'completed':
+            task.completed_at = datetime.utcnow()
+        
+        # Audit log
+        AuditService.log_change(
+            user=user,
+            action='STATUS_CHANGE',
+            object_type='task',
+            object_id=task.id,
+            old_value=old_status,
+            new_value=new_status
+        )
+        
+        db.session.commit()
+        return task
+```
+
+---
+
+## URL Structure
+
+### Current Routes
+
+| URL | Method | View Function | Auth |
+|-----|--------|---------------|------|
+| `/` | GET | `index` | No |
+| `/login` | GET, POST | `login` | No |
+| `/logout` | GET | `logout` | Yes |
+| `/set_language/<lang>` | GET | `set_language` | No |
+| `/admin/dashboard` | GET | `admin_dashboard` | Admin |
+| `/admin/users` | GET | `admin_users` | Admin |
+
+### Planned URL Structure
+
+```
+Authentication
+  /login                    GET, POST   Login form
+  /logout                   GET         Logout
+
+Main
+  /                         GET         Dashboard
+  /calendar                 GET         Calendar view
+  /calendar/<int:year>/<int:month>
+
+Tasks
+  /tasks                    GET         Task list
+  /tasks/<int:id>           GET         Task detail
+  /tasks/<int:id>/edit      GET, POST   Edit task
+  /tasks/<int:id>/status    POST        Change status
+  /tasks/<int:id>/evidence  POST        Upload evidence
+  /tasks/<int:id>/comment   POST        Add comment
+
+Admin
+  /admin                    GET         Admin dashboard
+  /admin/users              GET         User list
+  /admin/users/new          GET, POST   Create user
+  /admin/users/<int:id>     GET, POST   Edit user
+  /admin/entities           GET         Entity list
+  /admin/entities/new       GET, POST   Create entity
+  /admin/entities/<int:id>  GET, POST   Edit entity
+  /admin/tax-types          GET         Tax type list
+  /admin/templates          GET         Template list
+  /admin/import             GET, POST   Excel import
+
+API (optional)
+  /api/tasks                GET         Task list (JSON)
+  /api/tasks/<int:id>       GET, PUT    Task operations
+  /api/calendar-data        GET         Calendar events (JSON)
+```
+
+---
+
+## Template Inheritance
+
+### Hierarchy
+
+```
+base.html
+├── index.html
+├── login.html
+├── dashboard.html (new)
+├── calendar.html (new)
+├── tasks/
+│   ├── list.html
+│   └── detail.html
+├── admin/
+│   ├── dashboard.html
+│   ├── users.html
+│   ├── entities.html
+│   ├── tax_types.html
+│   ├── templates.html
+│   └── import.html
+└── errors/
+    ├── 404.html
+    └── 500.html
+```
+
+### Base Template Blocks
+
+```jinja2
+{# base.html provides these blocks #}
+{% block title %}{% endblock %}      {# Page title #}
+{% block extra_css %}{% endblock %}  {# Additional CSS #}
+{% block content %}{% endblock %}    {# Main content #}
+{% block extra_js %}{% endblock %}   {# Additional JavaScript #}
+```
+
+### Example Child Template
+
+```jinja2
+{# templates/tasks/list.html #}
+{% extends "base.html" %}
+
+{% block title %}{{ t('tasks') }} - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-row:hover { background-color: var(--dtt-green-pale); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1>{{ t('tasks') }}</h1>
+    {# Task list content #}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Task-specific JavaScript
+</script>
+{% endblock %}
+```
+
+---
+
+## Database Relationships
+
+### Current Models
+
+```python
+# models.py
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    name = db.Column(db.String(100))
+    password_hash = db.Column(db.String(256))
+    role = db.Column(db.String(20), default='user')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+    
+    # Relationships
+    audit_logs = db.relationship('AuditLog', backref='user', lazy='dynamic')
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    action = db.Column(db.String(50))
+    object_type = db.Column(db.String(50))
+    object_id = db.Column(db.Integer)
+    entity_name = db.Column(db.String(200))
+    old_value = db.Column(db.Text)
+    new_value = db.Column(db.Text)
+    ip_address = db.Column(db.String(50))
+    user_agent = db.Column(db.String(500))
+```
+
+### Planned Model Relationships
+
+```python
+# Planned relationships for ProjectOps models
+
+Entity (1) ─────< (N) Task
+    │
+    └── entity_id FK in tasks table
+
+TaskTemplate (1) ─────< (N) Task
+    │
+    └── template_id FK in tasks table
+
+TaxType (1) ─────< (N) TaskTemplate
+    │
+    └── tax_type_id FK in task_templates table
+
+User (1) ─────< (N) Task (as owner)
+    │
+    └── owner_id FK in tasks table
+
+User (1) ─────< (N) Task (as reviewer)
+    │
+    └── reviewer_id FK in tasks table
+
+Task (1) ─────< (N) TaskEvidence
+    │
+    └── task_id FK in task_evidence table
+
+Task (1) ─────< (N) Comment
+    │
+    └── task_id FK in comments table
+```
+
+---
+
+## Session Management
+
+### Language Preference
+
+```python
+# Stored in Flask session
+@app.route('/set_language/<lang>')
+def set_language(lang):
+    if lang in app.config.get('SUPPORTED_LANGUAGES', ['de', 'en']):
+        session['lang'] = lang
+    return redirect(request.referrer or url_for('index'))
+
+# Accessed via context processor
+@app.context_processor
+def inject_globals():
+    lang = session.get('lang', 'de')
+    return {
+        'lang': lang,
+        't': lambda key: get_translation(key, lang)
+    }
+```
+
+### User Session (Flask-Login)
+
+```python
+# Login manager configuration
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.login_message = 'Bitte melden Sie sich an.'
+login_manager.login_message_category = 'warning'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Login action
+login_user(user, remember=form.remember.data)
+
+# Logout action
+logout_user()
+```
+
+---
+
+## Flash Message Pattern
+
+### Categories Used
+
+| Category | Bootstrap Class | Usage |
+|----------|-----------------|-------|
+| `success` | `alert-success` | Action completed successfully |
+| `danger` | `alert-danger` | Error or access denied |
+| `warning` | `alert-warning` | Caution or login required |
+| `info` | `alert-info` | Informational message |
+
+### Template Implementation
+
+```jinja2
+{# In base.html #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+```
+
+### Usage in Views
+
+```python
+# Success message
+flash('Aufgabe erfolgreich aktualisiert.', 'success')
+
+# Error message
+flash('Fehler beim Speichern.', 'danger')
+
+# Warning message
+flash('Bitte füllen Sie alle Pflichtfelder aus.', 'warning')
+```
+
+---
+
+## Error Handling
+
+### HTTP Error Handlers
+
+```python
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('errors/500.html'), 500
+```
+
+### Form Validation Errors
+
+```jinja2
+{# Display field errors #}
+{% if form.email.errors %}
+    {% for error in form.email.errors %}
+    <span class="text-danger">{{ error }}</span>
+    {% endfor %}
+{% endif %}
+```
+
+### Business Logic Errors
+
+```python
+# In services, raise exceptions
+class TaskService:
+    @staticmethod
+    def change_status(task_id, new_status, user):
+        task = Task.query.get_or_404(task_id)
+        
+        if not TaskService._can_change_status(task, user):
+            raise PermissionError("User cannot change this task's status")
+        
+        if not TaskService._is_valid_transition(task.status, new_status):
+            raise ValueError(f"Invalid status transition")
+        
+        # ... proceed with change
+
+# In views, catch and flash
+@tasks_bp.route('/<int:id>/status', methods=['POST'])
+@login_required
+def change_status(id):
+    try:
+        TaskService.change_status(id, request.form['status'], current_user)
+        flash('Status aktualisiert.', 'success')
+    except PermissionError as e:
+        flash('Keine Berechtigung.', 'danger')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    return redirect(url_for('tasks.task_detail', id=id))
+```
+
+---
+
+## Audit Logging Pattern
+
+### Helper Function
+
+```python
+def log_audit(action, entity_type, entity_id, entity_name=None, 
+              old_value=None, new_value=None):
+    """Create an audit log entry."""
+    log = AuditLog(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        action=action,
+        object_type=entity_type,
+        object_id=entity_id,
+        entity_name=entity_name,
+        old_value=old_value,
+        new_value=new_value,
+        ip_address=request.remote_addr,
+        user_agent=request.user_agent.string[:500]
+    )
+    db.session.add(log)
+    # Note: commit happens with the main transaction
+```
+
+### Action Types
+
+| Action | Description |
+|--------|-------------|
+| `CREATE` | New record created |
+| `UPDATE` | Record modified |
+| `DELETE` | Record removed |
+| `STATUS_CHANGE` | Task status changed |
+| `LOGIN` | User logged in |
+| `LOGOUT` | User logged out |
+| `UPLOAD` | File uploaded |
+| `IMPORT` | Excel data imported |
+
+```
+
+## Instructions
+
+Please update each Memory Bank file with the new release information:
+
+### 1. activeContext.md
+- Update **Date** to 2026-01-03
+- Update **Version** to 1.12.0
+- Update **Last Action** with the main feature from this release
+- Update **Status** to reflect completed work
+- Add a new section under "What Was Accomplished" with the release changes
+- Move previous accomplishments to "Previously Completed"
+
+### 2. progress.md
+- Update **Last Updated** date
+- Update **Version** to 1.12.0
+- Add new release section at the top of "Recent Releases"
+- Include all Added/Changed/Fixed items from the release
+
+### 3. productContext.md
+- Update if there are new features, user roles, or functionality changes
+- Add new features to the appropriate tables
+
+### 4. techContext.md
+- Update if there are new dependencies, routes, or technical changes
+- Update project structure if new files/folders were added
+
+### 5. systemPatterns.md
+- Update if there are new patterns, conventions, or architectural changes
+
+## Output Format
+
+Provide the complete updated content for each file that needs changes:
+
+```activeContext.md
+[Full updated content]
+```
+
+```progress.md
+[Full updated content]
+```
+
+(Only include files that need updates)

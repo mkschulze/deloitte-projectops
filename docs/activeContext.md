@@ -8,47 +8,68 @@
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 14)  
-**Last Action:** PM-11 Methodology-Agnostic Terminology abgeschlossen  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + UI Redesign
+**Date:** 2026-01-03 (Session 15)  
+**Last Action:** Multi-Tenancy v1.12.0 + Release Automation + GitHub Rename  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
 **Version:** 1.12.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 14)
+### ✅ What Was Accomplished (Session 15)
+
+1. **Multi-Tenancy v1.12.0** (Complete)
+
+   #### Tenant Infrastructure
+   - `Tenant` model with slug, name, logo (base64), is_active, is_archived
+   - `TenantMembership` model with per-tenant roles (admin, manager, member, viewer)
+   - `TenantApiKey` model for API access per tenant
+   - `tenant_id` column on all major tables (Task, Entity, Project, Issue, Sprint, Team)
+   - Tenant middleware for context switching
+   
+   #### Super-Admin Tenant Management (`/admin/tenants/`)
+   - Modern Deloitte-styled UI with gradient headers
+   - Tenant list with active/archived filters and stats
+   - Tenant detail page with member list, API keys, quick actions
+   - Full CRUD: create, edit, archive, restore, delete
+   - "Enter Tenant" to switch context as Super-Admin
+   
+   #### Tenant Selection (`/select-tenant`)
+   - Users with multiple memberships can switch between clients
+   - Modern card-based UI with Deloitte branding
+   - Super-Admin section to access Tenant Management
+   
+   #### Compliance Export
+   - JSON export of tenant data
+   - Excel export with 10 sheets (Mandant, Mitglieder, Projekte, Issues, etc.)
+   - Timestamped filenames for audit trail
+
+2. **Release Automation Script** (Complete)
+   - `scripts/release.py` for automated releases
+   - Version updates in all files (VERSION, config.py, README.md, docs/)
+   - CHANGELOG.md section generation
+   - Memory Bank prompt generation for AI updates
+   - Git commit and tag creation
+   - Push to remote
+   - `scripts/update_memory_bank.py` for AI-powered doc updates
+
+3. **GitHub Repository Rename** (Complete)
+   - Renamed from `deloitte-taxops-calendar` to `deloitte-projectops`
+   - Updated all documentation URLs
+   - Created v1.12.0 tag
+
+4. **Landing Page Update** (Complete)
+   - New branding: ProjectOps with rocket icon
+   - Features: Projects, Kanban, Iterations, Multi-Tenancy
+   - Updated hero section and feature cards
+
+### ✅ Previously Completed (Session 14)
 
 1. **PM-11: Methodology-Agnostic Terminology** (Complete)
-
-   #### Neutrale URL-Pfade
-   - `/sprints/` → `/iterations/` (neutral für alle Methodologien)
-   - `/issues/` → `/items/` (neutral für alle Methodologien)
-   - Template-Ordner umbenannt: `issues/` → `items/`, `sprints/` → `iterations/`
-   - Alle `url_for()` Aufrufe und Route-Endpunkte aktualisiert
-   
-   #### Dynamische Terminologie
-   - METHODOLOGY_CONFIG erweitert mit `issue` / `issue_plural` Keys
-   - Alle 4 Methodologien haben vollständige Terminologie (DE/EN):
-     - Scrum: Issue/Issues
-     - Kanban: Aufgabe/Aufgaben (DE), Item/Items (EN)
-     - Waterfall: Aktivität/Aktivitäten (DE), Activity/Activities (EN)
-     - Custom: Eintrag/Einträge (DE), Item/Items (EN)
-   
-   #### Templates aktualisiert
-   - Projektübersicht: "Neues Issue" → "Neue Aktivität" (Waterfall)
-   - Projektübersicht: "Alle Issues" → "Alle Aktivitäten"
-   - Projektübersicht: "Issue-Typen" → "Aktivität-Typen"
-   - Iteration-Report: Burndown → Fortschrittsdiagramm, Velocity → Durchsatz
-   - Item-Formular: Dynamische Placeholders und Tipps
-   - Iteration-Formular: Timeline-Vorschau mit existierenden Iterationen
-
-### ✅ Previously Completed (Session 13)
-
-1. **PM-10: Workflow Transitions** (Complete)
-   - Tab-Navigation in Workflow Settings
-   - Interaktive Transition-Matrix
-   - Frontend/Backend Validation
+   - Neutral URL paths: `/sprints/` → `/iterations/`, `/issues/` → `/items/`
+   - Dynamic terminology per methodology
+   - METHODOLOGY_CONFIG with issue/issue_plural keys
 
 ---
 
@@ -57,12 +78,18 @@
 ### Database Tables
 
 ```
+# Multi-Tenancy
+tenant                ✅ Client/organization separation
+tenant_membership     ✅ Per-tenant user roles
+tenant_api_key        ✅ API access per tenant
+
+# Core
 user                  ✅ Extended with roles, email preferences, calendar token
 audit_log             ✅ With action types
-entity                ✅ With group hierarchy
-tax_type              ✅ Tax categories
+entity                ✅ With group hierarchy + tenant_id
+category              ✅ Task categories (renamed from tax_type)
 task_template         ✅ Reusable templates
-task                  ✅ Core tasks with status, teams, preset_id, is_recurring_instance
+task                  ✅ Core tasks with status, teams, preset_id + tenant_id
 task_reviewer         ✅ Multi-reviewer tracking
 task_evidence         ✅ Files and links
 comment               ✅ Discussion threads
@@ -79,15 +106,19 @@ user_entity           ✅ Entity access with levels
 
 | Model | Purpose |
 |-------|---------|
+| `Tenant` | Multi-tenant client separation |
+| `TenantMembership` | Per-tenant user roles (admin, manager, member, viewer) |
+| `TenantApiKey` | API access tokens per tenant |
 | `User` | User accounts with roles, preferences |
-| `Task` | Core task with workflow, teams, recurrence |
-| `TaskPreset` | Predefined templates with recurrence config |
+| `Project` | Projects with methodology configuration |
+| `Issue` | Issue/task tracking with workflows |
+| `Sprint` | Iterations/phases for time-boxed work |
+| `Task` | Calendar tasks with workflow, teams, recurrence |
 | `Team` | User grouping with members |
-| `TaskReviewer` | Multi-reviewer approval tracking |
+| `Entity` | Legal entities with tenant scoping |
 | `Notification` | In-app notification system |
-| `UserEntity` | Entity access permissions |
 
-### Routes (app.py ~1850 lines)
+### Routes (app.py ~3900 lines)
 
 | Category | Routes | Description |
 |----------|--------|-------------|
@@ -95,8 +126,9 @@ user_entity           ✅ Entity access with levels
 | Dashboard | 1 | Main dashboard |
 | Tasks | 12 | CRUD, status, evidence, comments |
 | Calendar | 3 | Month, year, week views |
-| Admin | 19 | Users, entities, tax types, teams, presets |
-| CLI | 4 | initdb, createadmin, seed, loadpresets |
+| Admin | 25+ | Users, entities, categories, teams, presets, tenants |
+| Tenants | 8 | CRUD, members, API keys, compliance export |
+| CLI | 6 | initdb, createadmin, seed, loadpresets, due reminders, recurring tasks |
 
 ---
 
@@ -163,44 +195,45 @@ team.get_member_count()      # Count members
 ## File Structure
 
 ```
-deloitte-projectops-calendar/
-├── app.py                  # ~3100 lines - All routes + CLI commands
-├── models.py               # ~850 lines - All models
+deloitte-projectops/
+├── app.py                  # ~3900 lines - All routes + CLI commands
+├── models.py               # ~1200 lines - All models incl. Multi-Tenancy
 ├── services.py             # ~650 lines - Business logic services
 ├── config.py               # Configuration
 ├── translations.py         # i18n (DE/EN)
 │
+├── admin/                  # Admin blueprints
+│   └── tenants.py          # Tenant management routes
+│
+├── middleware/             # Request middleware
+│   └── tenant.py           # Tenant context middleware
+│
+├── modules/                # Feature modules
+│   ├── projects/           # Project management module
+│   └── tasks/              # Tasks module
+│
+├── scripts/                # Automation scripts
+│   ├── release.py          # Release automation
+│   ├── update_memory_bank.py  # AI-powered doc updates
+│   └── create_full_demo_data.py
+│
 ├── templates/
-│   ├── base.html           # Master layout with navbar + notification bell
-│   ├── dashboard.html      # KPI cards, my tasks, Chart.js charts
-│   ├── calendar.html       # Month view with popovers
-│   ├── calendar_year.html  # Year view with popovers
-│   ├── profile_notifications.html  # Email preferences
-│   ├── calendar_sync.html  # iCal subscription instructions
-│   ├── tasks/
-│   │   ├── list.html       # Filterable list with bulk ops, preview
-│   │   ├── detail.html     # Tabs, evidence, comments, recurring badge
-│   │   └── form.html       # Create/edit with multi-reviewer
-│   └── admin/
-│       ├── presets.html    # Preset management
-│       ├── preset_form.html # With recurrence settings
-│       ├── teams.html      # Team management
-│       └── team_form.html  # Team create/edit
+│   ├── base.html           # Master layout with tenant switcher
+│   ├── select_tenant.html  # Tenant selection page
+│   ├── index.html          # Landing page (ProjectOps branding)
+│   ├── admin/
+│   │   └── tenants/        # Tenant management UI
+│   └── ...
 │
-├── uploads/                # Evidence files
-│   └── task_*/             # Per-task folders
-│
-├── data/                   # JSON data files
-│   ├── steuerarten_aufgaben.json
-│   └── Antraege.json
+├── migrations/versions/
+│   ├── mt001_add_multi_tenancy.py
+│   └── ...
 │
 └── docs/                   # Memory Bank
-    ├── progress.md         # Development checklist
-    ├── activeContext.md    # Current session state
-    ├── technicalConcept.md # Architecture
-    ├── techContext.md      # Tech stack
-    ├── systemPatterns.md   # Design patterns
-    └── productContext.md   # Product requirements
+    ├── progress.md
+    ├── activeContext.md
+    ├── multiTenancyDesign.md  # NEW: Multi-tenancy architecture
+    └── ...
 ```
 
 ---
@@ -209,7 +242,7 @@ deloitte-projectops-calendar/
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@deloitte.de | password | admin |
+| admin@deloitte.de | password | admin (Super-Admin) |
 | manager@deloitte.de | password | manager |
 | reviewer@deloitte.de | password | reviewer |
 | preparer@deloitte.de | password | preparer |
@@ -233,62 +266,52 @@ deloitte-projectops-calendar/
 
 | URL | Purpose |
 |-----|---------|
-| `/` | Landing page |
+| `/` | Landing page (ProjectOps branding) |
 | `/login` | Login form |
+| `/select-tenant` | Tenant selection for multi-tenant users |
 | `/dashboard` | Main dashboard with KPIs + charts |
 | `/tasks` | Task list with filters + bulk operations |
-| `/tasks/new` | Create new task |
-| `/tasks/<id>` | Task detail (tabs: overview, evidence, comments, audit) |
-| `/tasks/<id>/edit` | Edit task |
 | `/calendar` | Month calendar |
 | `/calendar/year` | Year calendar |
-| `/calendar/feed/<token>.ics` | iCal feed (subscriptions) |
-| `/profile/notifications` | Email preferences |
-| `/profile/calendar-sync` | Calendar sync settings |
+| `/projects` | Project Management module |
+| `/projects/<key>/board` | Kanban board |
+| `/projects/<key>/iterations` | Iterations/Sprints |
 | `/admin` | Admin dashboard |
+| `/admin/tenants` | **NEW:** Tenant management (Super-Admin) |
+| `/admin/tenants/<id>` | Tenant detail with members, API keys |
+| `/admin/tenants/<id>/export` | Compliance export (JSON/Excel) |
 | `/admin/entities` | Entity management |
-| `/admin/entities/<id>/users` | Entity user permissions |
-| `/admin/users/<id>/entities` | User entity permissions |
-| `/admin/tax-types` | Tax type management |
+| `/admin/categories` | Category management (renamed from tax-types) |
 | `/admin/teams` | Team management |
-| `/admin/presets` | Task preset management (with recurrence) |
 
 ---
 
 ## Next Steps (If Continuing Development)
 
-### Remaining Project Management Phases
-1. **Phase PM-4:** Backlog (Priorisierte Issue-Liste, Drag & Drop Ranking)
-2. **Phase PM-5:** Sprint-Management (Sprint starten/beenden, Sprint-Board)
-3. **Phase PM-6:** Kommentare, Attachments, Links
-4. **Phase PM-7:** Epics & Progress-Tracking
-5. **Phase PM-8:** Suche & Filter (erweitert)
-6. **Phase PM-9:** Charts (Burndown, Velocity, Cumulative Flow)
-7. **Phase PM-10:** Konfigurierbare Workflows (Workflow-Designer)
-
 ### Future Considerations
 1. OIDC/Entra ID SSO integration
 2. MS Teams notifications via webhooks
-3. Virus scanning for uploads
-4. WebSocket Real-time Updates für Board
+3. Advanced analytics dashboard
+4. Template builder UI
+5. Mobile-responsive improvements
 
 ---
 
 ## Blockers
 
-None currently. All Phase A-J + PM-0/PM-1/PM-2/PM-3 features are complete and functional.
+None currently. All features through v1.12.0 are complete and functional.
 
 ---
 
 ## Technical Notes
 
-- **MIME Type Detection:** Use `mimetypes.guess_type()` for file uploads
-- **Jinja2 Limitation:** `startswith()` doesn't work in templates, use string slicing: `mime[:6] == 'image/'`
-- **SQLite FK Constraints:** Must provide constraint names explicitly in migrations
-- **Multi-Reviewer Query:** For SQL queries checking reviewer access, need subquery join on `task_reviewer` table
+- **Multi-Tenancy:** All queries must be scoped by `tenant_id` for data isolation
+- **Tenant Middleware:** `middleware/tenant.py` handles tenant context from session
+- **Release Script:** `python scripts/release.py` automates version bumps, tags, and docs
+- **Memory Bank Updates:** Use generated prompt in `scripts/memory_bank_update_prompt.txt`
 - **SortableJS:** CDN für Kanban Board Drag & Drop (Version 1.15.0)
 - **marked.js:** CDN für Markdown-Rendering in Issue-Beschreibungen
 
 ---
 
-*Last updated: 2026-01-02 Session 9*
+*Last updated: 2026-01-03 Session 15*

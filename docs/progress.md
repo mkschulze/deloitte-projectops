@@ -2,24 +2,24 @@
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy Phase 1-3
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
 
-**Last Updated:** 2026-01-03 (Session 14)  
+**Last Updated:** 2026-01-03 (Session 15)  
 **Version:** 1.12.0
 
 ---
 
 ## Recent Releases
 
-### v1.12.0 - Multi-Tenancy: Enterprise Client Separation
+### v1.12.0 - Multi-Tenancy: Enterprise Client Separation (2026-01-03)
 
-**Status: ✅ Phase 1-3 Complete**
+**Status: ✅ Complete**
 
 - **Tenant Model & Infrastructure**:
-  - `Tenant` model with slug, name, logo, is_active, is_archived
+  - `Tenant` model with slug, name, logo (base64), is_active, is_archived
   - `TenantMembership` for per-tenant roles (admin, manager, member, viewer)
-  - `TenantApiKey` for API access
-  - `tenant_id` on all major tables
+  - `TenantApiKey` for API access per tenant
+  - `tenant_id` column on all major tables
 
 - **Super-Admin Tenant Management** (`/admin/tenants/`):
   - Modern Deloitte-styled UI with gradient headers
@@ -36,7 +36,22 @@
   - JSON and Excel export (10 sheets)
   - Full audit trail documentation
 
-- **Demo Data Script**: 
+- **Release Automation** (`scripts/release.py`):
+  - Automated version updates across all files
+  - CHANGELOG.md section generation
+  - Memory Bank prompt generation for AI updates
+  - Git commit and tag creation
+  - Push to remote
+
+- **GitHub Repository Rename**:
+  - `deloitte-taxops-calendar` → `deloitte-projectops`
+  - All documentation URLs updated
+
+- **Landing Page Update**:
+  - ProjectOps branding with rocket icon
+  - Features: Projects, Kanban, Iterations, Multi-Tenancy
+
+- **Demo Data Scripts**: 
   - Full demo data for all tenants
   - Issues, Sprints, Tasks, Teams, Entities
 
