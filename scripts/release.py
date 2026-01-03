@@ -3,14 +3,16 @@
 Release Script for Deloitte ProjectOps
 
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  🤖 AI REMINDER: AFTER RUNNING THIS SCRIPT, YOU MUST:                        ║
+║  🤖 AI REMINDER: BEFORE RUNNING THIS SCRIPT WITH --no-push, YOU MUST:        ║
 ║                                                                              ║
-║  1. Read the generated prompt: scripts/memory_bank_update_prompt.txt         ║
-║  2. Update docs/activeContext.md with new session info and accomplishments   ║
-║  3. Update docs/progress.md with new release section                         ║
-║  4. Commit and push the Memory Bank updates                                  ║
+║  1. Run with --no-push first: python scripts/release.py --version X.Y.Z --no-push
+║  2. Read the generated prompt: scripts/memory_bank_update_prompt.txt         ║
+║  3. Update docs/activeContext.md with new session info and accomplishments   ║
+║  4. Update docs/progress.md with new release section                         ║
+║  5. git add docs/ && git commit --amend --no-edit                            ║
+║  6. git push origin main --tags                                              ║
 ║                                                                              ║
-║  A release is NOT complete until the Memory Bank is updated!                 ║
+║  Memory Bank MUST be in sync with the release - same commit, same push!      ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 This script automates the release process:
