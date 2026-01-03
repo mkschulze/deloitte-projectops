@@ -8,63 +8,55 @@
 
 ## Session Information
 
-**Date:** 2026-01-03 (Session 15)  
-**Last Action:** Multi-Tenancy v1.12.0 + Release Automation + GitHub Rename  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Release Automation
+**Date:** 2026-01-03 (Session 16)  
+**Last Action:** Unit Test Infrastructure v1.13.0  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 **Version:** 1.13.0
 
 ---
 
 ## Current State
 
-### ✅ What Was Accomplished (Session 15)
+### ✅ What Was Accomplished (Session 16)
 
-1. **Multi-Tenancy v1.12.0** (Complete)
+1. **Unit Test Infrastructure v1.13.0** (Complete)
 
-   #### Tenant Infrastructure
-   - `Tenant` model with slug, name, logo (base64), is_active, is_archived
-   - `TenantMembership` model with per-tenant roles (admin, manager, member, viewer)
-   - `TenantApiKey` model for API access per tenant
-   - `tenant_id` column on all major tables (Task, Entity, Project, Issue, Sprint, Team)
-   - Tenant middleware for context switching
+   #### Test Framework Setup
+   - `pytest.ini` with markers (unit, integration, slow, api, models, services)
+   - `tests/conftest.py` with fixtures (app, db, user, tenant, project, sprint, issue)
+   - `tests/factories.py` with Factory Boy factories for test data
+   - pipenv dev dependencies (pytest, pytest-cov, pytest-flask, factory-boy)
    
-   #### Super-Admin Tenant Management (`/admin/tenants/`)
-   - Modern Deloitte-styled UI with gradient headers
-   - Tenant list with active/archived filters and stats
-   - Tenant detail page with member list, API keys, quick actions
-   - Full CRUD: create, edit, archive, restore, delete
-   - "Enter Tenant" to switch context as Super-Admin
+   #### Unit Tests (125 tests, 34% coverage)
+   - User model tests (9 tests): creation, password, roles, authentication
+   - Project/Sprint/Issue models (18 tests): CRUD, relationships, methodology
+   - Tenant/Membership models (14 tests): creation, roles, members
+   - Notification model (9 tests): types, preferences
+   - Services tests (13 tests): NotificationService, CalendarService, etc.
+   - Translations tests (10 tests): DE/EN support
+   - Config tests (10 tests): Config classes
+   - Extensions tests (8 tests): Flask extensions
+   - Methodology/Estimation tests (17 tests): scales, terminology
+   - Sprint/Board tests (17 tests): status, priority, labels, time tracking
    
-   #### Tenant Selection (`/select-tenant`)
-   - Users with multiple memberships can switch between clients
-   - Modern card-based UI with Deloitte branding
-   - Super-Admin section to access Tenant Management
+   #### Integration Tests
+   - Auth routes (login, logout)
+   - Dashboard routes (requires auth)
+   - Notification API
+   - Project routes
    
-   #### Compliance Export
-   - JSON export of tenant data
-   - Excel export with 10 sheets (Mandant, Mitglieder, Projekte, Issues, etc.)
-   - Timestamped filenames for audit trail
+   #### Additional Improvements
+   - Estimation scale settings UI for projects
+   - Dashboard improvements with project insights and trends
+   - Fix: Waterfall projects now show Personentage instead of Fibonacci
+   - README badges for tests and coverage
 
-2. **Release Automation Script** (Complete)
-   - `scripts/release.py` for automated releases
-   - Version updates in all files (VERSION, config.py, README.md, docs/)
-   - CHANGELOG.md section generation
-   - Memory Bank prompt generation for AI updates
-   - Git commit and tag creation
-   - Push to remote
-   - `scripts/update_memory_bank.py` for AI-powered doc updates
+2. **Estimation Scale Bug Fix** (Complete)
+   - Waterfall projects now default to Personentage (PT) scale
+   - Template fix in settings/estimation.html
+   - Reset estimation_scale when methodology changes
 
-3. **GitHub Repository Rename** (Complete)
-   - Renamed from `deloitte-taxops-calendar` to `deloitte-projectops`
-   - Updated all documentation URLs
-   - Created v1.12.0 tag
-
-4. **Landing Page Update** (Complete)
-   - New branding: ProjectOps with rocket icon
-   - Features: Projects, Kanban, Iterations, Multi-Tenancy
-   - Updated hero section and feature cards
-
-### ✅ Previously Completed (Session 14)
+### ✅ Previously Completed (Session 15)
 
 1. **PM-11: Methodology-Agnostic Terminology** (Complete)
    - Neutral URL paths: `/sprints/` → `/iterations/`, `/issues/` → `/items/`

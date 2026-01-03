@@ -11,6 +11,38 @@
 
 ## Recent Releases
 
+### v1.13.0 - Unit Test Infrastructure (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **Test Framework Setup**:
+  - `pytest.ini` with markers (unit, integration, slow, api, models, services)
+  - `tests/conftest.py` with fixtures (app, db, user, tenant, project, sprint, issue)
+  - `tests/factories.py` with Factory Boy factories for test data
+  - pipenv dev dependencies (pytest, pytest-cov, pytest-flask, factory-boy)
+
+- **125 Unit Tests (34% Coverage)**:
+  - User model tests (9): creation, password, roles, authentication
+  - Project/Sprint/Issue models (18): CRUD, relationships, methodology
+  - Tenant/Membership models (14): creation, roles, members
+  - Notification model (9): types, preferences
+  - Services tests (13): NotificationService, CalendarService, etc.
+  - Translations tests (10): DE/EN support
+  - Config tests (10): Config classes
+  - Extensions tests (8): Flask extensions
+  - Methodology/Estimation tests (17): scales, terminology
+  - Sprint/Board tests (17): status, priority, labels, time tracking
+
+- **Bug Fixes**:
+  - Waterfall projects now default to Personentage (PT) scale
+  - Template fix in settings/estimation.html
+  - Reset estimation_scale when methodology changes
+
+- **UI Improvements**:
+  - Estimation scale settings UI for projects
+  - Dashboard improvements with project insights and trends
+  - README badges for tests and coverage
+
 ### v1.12.0 - Multi-Tenancy: Enterprise Client Separation (2026-01-03)
 
 **Status: ✅ Complete**
