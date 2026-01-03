@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.18.0] - 2026-01-03
+
+### 🧪 Phase 3 Service Layer Tests
+
+#### Added
+- **`tests/unit/test_phase3_services.py`** - 62 comprehensive service layer tests:
+  - TestNotificationServiceCreate (4 tests) - basic creation, with message, entity reference, actor
+  - TestNotificationServiceNotifyUsers (4 tests) - single user, multiple users, deduplication, skip None
+  - TestNotificationServiceGetUnread (3 tests) - zero count, with notifications, excludes read
+  - TestExportServiceExcel (6 tests) - empty tasks, bytes return, German/English, multiple tasks, XLSX format
+  - TestCalendarServiceToken (5 tests) - string return, length, uniqueness, different users, hex characters
+  - TestCalendarServiceIcal (7 tests) - empty feed, with task, title inclusion, skip no due date, languages
+  - TestEmailServiceInit (3 tests) - without app, with app, init_app method
+  - TestEmailServiceIsEnabled (3 tests) - false without app, false by default, true when configured
+  - TestEmailServiceProvider (4 tests) - default smtp, without app, sendgrid, ses providers
+  - TestEmailServiceSendEmail (3 tests) - disabled logs only, generates text from HTML, via SMTP mock
+  - TestRecurrenceServicePeriodDates (16 tests) - monthly, quarterly, semi-annual, annual frequencies
+  - TestRecurrenceServiceEdgeCases (4 tests) - February day handling, leap year, negative/zero offset
+
+#### Changed
+- **services.py** - Fixed CalendarService.generate_ical_feed() bug:
+  - Added `date` import from datetime module
+  - Now properly handles both `date` and `datetime` objects for task.due_date
+  - Prevents AttributeError when due_date is already a date object
+
+#### Test Coverage
+- **services.py coverage**: 16% → 37% (+21 percentage points)
+- **Total tests**: 548 → 598 (+50 net, 62 new tests)
+- Phase 3 target was +12% coverage, achieved **+21%** - exceeded goal by 75%
+
+---
+
 ## [1.17.0] - 2026-01-03
 
 ### 🔧 Separated Memory Bank Check Script

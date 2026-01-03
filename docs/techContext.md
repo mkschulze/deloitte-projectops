@@ -297,7 +297,7 @@ flask db downgrade
 ### Running Tests
 
 ```bash
-# Run all tests (536 tests, ~45% coverage as of v1.16.2)
+# Run all tests (598 tests, ~35% coverage as of v1.18.0)
 pytest
 
 # Run with coverage

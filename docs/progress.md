@@ -4,12 +4,32 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-03 (Session 17)  
-**Version:** 1.17.0
+**Last Updated:** 2026-01-03 (Session 18)  
+**Version:** 1.18.0
 
 ---
 
 ## Recent Releases
+
+### v1.18.0 - Phase 3 Service Layer Tests (2026-01-03)
+
+**Status: ✅ Complete**
+
+- **62 New Service Tests** (`test_phase3_services.py`):
+  - NotificationService: create, notify_users, get_unread_count (11 tests)
+  - ExportService: export_tasks_to_excel with mocked data (6 tests)
+  - CalendarService: generate_user_token, generate_ical_feed (12 tests)
+  - EmailService: init, is_enabled, provider, send_email via SMTP (12 tests)
+  - RecurrenceService: get_period_dates for all frequencies (21 tests)
+
+- **Coverage Improvement**:
+  - services.py: 16% → 37% (+21 percentage points)
+  - Total tests: 548 → 598 (+50 net)
+  - Phase 3 target was +12%, achieved +21% - exceeded goal
+
+- **Bug Fix**:
+  - Fixed CalendarService.generate_ical_feed() calling .date() on date object
+  - Added `date` import to services.py for proper type checking
 
 ### v1.17.0 - Separated Memory Bank Check Script (2026-01-03)
 

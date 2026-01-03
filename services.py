@@ -5,7 +5,7 @@ This module contains service classes that encapsulate complex business logic,
 keeping routes thin and models focused on data representation.
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
@@ -1434,8 +1434,10 @@ class CalendarService:
             event.add('summary', task.title)
             
             # All-day event on the due date
-            event.add('dtstart', task.due_date.date())
-            event.add('dtend', task.due_date.date() + timedelta(days=1))
+            # Handle both date and datetime objects
+            due_date = task.due_date if isinstance(task.due_date, date) and not isinstance(task.due_date, datetime) else task.due_date.date()
+            event.add('dtstart', due_date)
+            event.add('dtend', due_date + timedelta(days=1))
             
             # Description with task details
             description_parts = []
