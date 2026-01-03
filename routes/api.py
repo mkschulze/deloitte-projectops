@@ -429,3 +429,278 @@ def preset_get(preset_id):
         'estimation_hours': preset.estimation_hours,
         'is_active': preset.is_active
     })
+
+
+# ============================================================================
+# DASHBOARD API - TEAM & PROJECTS
+# ============================================================================
+
+@api_bp.route('/dashboard/team-chart')
+@login_required
+def dashboard_team_chart():
+    """Get workload by team/owner for bar chart"""
+    from collections import Counter
+    
+    # Only admins and managers can see team workload
+    if not (current_user.is_admin() or current_user.is_manager()):
+        return jsonify({'labels': [], 'data': [], 'colors': []})
+    
+    lang = session.get('lang', 'de')
+    
+    # Get active tasks (not completed)
+    tasks = Task.query.filter(Task.status != 'completed').all()
+    
+    # Count by team
+    team_counts = Counter()
+    for task in tasks:
+        if task.owner_team:
+            team_name = task.owner_team.get_name(lang)
+        elif task.owner:
+            team_name = task.owner.name
+        else:
+            team_name = 'Nicht zugewiesen' if lang == 'de' else 'Unassigned'
+        team_counts[team_name] += 1
+    
+    # Sort by count (top 10)
+    sorted_teams = team_counts.most_common(10)
+    
+    labels = [t[0] for t in sorted_teams]
+    data = [t[1] for t in sorted_teams]
+    
+    # Generate colors (Deloitte palette variations)
+    base_colors = ['#86BC25', '#0D6EFD', '#0DCAF0', '#198754', '#FFC107', '#6C757D', '#DC3545', '#6610F2', '#D63384', '#20C997']
+    colors = [base_colors[i % len(base_colors)] for i in range(len(labels))]
+    
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'colors': colors
+    })
+
+
+@api_bp.route('/dashboard/project-velocity/<int:project_id>')
+@login_required
+def dashboard_project_velocity(project_id):
+    """Get velocity chart data for a project (last 6 sprints)"""
+    from modules.projects.models import Project, Sprint, Issue
+    
+    project = Project.query.get_or_404(project_id)
+    
+    # Check access
+    if not project.is_member(current_user):
+        return jsonify({'error': 'Access denied'}), 403
+    
+    lang = session.get('lang', 'de')
+    
+    # Get last 6 completed sprints
+    sprints = Sprint.query.filter_by(
+        project_id=project_id,
+        state='closed'
+    ).order_by(Sprint.completed_at.desc()).limit(6).all()
+    
+    sprints.reverse()  # Oldest first
+    
+    labels = []
+    committed = []
+    completed = []
+    
+    for sprint in sprints:
+        labels.append(sprint.name)
+        committed.append(sprint.total_points or 0)
+        completed.append(sprint.completed_points or 0)
+    
+    return jsonify({
+        'labels': labels,
+        'datasets': [
+            {
+                'label': 'Geplant' if lang == 'de' else 'Committed',
+                'data': committed,
+                'backgroundColor': 'rgba(13, 110, 253, 0.5)',
+                'borderColor': '#0D6EFD',
+                'borderWidth': 2
+            },
+            {
+                'label': 'Abgeschlossen' if lang == 'de' else 'Completed',
+                'data': completed,
+                'backgroundColor': 'rgba(134, 188, 37, 0.5)',
+                'borderColor': '#86BC25',
+                'borderWidth': 2
+            }
+        ]
+    })
+
+
+@api_bp.route('/dashboard/trends')
+@login_required
+def dashboard_trends():
+    """Get completion trends for the last 30 days"""
+    from collections import defaultdict
+    
+    lang = session.get('lang', 'de')
+    today = date.today()
+    
+    # Get tasks completed in last 30 days
+    days_back = 30
+    start_date = today - timedelta(days=days_back)
+    
+    # Build daily counts
+    daily_completed = defaultdict(int)
+    daily_created = defaultdict(int)
+    
+    # Get completed tasks
+    if current_user.is_admin() or current_user.is_manager():
+        completed_tasks = Task.query.filter(
+            Task.status == 'completed',
+            Task.updated_at >= start_date
+        ).all()
+        created_tasks = Task.query.filter(
+            Task.created_at >= start_date
+        ).all()
+    else:
+        completed_tasks = Task.query.filter(
+            Task.status == 'completed',
+            Task.updated_at >= start_date,
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        ).all()
+        created_tasks = Task.query.filter(
+            Task.created_at >= start_date,
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        ).all()
+    
+    for task in completed_tasks:
+        if task.updated_at:
+            day = task.updated_at.date() if hasattr(task.updated_at, 'date') else task.updated_at
+            daily_completed[day] += 1
+    
+    for task in created_tasks:
+        if task.created_at:
+            day = task.created_at.date() if hasattr(task.created_at, 'date') else task.created_at
+            daily_created[day] += 1
+    
+    # Build arrays for last 30 days
+    labels = []
+    completed_data = []
+    created_data = []
+    
+    for i in range(days_back):
+        day = start_date + timedelta(days=i)
+        labels.append(day.strftime('%d.%m'))
+        completed_data.append(daily_completed.get(day, 0))
+        created_data.append(daily_created.get(day, 0))
+    
+    return jsonify({
+        'labels': labels,
+        'datasets': [
+            {
+                'label': 'Abgeschlossen' if lang == 'de' else 'Completed',
+                'data': completed_data,
+                'borderColor': '#86BC25',
+                'backgroundColor': 'rgba(134, 188, 37, 0.1)',
+                'fill': True,
+                'tension': 0.4
+            },
+            {
+                'label': 'Erstellt' if lang == 'de' else 'Created',
+                'data': created_data,
+                'borderColor': '#0D6EFD',
+                'backgroundColor': 'rgba(13, 110, 253, 0.1)',
+                'fill': True,
+                'tension': 0.4
+            }
+        ]
+    })
+
+
+@api_bp.route('/dashboard/project-distribution')
+@login_required
+def dashboard_project_distribution():
+    """Get issue distribution across user's projects"""
+    from modules.projects.models import Project, ProjectMember, Issue
+    
+    lang = session.get('lang', 'de')
+    
+    # Get user's projects
+    if current_user.is_admin():
+        projects = Project.query.filter_by(is_archived=False).all()
+    else:
+        project_ids = db.session.query(ProjectMember.project_id).filter_by(user_id=current_user.id).all()
+        project_ids = [p[0] for p in project_ids]
+        projects = Project.query.filter(Project.id.in_(project_ids), Project.is_archived == False).all()
+    
+    labels = []
+    data = []
+    colors = []
+    
+    for project in projects:
+        issue_count = Issue.query.filter_by(project_id=project.id, is_archived=False).count()
+        if issue_count > 0:
+            labels.append(f"{project.key}: {project.get_name(lang)}")
+            data.append(issue_count)
+            colors.append(project.color or '#86BC25')
+    
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'colors': colors
+    })
+
+
+# ============================================================================
+# NOTIFICATION API
+# ============================================================================
+
+@api_bp.route('/notifications')
+@login_required
+def notifications_list():
+    """Get recent notifications for current user"""
+    from services import NotificationService
+    
+    lang = session.get('lang', 'de')
+    limit = request.args.get('limit', 10, type=int)
+    include_read = request.args.get('include_read', 'true').lower() == 'true'
+    
+    notifications = NotificationService.get_recent(
+        current_user.id, 
+        limit=min(limit, 50),  # Cap at 50
+        include_read=include_read
+    )
+    
+    return jsonify({
+        'notifications': [n.to_dict(lang) for n in notifications],
+        'unread_count': NotificationService.get_unread_count(current_user.id)
+    })
+
+
+@api_bp.route('/notifications/unread-count')
+@login_required
+def notifications_unread_count():
+    """Get unread notification count for badge"""
+    from services import NotificationService
+    
+    return jsonify({
+        'count': NotificationService.get_unread_count(current_user.id)
+    })
+
+
+@api_bp.route('/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def notification_mark_read(notification_id):
+    """Mark a single notification as read"""
+    from services import NotificationService
+    
+    success = NotificationService.mark_as_read(notification_id, current_user.id)
+    if success:
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Notification not found'}), 404
+
+
+@api_bp.route('/notifications/mark-all-read', methods=['POST'])
+@login_required
+def notifications_mark_all_read():
+    """Mark all notifications as read"""
+    from services import NotificationService
+    
+    count = NotificationService.mark_all_as_read(current_user.id)
+    db.session.commit()
+    return jsonify({'success': True, 'count': count})

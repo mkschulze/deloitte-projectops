@@ -7,6 +7,7 @@ This module contains all route handlers organized into blueprints for:
 - tasks: Task CRUD, status changes, evidence, comments
 - admin: User, entity, team, template management
 - api: JSON API endpoints
+- presets: Task preset management, import/export
 """
 
 from routes.auth import auth_bp
@@ -14,6 +15,7 @@ from routes.main import main_bp
 from routes.tasks import tasks_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
+from routes.presets import presets_bp
 
 __all__ = [
     'auth_bp',
@@ -21,4 +23,5 @@ __all__ = [
     'tasks_bp',
     'admin_bp',
     'api_bp',
+    'presets_bp',
 ]

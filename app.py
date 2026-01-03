@@ -68,12 +68,13 @@ def create_app(config_name='default'):
     app.register_blueprint(admin_tenants)
     
     # Register route blueprints (Phase 4 refactoring)
-    from routes import auth_bp, main_bp, tasks_bp, admin_bp, api_bp
+    from routes import auth_bp, main_bp, tasks_bp, admin_bp, api_bp, presets_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(presets_bp)
     
     return app
 

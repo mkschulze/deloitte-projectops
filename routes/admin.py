@@ -454,3 +454,213 @@ def module_toggle(module_id):
     status_en = 'enabled' if module.is_active else 'disabled'
     flash(f'Modul {module.get_name(lang)} {status if lang == "de" else status_en}.', 'success')
     return redirect(url_for('admin.modules'))
+
+
+# ============================================================================
+# USER MODULE MANAGEMENT
+# ============================================================================
+
+@admin_bp.route('/users/<int:user_id>/modules')
+@admin_required
+def user_modules(user_id):
+    """Manage user module assignments"""
+    user = User.query.get_or_404(user_id)
+    modules = Module.query.filter_by(is_active=True).order_by(Module.nav_order).all()
+    lang = session.get('lang', 'de')
+    
+    # Get user's assigned module IDs
+    assigned_module_ids = {um.module_id for um in user.user_modules}
+    
+    return render_template('admin/user_modules.html', 
+                          user=user, 
+                          modules=modules, 
+                          assigned_module_ids=assigned_module_ids,
+                          lang=lang)
+
+
+@admin_bp.route('/users/<int:user_id>/modules', methods=['POST'])
+@admin_required
+def user_modules_save(user_id):
+    """Save user module assignments"""
+    user = User.query.get_or_404(user_id)
+    lang = session.get('lang', 'de')
+    
+    # Get selected module IDs from form
+    selected_module_ids = set(map(int, request.form.getlist('modules')))
+    
+    # Get current assignments
+    current_module_ids = {um.module_id for um in user.user_modules}
+    
+    # Remove unselected modules
+    for um in list(user.user_modules):
+        if um.module_id not in selected_module_ids and not um.module.is_core:
+            db.session.delete(um)
+    
+    # Add new modules
+    for module_id in selected_module_ids:
+        if module_id not in current_module_ids:
+            module = Module.query.get(module_id)
+            if module and module.is_active:
+                um = UserModule(
+                    user_id=user_id,
+                    module_id=module_id,
+                    granted_by_id=current_user.id
+                )
+                db.session.add(um)
+    
+    db.session.commit()
+    
+    flash('Modulzuweisungen gespeichert.' if lang == 'de' else 'Module assignments saved.', 'success')
+    return redirect(url_for('admin.user_modules', user_id=user_id))
+
+
+# ============================================================================
+# USER ENTITY PERMISSIONS
+# ============================================================================
+
+@admin_bp.route('/users/<int:user_id>/entities')
+@admin_required
+def user_entities(user_id):
+    """Manage entity access for a user"""
+    user = User.query.get_or_404(user_id)
+    entities = Entity.query.filter_by(is_active=True).order_by(Entity.name).all()
+    lang = session.get('lang', 'de')
+    
+    # Get current permissions as dict for easy lookup
+    current_perms = {p.entity_id: p for p in user.entity_permissions}
+    
+    return render_template('admin/user_entities.html', 
+                           user=user, 
+                           entities=entities,
+                           current_perms=current_perms,
+                           access_levels=EntityAccessLevel,
+                           lang=lang,
+                           t=t)
+
+
+@admin_bp.route('/users/<int:user_id>/entities', methods=['POST'])
+@admin_required
+def user_entities_save(user_id):
+    """Save entity permissions for a user"""
+    user = User.query.get_or_404(user_id)
+    
+    # Get all entity IDs that were submitted
+    entity_ids = request.form.getlist('entity_ids', type=int)
+    
+    # Get existing permissions
+    existing_perms = {p.entity_id: p for p in user.entity_permissions}
+    
+    # Track which entities we've processed
+    processed_ids = set()
+    
+    for entity_id in entity_ids:
+        access_level = request.form.get(f'access_level_{entity_id}', 'view')
+        inherit = request.form.get(f'inherit_{entity_id}') == 'on'
+        
+        if entity_id in existing_perms:
+            # Update existing permission
+            perm = existing_perms[entity_id]
+            perm.access_level = access_level
+            perm.inherit_to_children = inherit
+        else:
+            # Create new permission
+            perm = UserEntity(
+                user_id=user.id,
+                entity_id=entity_id,
+                access_level=access_level,
+                inherit_to_children=inherit,
+                granted_by_id=current_user.id
+            )
+            db.session.add(perm)
+        
+        processed_ids.add(entity_id)
+    
+    # Remove permissions that weren't in the form (unchecked)
+    for entity_id, perm in existing_perms.items():
+        if entity_id not in processed_ids:
+            db.session.delete(perm)
+    
+    db.session.commit()
+    log_action('UPDATE', 'UserEntity', user.id, f'Entity permissions for {user.email}')
+    
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash(f'Berechtigungen für {user.name} wurden gespeichert.', 'success')
+    else:
+        flash(f'Permissions for {user.name} saved.', 'success')
+    
+    return redirect(url_for('admin.user_entities', user_id=user_id))
+
+
+@admin_bp.route('/entities/<int:entity_id>/users')
+@admin_required
+def entity_users(entity_id):
+    """View users with access to an entity"""
+    entity = Entity.query.get_or_404(entity_id)
+    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    lang = session.get('lang', 'de')
+    
+    # Get current permissions as dict for easy lookup
+    current_perms = {p.user_id: p for p in entity.user_permissions}
+    
+    return render_template('admin/entity_users.html',
+                           entity=entity,
+                           users=users,
+                           current_perms=current_perms,
+                           access_levels=EntityAccessLevel,
+                           lang=lang,
+                           t=t)
+
+
+@admin_bp.route('/entities/<int:entity_id>/users', methods=['POST'])
+@admin_required
+def entity_users_save(entity_id):
+    """Save user permissions for an entity"""
+    entity = Entity.query.get_or_404(entity_id)
+    
+    # Get all user IDs that were submitted
+    user_ids = request.form.getlist('user_ids', type=int)
+    
+    # Get existing permissions
+    existing_perms = {p.user_id: p for p in entity.user_permissions}
+    
+    # Track which users we've processed
+    processed_ids = set()
+    
+    for user_id in user_ids:
+        access_level = request.form.get(f'access_level_{user_id}', 'view')
+        inherit = request.form.get(f'inherit_{user_id}') == 'on'
+        
+        if user_id in existing_perms:
+            # Update existing permission
+            perm = existing_perms[user_id]
+            perm.access_level = access_level
+            perm.inherit_to_children = inherit
+        else:
+            # Create new permission
+            perm = UserEntity(
+                user_id=user_id,
+                entity_id=entity.id,
+                access_level=access_level,
+                inherit_to_children=inherit,
+                granted_by_id=current_user.id
+            )
+            db.session.add(perm)
+        
+        processed_ids.add(user_id)
+    
+    # Remove permissions that weren't in the form (unchecked)
+    for user_id, perm in existing_perms.items():
+        if user_id not in processed_ids:
+            db.session.delete(perm)
+    
+    db.session.commit()
+    log_action('UPDATE', 'UserEntity', entity.id, f'User permissions for {entity.name}')
+    
+    lang = session.get('lang', 'de')
+    if lang == 'de':
+        flash(f'Berechtigungen für {entity.name} wurden gespeichert.', 'success')
+    else:
+        flash(f'Permissions for {entity.name} saved.', 'success')
+    
+    return redirect(url_for('admin.entity_users', entity_id=entity_id))

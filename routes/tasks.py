@@ -885,3 +885,130 @@ def task_delete_comment(task_id, comment_id):
     flash('Kommentar gelöscht.', 'success')
     
     return redirect(url_for('tasks.task_detail', task_id=task_id) + '#comments')
+
+
+# ============================================================================
+# EXPORT ROUTES
+# ============================================================================
+
+@tasks_bp.route('/export/excel')
+@login_required
+def export_excel():
+    """Export filtered task list to Excel"""
+    from flask import Response
+    from services import ExportService
+    
+    lang = session.get('lang', 'de')
+    
+    # Get filter parameters (same as task_list)
+    status_filter = request.args.get('status', '')
+    entity_filter = request.args.get('entity', type=int)
+    tax_type_filter = request.args.get('tax_type', type=int)
+    year_filter = request.args.get('year', type=int, default=date.today().year)
+    
+    # Base query
+    query = Task.query
+    
+    # Apply role-based filtering
+    if not (current_user.is_admin() or current_user.is_manager()):
+        query = query.filter(
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        )
+    
+    # Apply filters
+    if status_filter:
+        if status_filter == 'overdue':
+            query = query.filter(Task.due_date < date.today(), Task.status != 'completed')
+        elif status_filter == 'due_soon':
+            soon = date.today() + timedelta(days=7)
+            query = query.filter(Task.due_date >= date.today(), Task.due_date <= soon, Task.status != 'completed')
+        else:
+            query = query.filter_by(status=status_filter)
+    
+    if entity_filter:
+        query = query.filter_by(entity_id=entity_filter)
+    
+    if tax_type_filter:
+        query = query.join(TaskTemplate).filter(TaskTemplate.tax_type_id == tax_type_filter)
+    
+    if year_filter:
+        query = query.filter_by(year=year_filter)
+    
+    tasks = query.order_by(Task.due_date).all()
+    
+    # Generate Excel
+    excel_bytes = ExportService.export_tasks_to_excel(tasks, lang)
+    
+    filename = f"aufgaben_{date.today().strftime('%Y%m%d')}.xlsx" if lang == 'de' else f"tasks_{date.today().strftime('%Y%m%d')}.xlsx"
+    
+    return Response(
+        excel_bytes,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+@tasks_bp.route('/export/summary')
+@login_required
+def export_summary():
+    """Export summary report to Excel"""
+    from flask import Response
+    from services import ExportService
+    
+    lang = session.get('lang', 'de')
+    
+    # Get all tasks (with role-based filtering)
+    query = Task.query
+    
+    if not (current_user.is_admin() or current_user.is_manager()):
+        query = query.filter(
+            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
+        )
+    
+    # Apply year filter if provided
+    year_filter = request.args.get('year', type=int, default=date.today().year)
+    if year_filter:
+        query = query.filter_by(year=year_filter)
+    
+    tasks = query.all()
+    
+    # Generate report
+    excel_bytes = ExportService.export_summary_report(tasks, lang)
+    
+    filename = f"bericht_{year_filter}.xlsx" if lang == 'de' else f"report_{year_filter}.xlsx"
+    
+    return Response(
+        excel_bytes,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+@tasks_bp.route('/<int:task_id>/export/pdf')
+@login_required
+def export_pdf(task_id):
+    """Export single task to PDF"""
+    from flask import Response
+    from services import ExportService
+    
+    task = Task.query.get_or_404(task_id)
+    lang = session.get('lang', 'de')
+    
+    # Check access
+    if not (current_user.is_admin() or current_user.is_manager() or 
+            task.owner_id == current_user.id or task.is_reviewer(current_user)):
+        flash('Keine Berechtigung.', 'danger')
+        return redirect(url_for('tasks.task_list'))
+    
+    # Generate PDF
+    pdf_bytes = ExportService.export_task_to_pdf(task, lang)
+    
+    # Sanitize filename
+    safe_title = "".join(c for c in task.title if c.isalnum() or c in (' ', '-', '_')).strip()[:50]
+    filename = f"{safe_title}_{date.today().strftime('%Y%m%d')}.pdf"
+    
+    return Response(
+        pdf_bytes,
+        mimetype='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
