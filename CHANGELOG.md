@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.20.1] - 2026-01-04
+
+### 🐛 Bug Fixes
+
+- **NotificationService.notify_comment_added()** - Fixed AttributeError when adding comments to tasks
+  - Changed `comment.content` to `comment.text` to match Comment model schema
+  - Resolves 500 error on POST `/tasks/<id>/comments`
+
+---
+
 ## [1.20.0] - 2026-01-03
 
 ### 🏗️ Phase 4b Complete Route Migration
