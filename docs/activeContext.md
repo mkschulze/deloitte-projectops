@@ -8,14 +8,65 @@
 
 ## Session Information
 
-**Date:** 2026-01-04 (Session 22)  
-**Last Action:** Test Coverage Major Expansion v1.20.3  
+**Date:** 2026-01-04 (Session 23)  
+**Last Action:** Test Coverage Continued Expansion v1.20.4  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
-**Version:** 1.20.3
+**Version:** 1.20.4
 
 ---
 
 ## Current State
+
+### ✅ What Was Accomplished (Session 23)
+
+1. **Test Coverage Continued Expansion v1.20.4** (Complete)
+
+   #### New Test Files Created
+   - **`tests/unit/test_app.py`** - 23 tests for app.py
+     - TestGetFileIcon: all file extension icon mappings (PDF, Word, Excel, images, etc.)
+     - TestLegacyRouteAliases: index, login, logout endpoint aliases
+     - TestContextProcessors: inject_globals with t(), app_name, helpers
+     - TestLogAction: audit log creation with old/new values
+     - TestWebSocketEvents: emit_notification functions
+     - 19 passed, 4 xfailed
+
+   - **`tests/integration/test_auth_routes.py`** - 31 tests for auth routes
+     - TestLoginPage, TestLogout, TestSelectTenant
+     - TestSwitchTenant, TestApiSwitchTenant
+     - TestAuditLogging
+     - 25 passed, 6 xfailed
+
+   #### Extended Test Files
+   - **`tests/integration/test_api_routes.py`** - +9 tests (46 total)
+     - TestDashboardChartUserRestrictions: preparer user access to charts
+     - TestDashboardTeamChart, TestDashboardTrendsChart
+     - TestDashboardProjectDistribution, TestPresetsApi
+
+   - **`tests/integration/test_admin_routes.py`** - +18 tests (59 total)
+     - TestUserModulePermissions: save and remove module assignments
+     - TestUserEntitySave, TestEntityUserSave: entity permission CRUD
+     - TestCategoryCreateEdit, TestModuleToggleExtended, TestTeamValidation
+
+   - **`tests/integration/test_tasks_routes.py`** - +16 evidence tests
+     - TestTaskEvidence: file upload, link add, delete, not found handling
+     - TestTaskReviewerAction: reviewer-specific actions
+
+   #### Bug Fixes
+   - **api_switch_tenant response**: Fixed `tenant.display_name` → `tenant.slug`
+
+   #### Coverage Improvements
+
+   | File | Before | After | Improvement |
+   |------|--------|-------|-------------|
+   | routes/auth.py | 57% | 100% | +43% |
+   | routes/admin.py | 70% | 97% | +27% |
+   | routes/api.py | 70% | 88% | +18% |
+   | app.py | 64% | 78% | +14% |
+   | routes/tasks.py | 62% | 69% | +7% |
+
+   #### Test Results
+   - **892 tests passed**, 12 skipped, 113 xfailed
+   - **Overall Coverage: 68%** (up from 65%)
 
 ### ✅ What Was Accomplished (Session 22)
 

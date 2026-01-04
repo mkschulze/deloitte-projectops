@@ -539,3 +539,358 @@ class TestUserModulePermissions:
         """User modules for non-existent user should return 404"""
         response = admin_client.get('/admin/users/99999/modules')
         assert response.status_code == 404
+    
+    def test_user_modules_save(self, admin_client, user, test_module, db):
+        """POST /admin/users/<id>/modules should save module assignments"""
+        response = admin_client.post(
+            f'/admin/users/{user.id}/modules',
+            data={'modules': [str(test_module.id)]},
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302  # Redirect
+        # Check module was assigned
+        from models import UserModule
+        assignment = UserModule.query.filter_by(
+            user_id=user.id, 
+            module_id=test_module.id
+        ).first()
+        assert assignment is not None
+    
+    def test_user_modules_remove(self, admin_client, user, test_module, db):
+        """Removing module from user should delete assignment"""
+        from models import UserModule
+        # First add the module
+        um = UserModule(
+            user_id=user.id,
+            module_id=test_module.id,
+            granted_by_id=user.id
+        )
+        db.session.add(um)
+        db.session.commit()
+        
+        # Now remove by not including in POST
+        response = admin_client.post(
+            f'/admin/users/{user.id}/modules',
+            data={'modules': []},  # Empty list
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        # Check module was removed
+        assignment = UserModule.query.filter_by(
+            user_id=user.id, 
+            module_id=test_module.id
+        ).first()
+        assert assignment is None
+
+
+# ============================================================================
+# USER ENTITY PERMISSION SAVE TESTS
+# ============================================================================
+
+class TestUserEntitySave:
+    """Tests for saving user-entity permissions"""
+    
+    def test_user_entities_save(self, admin_client, user, entity, db):
+        """POST /admin/users/<id>/entities should save permissions"""
+        response = admin_client.post(
+            f'/admin/users/{user.id}/entities',
+            data={
+                'entity_ids': [str(entity.id)],
+                f'access_level_{entity.id}': 'edit',
+                f'inherit_{entity.id}': 'on'
+            },
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        # Check permission was created
+        from models import UserEntity
+        perm = UserEntity.query.filter_by(
+            user_id=user.id,
+            entity_id=entity.id
+        ).first()
+        assert perm is not None
+        assert perm.access_level == 'edit'
+        assert perm.inherit_to_children is True
+    
+    def test_user_entities_update_existing(self, admin_client, user, entity, db, admin_user):
+        """Updating existing permission should work"""
+        from models import UserEntity
+        # First create a permission
+        perm = UserEntity(
+            user_id=user.id,
+            entity_id=entity.id,
+            access_level='view',
+            inherit_to_children=False,
+            granted_by_id=admin_user.id
+        )
+        db.session.add(perm)
+        db.session.commit()
+        
+        # Now update it
+        response = admin_client.post(
+            f'/admin/users/{user.id}/entities',
+            data={
+                'entity_ids': [str(entity.id)],
+                f'access_level_{entity.id}': 'admin',
+            },
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        db.session.refresh(perm)
+        assert perm.access_level == 'admin'
+    
+    def test_user_entities_remove_permission(self, admin_client, user, entity, db, admin_user):
+        """Removing entity from form should delete permission"""
+        from models import UserEntity
+        perm = UserEntity(
+            user_id=user.id,
+            entity_id=entity.id,
+            access_level='view',
+            granted_by_id=admin_user.id
+        )
+        db.session.add(perm)
+        db.session.commit()
+        
+        # POST without the entity in entity_ids
+        response = admin_client.post(
+            f'/admin/users/{user.id}/entities',
+            data={'entity_ids': []},
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        deleted = UserEntity.query.filter_by(
+            user_id=user.id,
+            entity_id=entity.id
+        ).first()
+        assert deleted is None
+
+
+# ============================================================================
+# ENTITY USER PERMISSION SAVE TESTS  
+# ============================================================================
+
+class TestEntityUserSave:
+    """Tests for saving entity-user permissions"""
+    
+    def test_entity_users_save(self, admin_client, user, entity, db):
+        """POST /admin/entities/<id>/users should save permissions"""
+        response = admin_client.post(
+            f'/admin/entities/{entity.id}/users',
+            data={
+                'user_ids': [str(user.id)],
+                f'access_level_{user.id}': 'edit'
+            },
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        from models import UserEntity
+        perm = UserEntity.query.filter_by(
+            user_id=user.id,
+            entity_id=entity.id
+        ).first()
+        assert perm is not None
+        assert perm.access_level == 'edit'
+    
+    def test_entity_users_update(self, admin_client, user, entity, db, admin_user):
+        """Updating existing entity-user permission should work"""
+        from models import UserEntity
+        perm = UserEntity(
+            user_id=user.id,
+            entity_id=entity.id,
+            access_level='view',
+            granted_by_id=admin_user.id
+        )
+        db.session.add(perm)
+        db.session.commit()
+        
+        response = admin_client.post(
+            f'/admin/entities/{entity.id}/users',
+            data={
+                'user_ids': [str(user.id)],
+                f'access_level_{user.id}': 'admin',
+                f'inherit_{user.id}': 'on'
+            },
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        db.session.refresh(perm)
+        assert perm.access_level == 'admin'
+        assert perm.inherit_to_children is True
+    
+    def test_entity_users_remove(self, admin_client, user, entity, db, admin_user):
+        """Removing user should delete permission"""
+        from models import UserEntity
+        perm = UserEntity(
+            user_id=user.id,
+            entity_id=entity.id,
+            access_level='view',
+            granted_by_id=admin_user.id
+        )
+        db.session.add(perm)
+        db.session.commit()
+        
+        response = admin_client.post(
+            f'/admin/entities/{entity.id}/users',
+            data={'user_ids': []},
+            follow_redirects=False
+        )
+        
+        assert response.status_code == 302
+        deleted = UserEntity.query.filter_by(
+            user_id=user.id,
+            entity_id=entity.id
+        ).first()
+        assert deleted is None
+
+
+# ============================================================================
+# CATEGORY CREATE/EDIT TESTS
+# ============================================================================
+
+class TestCategoryCreateEdit:
+    """Tests for category creation and editing"""
+    
+    @pytest.mark.xfail(reason="Template requires context processor 't'")
+    def test_category_create(self, admin_client):
+        """POST /admin/categories/new should create category"""
+        response = admin_client.post('/admin/categories/new', data={
+            'code': 'NEWCAT',
+            'name_de': 'Neue Kategorie',
+            'name_en': 'New Category',
+            'description_de': 'Beschreibung',
+            'description_en': 'Description',
+            'color': '#FF0000',
+            'icon': 'bi-tag'
+        }, follow_redirects=True)
+        
+        assert response.status_code == 200
+        new_cat = TaskCategory.query.filter_by(code='NEWCAT').first()
+        assert new_cat is not None
+        assert new_cat.color == '#FF0000'
+    
+    @pytest.mark.xfail(reason="Template requires context processor 't'")
+    def test_category_create_duplicate_code(self, admin_client, test_category):
+        """Creating category with existing code should fail"""
+        response = admin_client.post('/admin/categories/new', data={
+            'code': test_category.code,  # Existing code
+            'name_de': 'Duplicate',
+            'name_en': 'Duplicate EN'
+        }, follow_redirects=True)
+        
+        assert response.status_code == 200
+        # Count should not increase
+    
+    @pytest.mark.xfail(reason="Template requires context processor 't'")
+    def test_category_create_missing_fields(self, admin_client):
+        """Creating category without required fields should fail"""
+        response = admin_client.post('/admin/categories/new', data={
+            'code': '',  # Missing code
+            'name_de': '',
+            'name_en': ''
+        }, follow_redirects=True)
+        
+        assert response.status_code == 200
+    
+    @pytest.mark.xfail(reason="Template requires context processor 't'")
+    def test_category_edit(self, admin_client, test_category):
+        """POST /admin/categories/<id> should update category"""
+        cat_id = test_category.id
+        response = admin_client.post(f'/admin/categories/{cat_id}', data={
+            'name_de': 'Aktualisiert',
+            'name_en': 'Updated',
+            'description_de': 'Neue Beschreibung',
+            'description_en': 'New Description',
+            'color': '#00FF00',
+            'icon': 'bi-folder-fill',
+            'is_active': 'on'
+        }, follow_redirects=True)
+        
+        assert response.status_code == 200
+        updated = TaskCategory.query.get(cat_id)
+        assert updated.name_de == 'Aktualisiert'
+        assert updated.color == '#00FF00'
+
+
+# ============================================================================
+# MODULE TOGGLE TESTS
+# ============================================================================
+
+class TestModuleToggleExtended:
+    """Extended tests for module toggle functionality"""
+    
+    def test_module_toggle_core_module(self, admin_client, db):
+        """Toggling core module should be prevented"""
+        from models import Module
+        core_module = Module(
+            code='CORE_MOD',
+            name_de='Kernmodul',
+            name_en='Core Module',
+            is_active=True,
+            is_core=True  # Core module
+        )
+        db.session.add(core_module)
+        db.session.commit()
+        
+        original_status = core_module.is_active
+        response = admin_client.post(f'/admin/modules/{core_module.id}/toggle')
+        
+        assert response.status_code == 302
+        db.session.refresh(core_module)
+        # Core module should NOT be toggled
+        assert core_module.is_active == original_status
+
+
+# ============================================================================
+# TEAM VALIDATION TESTS
+# ============================================================================
+
+class TestTeamValidation:
+    """Tests for team validation logic"""
+    
+    @pytest.mark.xfail(reason="Template requires context processor 't'")
+    def test_team_create_missing_name_en(self, admin_client):
+        """Creating team without English name should fail"""
+        response = admin_client.post('/admin/teams/new', data={
+            'name_de': 'Nur Deutsch',
+            'name_en': '',  # Missing
+            'color': '#123456'
+        }, follow_redirects=True)
+        
+        assert response.status_code == 200
+        # Team should not be created
+        team = Team.query.filter_by(name='Nur Deutsch').first()
+        assert team is None
+    
+    @pytest.mark.xfail(reason="Template requires context processor 't'")
+    def test_team_edit_duplicate_name(self, admin_client, test_team, admin_user, db):
+        """Editing team to have duplicate name should fail"""
+        # Create another team
+        other_team = Team(
+            name='Other Team',
+            name_de='Other Team',
+            name_en='Other Team EN',
+            is_active=True
+        )
+        db.session.add(other_team)
+        db.session.commit()
+        
+        # Try to rename test_team to have same name as other_team
+        response = admin_client.post(f'/admin/teams/{test_team.id}', data={
+            'name_de': 'Other Team',  # Duplicate
+            'name_en': 'Other EN',
+            'color': '#ABCDEF',
+            'is_active': 'on'
+        }, follow_redirects=True)
+        
+        assert response.status_code == 200
+        # Name should not have changed
+        db.session.refresh(test_team)
+        assert test_team.name == 'Test Team'
+

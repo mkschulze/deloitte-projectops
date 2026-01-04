@@ -595,9 +595,9 @@ def client(app):
 | **Integration Tests** | Component interactions | Database operations, workflows |
 | **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
 
-### Current Coverage (v1.20.2)
+### Current Coverage (v1.20.4)
 
-**Overall: 46%** (6,754 statements, 3,627 missed)
+**Overall: 68%** (6,775 statements, 2,143 missed)
 
 | Module | Coverage | Notes |
 |--------|----------|-------|
@@ -605,22 +605,22 @@ def client(app):
 | extensions.py | 100% | ✅ |
 | translations.py | 100% | ✅ |
 | routes/__init__.py | 100% | ✅ |
+| routes/auth.py | 100% | ✅ |
 | modules/core/__init__.py | 100% | ✅ |
+| routes/presets.py | 99% | |
 | middleware/tenant.py | 98% | ✅ |
+| routes/admin.py | 97% | |
 | modules/__init__.py | 88% | |
+| routes/api.py | 88% | |
+| app.py | 78% | |
 | models.py | 76% | |
+| routes/tasks.py | 69% | |
 | routes/main.py | 68% | |
 | modules/projects/models.py | 69% | |
-| app.py | 64% | Cleaned up, legacy removed |
-| routes/tasks.py | 62% | +34% with new tests |
-| routes/auth.py | 57% | |
-| services.py | 51% | |
-| routes/api.py | 43% | |
-| routes/admin.py | 24% | |
-| routes/presets.py | 20% | |
-| modules/projects/routes.py | 19% | |
-| admin/tenants.py | 17% | |
-| **Total** | **46%** | **647 tests** |
+| services.py | 65% | |
+| admin/tenants.py | 63% | |
+| modules/projects/routes.py | 42% | |
+| **Total** | **68%** | **892 tests** |
 
 > See [testCoveragePlan.md](testCoveragePlan.md) for the roadmap to 100% coverage.
 

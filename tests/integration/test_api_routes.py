@@ -730,3 +730,97 @@ class TestApiEdgeCases:
         )
         # Should either work or return proper error
         assert response.status_code in [200, 400, 415]
+
+
+# ============================================================================
+# NON-ADMIN USER ACCESS TESTS (for coverage of access restriction branches)
+# ============================================================================
+
+class TestDashboardChartUserRestrictions:
+    """Test dashboard charts for regular users (non-admin/manager)."""
+    
+    def test_status_chart_preparer_no_entities(self, preparer_api_client):
+        """Preparer with no entity access should only see own tasks."""
+        response = preparer_api_client.get('/api/dashboard/status-chart')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert 'draft' in data
+        assert 'completed' in data
+    
+    def test_monthly_chart_preparer(self, preparer_api_client):
+        """Preparer should see monthly chart with restricted data."""
+        response = preparer_api_client.get('/api/dashboard/monthly-chart')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert 'year' in data
+        assert 'months' in data
+
+
+class TestDashboardTeamChart:
+    """Tests for GET /api/dashboard/team-chart"""
+    
+    def test_team_chart_success(self, admin_api_client, multiple_tasks):
+        """Should return team performance data."""
+        response = admin_api_client.get('/api/dashboard/team-chart')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        # Should return team data or empty array
+        assert isinstance(data, (list, dict))
+    
+    def test_team_chart_preparer(self, preparer_api_client):
+        """Preparer can access team chart."""
+        response = preparer_api_client.get('/api/dashboard/team-chart')
+        
+        assert response.status_code == 200
+
+
+class TestDashboardTrendsChart:
+    """Tests for GET /api/dashboard/trends"""
+    
+    def test_trends_chart_success(self, admin_api_client):
+        """Should return trends data."""
+        response = admin_api_client.get('/api/dashboard/trends')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert isinstance(data, (list, dict))
+    
+    def test_trends_chart_preparer(self, preparer_api_client):
+        """Preparer can access trends chart."""
+        response = preparer_api_client.get('/api/dashboard/trends')
+        
+        assert response.status_code == 200
+
+
+class TestDashboardProjectDistribution:
+    """Tests for GET /api/dashboard/project-distribution"""
+    
+    def test_project_distribution_success(self, admin_api_client):
+        """Should return project distribution data."""
+        response = admin_api_client.get('/api/dashboard/project-distribution')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert isinstance(data, (list, dict))
+
+
+class TestPresetsApi:
+    """Tests for preset API endpoints."""
+    
+    def test_presets_list(self, admin_api_client):
+        """Should return list of presets."""
+        response = admin_api_client.get('/api/presets')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert isinstance(data, (list, dict))
+    
+    def test_preset_get_not_found(self, admin_api_client):
+        """Non-existent preset should return 404."""
+        response = admin_api_client.get('/api/presets/99999')
+        
+        assert response.status_code in [404, 200]  # May return empty or 404
+

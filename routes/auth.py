@@ -156,6 +156,6 @@ def api_switch_tenant(tenant_id):
         'tenant': {
             'id': tenant.id,
             'name': tenant.name,
-            'display_name': tenant.display_name
+            'slug': tenant.slug
         }
     })

@@ -4,12 +4,37 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-04 (Session 22)  
-**Version:** 1.20.3
+**Last Updated:** 2026-01-04 (Session 23)  
+**Version:** 1.20.4
 
 ---
 
 ## Recent Releases
+
+### v1.20.4 - Test Coverage Continued Expansion (2026-01-04)
+
+**Status: ✅ Complete**
+
+- **New Test Files Created**:
+  - `tests/unit/test_app.py` - 23 tests for app.py
+  - `tests/integration/test_auth_routes.py` - 31 tests for auth routes
+
+- **Extended Test Files**:
+  - `tests/integration/test_api_routes.py` - +9 tests (46 total)
+  - `tests/integration/test_admin_routes.py` - +18 tests (59 total)
+  - `tests/integration/test_tasks_routes.py` - +16 tests
+
+- **Bug Fix**: Fixed `tenant.display_name` → `tenant.slug` in api_switch_tenant
+
+- **Coverage Improvements**:
+  - routes/auth.py: 57% → 100% (+43%)
+  - routes/admin.py: 70% → 97% (+27%)
+  - routes/api.py: 70% → 88% (+18%)
+  - app.py: 64% → 78% (+14%)
+
+- **Test Results**:
+  - Total tests: 892 passed, 12 skipped, 113 xfailed
+  - Overall Coverage: 68% (up from 65%)
 
 ### v1.20.3 - Test Coverage Major Expansion (2026-01-04)
 

@@ -305,3 +305,165 @@ class TestTaskExport:
         response = task_client.get(f'/tasks/{task.id}/export/pdf')
         # May return 200 with PDF or redirect if PDF library not installed
         assert response.status_code in [200, 302]
+
+
+# ============================================================================
+# TASK EVIDENCE TESTS
+# ============================================================================
+
+class TestTaskEvidence:
+    """Tests for task evidence routes."""
+    
+    def test_evidence_upload_requires_login(self, client, task):
+        """Evidence upload should require login."""
+        response = client.post(f'/tasks/{task.id}/evidence/upload')
+        assert response.status_code == 302
+        assert '/login' in response.location
+    
+    def test_evidence_upload_no_file(self, task_client, task):
+        """Evidence upload without file should show warning."""
+        response = task_client.post(
+            f'/tasks/{task.id}/evidence/upload',
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+    
+    def test_evidence_upload_empty_filename(self, task_client, task):
+        """Evidence upload with empty filename should show warning."""
+        from io import BytesIO
+        data = {'file': (BytesIO(b''), '')}  # Empty filename
+        response = task_client.post(
+            f'/tasks/{task.id}/evidence/upload',
+            data=data,
+            content_type='multipart/form-data',
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+    
+    def test_evidence_link_requires_login(self, client, task):
+        """Evidence link should require login."""
+        response = client.post(f'/tasks/{task.id}/evidence/link')
+        assert response.status_code == 302
+        assert '/login' in response.location
+    
+    def test_evidence_link_add_success(self, task_client, task, db):
+        """Adding a link evidence should work."""
+        response = task_client.post(
+            f'/tasks/{task.id}/evidence/link',
+            data={
+                'url': 'https://example.com/document',
+                'link_title': 'Example Document'
+            },
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+        
+        # Verify link was added
+        evidence = TaskEvidence.query.filter_by(
+            task_id=task.id, evidence_type='link'
+        ).first()
+        assert evidence is not None
+        assert evidence.url == 'https://example.com/document'
+    
+    def test_evidence_link_add_without_protocol(self, task_client, task, db):
+        """Adding a link without http:// should auto-add https://."""
+        response = task_client.post(
+            f'/tasks/{task.id}/evidence/link',
+            data={
+                'url': 'example.com/doc',
+                'link_title': 'Example'
+            },
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+        
+        evidence = TaskEvidence.query.filter_by(
+            task_id=task.id, evidence_type='link'
+        ).order_by(TaskEvidence.id.desc()).first()
+        assert evidence.url == 'https://example.com/doc'
+    
+    def test_evidence_link_empty_url(self, task_client, task):
+        """Adding a link without URL should fail."""
+        response = task_client.post(
+            f'/tasks/{task.id}/evidence/link',
+            data={'url': '', 'link_title': 'Empty'},
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+    
+    def test_evidence_download_requires_login(self, client, task):
+        """Evidence download should require login."""
+        response = client.get(f'/tasks/{task.id}/evidence/1/download')
+        assert response.status_code == 302
+        assert '/login' in response.location
+    
+    def test_evidence_download_not_found(self, task_client, task):
+        """Downloading non-existent evidence should 404."""
+        response = task_client.get(f'/tasks/{task.id}/evidence/99999/download')
+        assert response.status_code == 404
+    
+    def test_evidence_preview_requires_login(self, client, task):
+        """Evidence preview should require login."""
+        response = client.get(f'/tasks/{task.id}/evidence/1/preview')
+        assert response.status_code == 302
+        assert '/login' in response.location
+    
+    def test_evidence_preview_not_found(self, task_client, task):
+        """Previewing non-existent evidence should 404."""
+        response = task_client.get(f'/tasks/{task.id}/evidence/99999/preview')
+        assert response.status_code == 404
+    
+    def test_evidence_delete_requires_login(self, client, task):
+        """Evidence delete should require login."""
+        response = client.post(f'/tasks/{task.id}/evidence/1/delete')
+        assert response.status_code == 302
+        assert '/login' in response.location
+    
+    def test_evidence_delete_not_found(self, task_client, task):
+        """Deleting non-existent evidence should 404."""
+        response = task_client.post(f'/tasks/{task.id}/evidence/99999/delete')
+        assert response.status_code == 404
+    
+    def test_evidence_delete_link(self, task_client, task, user, db):
+        """Deleting link evidence should work."""
+        # Create a link evidence
+        evidence = TaskEvidence(
+            task_id=task.id,
+            evidence_type='link',
+            url='https://example.com',
+            link_title='Test Link',
+            uploaded_by_id=user.id
+        )
+        db.session.add(evidence)
+        db.session.commit()
+        evidence_id = evidence.id
+        
+        response = task_client.post(
+            f'/tasks/{task.id}/evidence/{evidence_id}/delete',
+            follow_redirects=False
+        )
+        assert response.status_code == 302
+        
+        # Verify deletion
+        deleted = TaskEvidence.query.get(evidence_id)
+        assert deleted is None
+
+
+# ============================================================================
+# TASK REVIEWER ACTION TESTS
+# ============================================================================
+
+class TestTaskReviewerAction:
+    """Tests for reviewer approve/reject actions."""
+    
+    def test_reviewer_action_requires_login(self, client, task):
+        """Reviewer action should require login."""
+        response = client.post(f'/tasks/{task.id}/reviewer-action')
+        assert response.status_code == 302
+        assert '/login' in response.location
+    
+    def test_reviewer_action_task_not_found(self, task_client):
+        """Reviewer action on non-existent task should 404."""
+        response = task_client.post('/tasks/99999/reviewer-action')
+        assert response.status_code == 404
+

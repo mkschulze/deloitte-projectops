@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.20.4] - 2026-01-04
+
+### 🧪 Test Coverage Continued Expansion
+
+#### Added
+- **`tests/integration/test_auth_routes.py`** - 31 tests for auth routes
+  - TestLoginPage: login form rendering, login/logout flows
+  - TestLogout: proper session clearing
+  - TestSelectTenant: tenant selection views
+  - TestSwitchTenant: tenant switching with validation
+  - TestApiSwitchTenant: API-based tenant switching
+  - TestAuditLogging: login/logout audit logging
+
+- **`tests/unit/test_app.py`** - 23 tests (new file)
+  - TestGetFileIcon: all file extension icon mappings (PDF, Word, Excel, images, etc.)
+  - TestLegacyRouteAliases: index, login, logout endpoint aliases
+  - TestContextProcessors: inject_globals with t(), app_name, helpers
+  - TestLogAction: audit log creation with old/new values
+  - TestWebSocketEvents: emit_notification functions
+
+- Extended **`tests/integration/test_api_routes.py`** - +9 tests (46 total)
+  - TestDashboardChartUserRestrictions: preparer user access to charts
+  - TestDashboardTeamChart, TestDashboardTrendsChart
+  - TestDashboardProjectDistribution
+  - TestPresetsApi: preset list and retrieval
+
+- Extended **`tests/integration/test_admin_routes.py`** - +18 tests (59 total)
+  - TestUserModulePermissions: save and remove module assignments
+  - TestUserEntitySave: entity permission CRUD
+  - TestEntityUserSave: user permission CRUD from entity side
+  - TestCategoryCreateEdit: category creation and editing
+  - TestModuleToggleExtended: core module toggle prevention
+  - TestTeamValidation: team name validation
+
+- Extended **`tests/integration/test_tasks_routes.py`** - +16 evidence tests
+  - TestTaskEvidence: file upload, link add, delete, not found handling
+  - TestTaskReviewerAction: reviewer-specific actions
+
+### 🐛 Bug Fixes
+- **api_switch_tenant response** - Fixed `tenant.display_name` → `tenant.slug` (attribute didn't exist)
+
+#### Coverage Improvements
+
+| File | Before | After | Improvement |
+|------|--------|-------|-------------|
+| routes/auth.py | 57% | 100% | +43% |
+| routes/admin.py | 70% | 97% | +27% |
+| routes/api.py | 70% | 88% | +18% |
+| app.py | 64% | 78% | +14% |
+| routes/tasks.py | 62% | 69% | +7% |
+
+#### Test Results
+- **892 tests passed**, 12 skipped, 113 xfailed
+- **Overall Coverage: 68%** (up from 65%)
+
+---
+
 ## [1.20.3] - 2026-01-04
 
 ### 🧪 Test Coverage Major Expansion
