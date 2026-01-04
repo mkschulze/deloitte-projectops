@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     
     <!-- Favicon -->
@@ -19,7 +20,7 @@
     <link href="{{ url_for('static', filename='Deloitte Special Case Web Icons/Web font/css/deloitte-special-use-icon-font.css') }}" rel="stylesheet">
     
     <!-- Deloitte Colors & Custom Styles - Official Palette 2024 -->
-    <style>
+    <style nonce="{{ csp_nonce }}">
         /* =========================
            Deloitte Palette Variables
            ========================= */
@@ -310,20 +311,20 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li>
-                                <a class="dropdown-item {% if request.endpoint == 'task_list' %}active{% endif %}" href="{{ url_for('task_list') }}">
+                                <a class="dropdown-item {% if request.endpoint == 'tasks.task_list' %}active{% endif %}" href="{{ url_for('tasks.task_list') }}">
                                     <i class="bi bi-list-task me-2"></i>{{ 'Alle Aufgaben' if lang == 'de' else 'All Tasks' }}
                                 </a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item {% if request.endpoint == 'task_archive_list' %}active{% endif %}" href="{{ url_for('task_archive_list') }}">
+                                <a class="dropdown-item {% if request.endpoint == 'tasks.task_archive_list' %}active{% endif %}" href="{{ url_for('tasks.task_archive_list') }}">
                                     <i class="bi bi-archive me-2"></i>{{ 'Archiv' if lang == 'de' else 'Archive' }}
                                 </a>
                             </li>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" href="{{ url_for('calendar_view') }}">
+                        <a class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}" href="{{ url_for('main.calendar_view') }}">
                             <i class="bi bi-calendar3"></i> {{ t('nav_calendar') }}
                         </a>
                     </li>
@@ -354,8 +355,8 @@
                             <i class="bi bi-globe"></i> {{ lang|upper }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item {% if lang == 'de' %}active{% endif %}" href="{{ url_for('set_language', lang='de') }}">🇩🇪 Deutsch</a></li>
-                            <li><a class="dropdown-item {% if lang == 'en' %}active{% endif %}" href="{{ url_for('set_language', lang='en') }}">🇬🇧 English</a></li>
+                            <li><a class="dropdown-item {% if lang == 'de' %}active{% endif %}" href="{{ url_for('main.set_language', lang='de') }}">🇩🇪 Deutsch</a></li>
+                            <li><a class="dropdown-item {% if lang == 'en' %}active{% endif %}" href="{{ url_for('main.set_language', lang='en') }}">🇬🇧 English</a></li>
                         </ul>
                     </li>
                     
@@ -383,7 +384,7 @@
                             </div>
                             <li><hr class="dropdown-divider my-0"></li>
                             <li class="text-center py-2">
-                                <a href="{{ url_for('notifications_page') }}" class="small text-decoration-none">{{ t('view_all_notifications') }}</a>
+                                <a href="{{ url_for('main.notifications') }}" class="small text-decoration-none">{{ t('view_all_notifications') }}</a>
                             </li>
                         </ul>
                     </li>
@@ -408,18 +409,18 @@
                                     {% endif %}
                                 </div>
                             </li>
-                            <li><a class="dropdown-item" href="{{ url_for('select_tenant') }}">
+                            <li><a class="dropdown-item" href="{{ url_for('auth.select_tenant') }}">
                                 <i class="bi bi-arrow-left-right me-2"></i>{{ 'Mandant wechseln' if lang == 'de' else 'Switch Tenant' }}
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             {% if current_user.is_admin() %}
-                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>{{ t('admin_dashboard') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>{{ t('admin_dashboard') }}</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin_entities') }}"><i class="bi bi-building me-2"></i>{{ t('entities') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin_categories') }}"><i class="bi bi-tags me-2"></i>{{ t('categories') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin_teams') }}"><i class="bi bi-people-fill me-2"></i>{{ t('teams') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}"><i class="bi bi-person me-2"></i>{{ t('nav_users') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.entities') }}"><i class="bi bi-building me-2"></i>{{ t('entities') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.categories') }}"><i class="bi bi-tags me-2"></i>{{ t('categories') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.teams') }}"><i class="bi bi-people-fill me-2"></i>{{ t('teams') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.users') }}"><i class="bi bi-person me-2"></i>{{ t('nav_users') }}</a></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             {% if current_user.is_superadmin %}
@@ -428,15 +429,15 @@
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             {% endif %}
-                            <li><a class="dropdown-item" href="{{ url_for('calendar_subscription') }}"><i class="bi bi-calendar2-plus me-2"></i>{{ 'Kalender-Abonnement' if lang == 'de' else 'Calendar Subscription' }}</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('profile_notifications') }}"><i class="bi bi-envelope-at me-2"></i>{{ 'E-Mail-Einstellungen' if lang == 'de' else 'Email Preferences' }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.calendar_subscription') }}"><i class="bi bi-calendar2-plus me-2"></i>{{ 'Kalender-Abonnement' if lang == 'de' else 'Calendar Subscription' }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.profile_notifications') }}"><i class="bi bi-envelope-at me-2"></i>{{ 'E-Mail-Einstellungen' if lang == 'de' else 'Email Preferences' }}</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>{{ t('nav_logout') }}</a></li>
+                            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i>{{ t('nav_logout') }}</a></li>
                         </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">
                             <i class="bi bi-box-arrow-in-right"></i> {{ t('nav_login') }}
                         </a>
                     </li>
@@ -485,7 +486,7 @@
     {% if current_user.is_authenticated %}
     <!-- Socket.IO for real-time notifications -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
         // Initialize Socket.IO connection
         const socket = io();
         
@@ -761,7 +762,7 @@
         </div>
     </div>
     
-    <style>
+    <style nonce="{{ csp_nonce }}">
         /* Quick Search Modal Styles */
         #quickSearchModal .modal-content {
             background: #fff;
@@ -834,7 +835,7 @@
         }
     </style>
     
-    <script>
+    <script nonce="{{ csp_nonce }}">
         // Quick Search Functionality
         (function() {
             let searchTimeout = null;
@@ -1009,6 +1010,30 @@
         })();
     </script>
     {% endif %}
+    
+    <!-- CSRF Token for AJAX requests (same-origin only) -->
+    <script nonce="{{ csp_nonce }}">
+        (function() {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                // Store for manual use in fetch() calls
+                window.csrfToken = csrfToken;
+                
+                // Auto-inject for jQuery AJAX (if jQuery is loaded)
+                if (window.$) {
+                    $.ajaxSetup({
+                        beforeSend: function(xhr, settings) {
+                            // Only send token for same-origin requests
+                            if (!/^https?:\/\//i.test(settings.url) || 
+                                settings.url.startsWith(window.location.origin)) {
+                                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                            }
+                        }
+                    });
+                }
+            }
+        })();
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

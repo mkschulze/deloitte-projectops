@@ -14,6 +14,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+from markupsafe import escape
 from extensions import db
 from models import Task, TaskReviewer, User
 
@@ -45,6 +46,111 @@ class ApprovalStatus:
     pending_reviewers: List[User]
     approved_reviewers: List[User]
     rejected_reviewers: List[User]
+
+
+# ============================================================================
+# TASK QUERY BUILDER
+# ============================================================================
+
+def build_task_query(user, tenant_id: Optional[int] = None, filters: Optional[dict] = None, show_archived: bool = False):
+    """
+    Build a filtered, access-scoped Task query.
+    
+    This centralizes the query logic used by task_list, export_excel, and export_summary
+    to ensure consistent access control and filtering.
+    
+    Args:
+        user: Current user (for access scoping)
+        tenant_id: Optional tenant ID for scoping (uses g.tenant if not provided)
+        filters: Optional dict with keys: status, entity_id, tax_type_id, year
+        show_archived: Whether to include archived tasks
+        
+    Returns:
+        SQLAlchemy Query object (call .all() or iterate to execute)
+    """
+    from flask import g
+    from sqlalchemy import or_
+    from models import TaskTemplate, team_members
+    
+    filters = filters or {}
+    query = Task.query
+    
+    # Tenant scoping
+    if tenant_id:
+        query = query.filter(Task.tenant_id == tenant_id)
+    else:
+        tenant = getattr(g, 'tenant', None)
+        if tenant:
+            query = query.filter(Task.tenant_id == tenant.id)
+        else:
+            # No tenant context -> return empty
+            return query.filter(False)
+    
+    # Archived filter
+    if not show_archived:
+        query = query.filter((Task.is_archived == False) | (Task.is_archived.is_(None)))
+    
+    # Access scoping for non-admin/non-manager users
+    if not (user.is_admin() or user.is_manager()):
+        accessible_entity_ids = user.get_accessible_entity_ids('view')
+        
+        # Subquery: user is a direct reviewer via TaskReviewer table
+        reviewer_exists = db.session.query(TaskReviewer.id).filter(
+            TaskReviewer.task_id == Task.id,
+            TaskReviewer.user_id == user.id
+        ).exists()
+        
+        # Subquery: user is member of reviewer team
+        reviewer_team_exists = db.session.query(team_members.c.user_id).filter(
+            team_members.c.team_id == Task.reviewer_team_id,
+            team_members.c.user_id == user.id
+        ).exists()
+        
+        # Subquery: user is member of owner team
+        owner_team_exists = db.session.query(team_members.c.user_id).filter(
+            team_members.c.team_id == Task.owner_team_id,
+            team_members.c.user_id == user.id
+        ).exists()
+        
+        # Build access clauses
+        access_clauses = [
+            Task.owner_id == user.id,
+            Task.reviewer_id == user.id,  # Legacy single reviewer field
+            reviewer_exists,
+            reviewer_team_exists,
+            owner_team_exists,
+        ]
+        
+        if accessible_entity_ids:
+            access_clauses.append(Task.entity_id.in_(accessible_entity_ids))
+        
+        query = query.filter(or_(*access_clauses))
+    
+    # Apply filters
+    status = filters.get('status')
+    if status:
+        if status == 'overdue':
+            query = query.filter(Task.due_date < date.today(), Task.status != 'completed')
+        elif status == 'due_soon':
+            soon = date.today() + timedelta(days=7)
+            query = query.filter(Task.due_date >= date.today(), Task.due_date <= soon, Task.status != 'completed')
+        else:
+            query = query.filter(Task.status == status)
+    
+    entity_id = filters.get('entity_id')
+    if entity_id:
+        query = query.filter(Task.entity_id == entity_id)
+    
+    tax_type_id = filters.get('tax_type_id')
+    if tax_type_id:
+        query = query.join(TaskTemplate).filter(TaskTemplate.tax_type_id == tax_type_id)
+    
+    year = filters.get('year')
+    if year:
+        query = query.filter(Task.year == year)
+    
+    # Use distinct to prevent duplicates from exists subqueries
+    return query.distinct()
 
 
 class ApprovalService:
@@ -974,7 +1080,7 @@ class ExportService:
                 date_span = '<span class="date">' + tr.approved_at.strftime("%d.%m.%Y %H:%M") + '</span>'
             reviewer_html += '<div class="reviewer ' + status_class + '">'
             reviewer_html += '<span class="icon">' + status_icon + '</span>'
-            reviewer_html += '<span class="name">' + tr.user.name + '</span>'
+            reviewer_html += '<span class="name">' + escape(tr.user.name) + '</span>'
             reviewer_html += date_span
             reviewer_html += '</div>'
         
@@ -982,17 +1088,17 @@ class ExportService:
         evidence_html = ''
         for ev in evidence_list:
             icon = '📎' if ev.evidence_type == 'file' else '🔗'
-            evidence_html += '<div class="evidence-item">' + icon + ' ' + (ev.filename or ev.url) + '</div>'
+            evidence_html += '<div class="evidence-item">' + icon + ' ' + escape(ev.filename or ev.url) + '</div>'
         
         # Build comments HTML
         comments_html = ''
         for comment in comments_list:
             comments_html += '<div class="comment">'
             comments_html += '<div class="comment-header">'
-            comments_html += '<strong>' + comment.user.name + '</strong>'
+            comments_html += '<strong>' + escape(comment.created_by.name) + '</strong>'
             comments_html += '<span class="date">' + comment.created_at.strftime("%d.%m.%Y %H:%M") + '</span>'
             comments_html += '</div>'
-            comments_html += '<div class="comment-body">' + comment.content + '</div>'
+            comments_html += '<div class="comment-body">' + escape(comment.text) + '</div>'
             comments_html += '</div>'
         
         # Build optional sections
@@ -1007,7 +1113,7 @@ class ExportService:
             description_section = '''
             <div class="section">
                 <div class="section-title">''' + desc_title + '''</div>
-                <div class="description">''' + task.description + '''</div>
+                <div class="description">''' + str(escape(task.description)) + '''</div>
             </div>
             '''
         
@@ -2270,4 +2376,3 @@ class RecurrenceService:
             return []
         except Exception:
             return []
-

@@ -2,7 +2,7 @@
 {% block title %}{{ 'Issue Types' if lang == 'en' else 'Issue-Typen' }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* ============================================
        SETTINGS: ISSUE TYPES - DELOITTE DESIGN
        Color: Purple #62378a (Settings accent)
@@ -381,6 +381,7 @@
                 </div>
                 <div class="form-sidebar-body">
                     <form method="post" action="{{ url_for('projects.project_issue_type_add', project_id=project.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Preview -->
                         <div class="text-center">
                             <div class="icon-preview mx-auto" id="typePreview" style="background-color: #86BC25;">
@@ -466,7 +467,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const iconSelect = document.getElementById('iconSelect');
     const colorInput = document.getElementById('colorInput');

@@ -3,7 +3,7 @@
 {% block title %}{{ (project.get_name(lang) if project else ('Neues Projekt' if lang == 'de' else 'New Project')) }} - ProjectOps{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* Form Header */
     .form-header-bar {
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -206,6 +206,7 @@
             <div class="form-card card">
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row">
                             <!-- Left Column -->
                             <div class="col-lg-7">
@@ -383,7 +384,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const colorInput = document.getElementById('color');
     const colorText = document.getElementById('color-text');

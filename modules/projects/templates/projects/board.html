@@ -201,7 +201,7 @@
     </div>
 </div>
 
-<style>
+<style nonce="{{ csp_nonce }}">
 /* Hero Section */
 .board-hero {
     background: linear-gradient(135deg, #62B5E5 0%, #0076A8 50%, #000000 100%);
@@ -498,7 +498,7 @@
 <!-- SortableJS -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const projectId = {{ project.id }};
     const moveUrl = "{{ url_for('projects.kanban_move_issue', project_id=project.id) }}";

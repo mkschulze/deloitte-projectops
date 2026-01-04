@@ -13,13 +13,25 @@
 | **Migrations** | Alembic (Flask-Migrate) | Schema version control |
 | **Authentication** | Flask-Login | Session management |
 | **Forms** | Flask-WTF + WTForms | Form handling & CSRF |
-| **Password Hashing** | Werkzeug | Secure password storage |
+| **Password Hashing** | Werkzeug | Secure password storage (pbkdf2:sha256) |
+| **Rate Limiting** | Flask-Limiter | Brute-force protection |
 | **Excel Processing** | openpyxl | Import/export Excel files |
 | **PDF Export** | WeasyPrint | HTML to PDF conversion |
 | **Environment** | python-dotenv | Configuration management |
 | **WebSocket** | Flask-SocketIO + eventlet | Real-time notifications |
 | **Date Handling** | python-dateutil | RRULE parsing, date calculations |
 | **iCal Generation** | icalendar | Calendar feed generation |
+
+### Security
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **CSP** | Nonce-based | XSS protection for inline scripts/styles |
+| **Security Headers** | Custom middleware | X-Frame-Options, X-Content-Type-Options |
+| **CSRF Protection** | Flask-WTF | Cross-site request forgery prevention |
+| **Rate Limiting** | Flask-Limiter | Brute-force & abuse prevention |
+| **Session Security** | Flask (production) | HttpOnly, Secure, SameSite cookies |
+| **Tenant Isolation** | Query-level filtering | Data separation per tenant |
 
 ### Frontend
 

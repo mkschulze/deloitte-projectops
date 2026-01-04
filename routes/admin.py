@@ -16,7 +16,7 @@ Additional admin routes remain in app.py for gradual migration.
 
 from datetime import date
 from functools import wraps
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, g
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -64,15 +64,18 @@ def log_action(action, entity_type, entity_id, entity_name, old_value=None, new_
 @admin_required
 def dashboard():
     """Admin dashboard with system statistics"""
+    # Scope task queries to current tenant
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    
     stats = {
         'users': User.query.count(),
         'active_users': User.query.filter_by(is_active=True).count(),
         'entities': Entity.query.filter_by(is_active=True).count(),
         'categories': TaskCategory.query.filter_by(is_active=True).count(),
         'tax_types': TaskCategory.query.filter_by(is_active=True).count(),  # Legacy alias
-        'tasks_total': Task.query.count(),
-        'tasks_overdue': Task.query.filter(Task.due_date < date.today(), Task.status != 'completed').count(),
-        'tasks_completed': Task.query.filter_by(status='completed').count(),
+        'tasks_total': Task.query.filter(tenant_filter).count(),
+        'tasks_overdue': Task.query.filter(tenant_filter, Task.due_date < date.today(), Task.status != 'completed').count(),
+        'tasks_completed': Task.query.filter(tenant_filter, Task.status == 'completed').count(),
         'presets': TaskPreset.query.filter_by(is_active=True).count(),
         'modules': Module.query.filter_by(is_active=True).count(),
     }

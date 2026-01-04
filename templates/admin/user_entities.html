@@ -6,9 +6,9 @@
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('admin_users') }}">{{ t('nav_users') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('admin_user_edit', user_id=user.id) }}">{{ user.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.users') }}">{{ t('nav_users') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.user_edit', user_id=user.id) }}">{{ user.name }}</a></li>
             <li class="breadcrumb-item active">{{ 'Gesellschaftsberechtigungen' if lang == 'de' else 'Entity Permissions' }}</li>
         </ol>
     </nav>
@@ -34,7 +34,8 @@
     </div>
     {% else %}
     
-    <form method="POST" action="{{ url_for('admin_user_entities_save', user_id=user.id) }}">
+    <form method="POST" action="{{ url_for('admin.user_entities_save', user_id=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="card shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
@@ -111,7 +112,7 @@
                 </table>
             </div>
             <div class="card-footer bg-white d-flex justify-content-between">
-                <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>
                     {{ 'Zurück' if lang == 'de' else 'Back' }}
                 </a>
@@ -152,7 +153,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function toggleRow(checkbox) {
     const row = checkbox.closest('tr');
     const accessSelect = row.querySelector('.access-select');

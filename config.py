@@ -7,7 +7,7 @@ class Config:
     """Base configuration"""
     # App Info - CUSTOMIZE THESE
     APP_NAME = 'Deloitte ProjectOps'
-    APP_VERSION = '1.20.4'
+    APP_VERSION = '1.21.0'
     
     # Secret key for session management
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
@@ -60,12 +60,21 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    def __init__(self):
+        super().__init__()
+        if not os.environ.get('SECRET_KEY'):
+            raise ValueError("SECRET_KEY environment variable must be set in production")
 
 
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False  # Disable CSRF for tests
 
 
 config = {

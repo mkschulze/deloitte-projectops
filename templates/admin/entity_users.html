@@ -6,9 +6,9 @@
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('admin_entities') }}">{{ t('entities') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('admin_entity_edit', entity_id=entity.id) }}">{{ entity.get_name(lang) }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.entities') }}">{{ t('entities') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.entity_edit', entity_id=entity.id) }}">{{ entity.get_name(lang) }}</a></li>
             <li class="breadcrumb-item active">{{ 'Benutzerberechtigungen' if lang == 'de' else 'User Permissions' }}</li>
         </ol>
     </nav>
@@ -20,7 +20,8 @@
         </h1>
     </div>
     
-    <form method="POST" action="{{ url_for('admin_entity_users_save', entity_id=entity.id) }}">
+    <form method="POST" action="{{ url_for('admin.entity_users_save', entity_id=entity.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="card shadow-sm">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
@@ -115,7 +116,7 @@
                 </div>
             </div>
             <div class="card-footer bg-white d-flex justify-content-between">
-                <a href="{{ url_for('admin_entities') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('admin.entities') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-1"></i>
                     {{ 'Zurück' if lang == 'de' else 'Back' }}
                 </a>
@@ -141,7 +142,7 @@
             <ul class="mb-0">
                 {% for child in entity.children %}
                 <li>
-                    <a href="{{ url_for('admin_entity_users', entity_id=child.id) }}">{{ child.get_name(lang) }}</a>
+                    <a href="{{ url_for('admin.entity_users', entity_id=child.id) }}">{{ child.get_name(lang) }}</a>
                     {% if child.children.count() > 0 %}
                     <span class="text-muted small">(+ {{ child.children.count() }} {{ 'weitere' if lang == 'de' else 'more' }})</span>
                     {% endif %}
@@ -153,7 +154,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function toggleRow(checkbox) {
     const row = checkbox.closest('tr');
     const accessSelect = row.querySelector('.access-select');

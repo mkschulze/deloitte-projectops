@@ -473,6 +473,163 @@ def change_status(id):
 
 ---
 
+## Security Patterns
+
+### Content Security Policy (CSP) with Nonces
+
+The application uses a nonce-based CSP to protect against XSS attacks while allowing necessary inline scripts and styles.
+
+```python
+# app.py - Nonce generation per request
+@app.before_request
+def generate_csp_nonce():
+    """Generate a unique nonce for each request for CSP."""
+    g.csp_nonce = secrets.token_urlsafe(16)
+
+@app.context_processor
+def inject_csp_nonce():
+    """Make csp_nonce available in all templates."""
+    return {'csp_nonce': getattr(g, 'csp_nonce', '')}
+```
+
+**Template Usage:**
+```jinja2
+{# Inline scripts require nonce attribute #}
+<script nonce="{{ csp_nonce }}">
+    // JavaScript code here
+</script>
+
+{# Inline styles require nonce attribute #}
+<style nonce="{{ csp_nonce }}">
+    .my-class { color: red; }
+</style>
+```
+
+### Security Headers Middleware
+
+```python
+@app.after_request
+def add_security_headers(response):
+    """Apply baseline security headers to all responses."""
+    security_headers = {
+        'X-Content-Type-Options': 'nosniff',       # Prevent MIME sniffing
+        'X-Frame-Options': 'SAMEORIGIN',           # Clickjacking protection
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    }
+    for header, value in security_headers.items():
+        response.headers.setdefault(header, value)
+    
+    # CSP with nonces
+    nonce = getattr(g, 'csp_nonce', '')
+    csp = (
+        "default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+        f"style-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+        "script-src-attr 'unsafe-inline'; "  # For onclick, onsubmit
+        "style-src-attr 'unsafe-inline'; "   # For style="" attributes
+        # ... additional directives
+    )
+    response.headers.setdefault('Content-Security-Policy', csp)
+    return response
+```
+
+### CSRF Protection Pattern
+
+```python
+# extensions.py
+from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect()
+
+# In templates - hidden field
+<form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <!-- form fields -->
+</form>
+
+# AJAX requests - meta tag + header
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<script nonce="{{ csp_nonce }}">
+fetch('/api/endpoint', {
+    method: 'POST',
+    headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+    }
+});
+</script>
+```
+
+### Rate Limiting Pattern
+
+```python
+# extensions.py
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+# Usage on routes
+@auth_bp.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")  # Brute-force protection
+def login():
+    # ...
+
+@auth_bp.route('/switch-tenant/<int:tenant_id>', methods=['POST'])
+@limiter.limit("30 per minute")  # Abuse prevention
+def switch_tenant(tenant_id):
+    # ...
+```
+
+### Tenant Isolation Pattern
+
+```python
+# middleware/tenant.py
+def load_tenant_context():
+    """Load tenant context for each request."""
+    g.tenant = None
+    g.tenant_role = None
+    
+    if not current_user.is_authenticated:
+        return
+    
+    tenant_id = session.get('current_tenant_id')
+    if tenant_id and current_user.can_access_tenant(tenant_id):
+        g.tenant = Tenant.query.get(tenant_id)
+        g.tenant_role = current_user.get_role_in_tenant(tenant_id)
+
+# Query scoping in routes
+def get_tasks():
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    return Task.query.filter(tenant_filter).all()
+```
+
+### File Upload Security
+
+```python
+from werkzeug.utils import secure_filename
+import uuid
+
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@tasks_bp.route('/<int:id>/upload', methods=['POST'])
+def upload_file(id):
+    file = request.files['file']
+    if file and allowed_file(file.filename):
+        # Secure filename + UUID prefix to prevent collisions
+        filename = f"{uuid.uuid4().hex}_{secure_filename(file.filename)}"
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+```
+
+---
+
 ## Audit Logging Pattern
 
 ### Helper Function

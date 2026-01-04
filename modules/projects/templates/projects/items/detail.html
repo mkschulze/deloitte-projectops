@@ -2,7 +2,7 @@
 {% block title %}{{ issue.key }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* Compact Header Bar */
     .issue-header-bar {
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -310,6 +310,7 @@
                     <div class="d-flex align-items-center gap-3">
                         <span class="text-muted fw-500">Status:</span>
                         <form method="post" action="{{ url_for('projects.item_transition', project_id=project.id, issue_key=issue.key) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="status-btn-group">
                                 {% for s in available_statuses %}
                                 <button type="submit" name="status_id" value="{{ s.id }}" 
@@ -391,6 +392,7 @@
                 <div class="card-body">
                     <!-- Add Comment Form -->
                     <form method="post" action="{{ url_for('projects.comment_add', project_id=project.id, issue_key=issue.key) }}" class="mb-4">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="d-flex gap-3">
                             <span class="avatar-circle flex-shrink-0" style="background-color: #86BC25;">
                                 {{ current_user.name[:1].upper() }}
@@ -427,6 +429,7 @@
                                         <ul class="dropdown-menu dropdown-menu-end">
                                             <li>
                                                 <form method="post" action="{{ url_for('projects.comment_delete', project_id=project.id, issue_key=issue.key, comment_id=comment.id) }}" onsubmit="return confirm('{{ 'Delete comment?' if lang == 'en' else 'Kommentar löschen?' }}')">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <button type="submit" class="dropdown-item text-danger">
                                                         <i class="bi bi-trash me-2"></i>{{ 'Delete' if lang == 'en' else 'Löschen' }}
                                                     </button>
@@ -464,6 +467,7 @@
                     <div class="collapse" id="addLinkForm">
                         <div class="collapse-form">
                             <form method="post" action="{{ url_for('projects.link_add', project_id=project.id, issue_key=issue.key) }}" class="row g-2 align-items-end">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="col-auto">
                                     <select name="link_type" class="form-select form-select-sm" required style="border-radius: 6px;">
                                         <option value="blocks">{{ 'blocks' if lang == 'en' else 'blockiert' }}</option>
@@ -499,6 +503,7 @@
                                 <span class="text-muted small ms-1">{{ link.target_issue.summary[:30] }}{% if link.target_issue.summary|length > 30 %}...{% endif %}</span>
                             </div>
                             <form method="post" action="{{ url_for('projects.link_delete', project_id=project.id, issue_key=issue.key, link_id=link.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-x"></i></button>
                             </form>
                         </div>
@@ -514,6 +519,7 @@
                                 <span class="text-muted small ms-1">{{ link.source_issue.summary[:30] }}{% if link.source_issue.summary|length > 30 %}...{% endif %}</span>
                             </div>
                             <form method="post" action="{{ url_for('projects.link_delete', project_id=project.id, issue_key=issue.key, link_id=link.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-x"></i></button>
                             </form>
                         </div>
@@ -544,6 +550,7 @@
                     <div class="collapse" id="uploadForm">
                         <div class="collapse-form">
                             <form method="post" action="{{ url_for('projects.attachment_upload', project_id=project.id, issue_key=issue.key) }}" enctype="multipart/form-data">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="input-group input-group-sm">
                                     <input type="file" name="file" class="form-control" required style="border-radius: 6px 0 0 6px;">
                                     <button type="submit" class="btn btn-deloitte-green" style="border-radius: 0 6px 6px 0;">
@@ -571,6 +578,7 @@
                         </div>
                         {% if att.uploaded_by_id == current_user.id or project.is_admin(current_user) %}
                         <form method="post" action="{{ url_for('projects.attachment_delete', project_id=project.id, issue_key=issue.key, attachment_id=att.id) }}" onsubmit="return confirm('{{ 'Delete file?' if lang == 'en' else 'Datei löschen?' }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-link text-danger p-0">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -602,6 +610,7 @@
                     <div class="collapse" id="logTimeForm">
                         <div class="collapse-form">
                             <form method="post" action="{{ url_for('projects.worklog_add', project_id=project.id, issue_key=issue.key) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="row g-2 mb-2">
                                     <div class="col-4">
                                         <input type="text" name="time_spent" class="form-control form-control-sm" placeholder="2h 30m" required style="border-radius: 6px;">
@@ -632,6 +641,7 @@
                         </div>
                         {% if wl.author_id == current_user.id or project.is_admin(current_user) %}
                         <form method="post" action="{{ url_for('projects.worklog_delete', project_id=project.id, issue_key=issue.key, worklog_id=wl.id) }}" onsubmit="return confirm('{{ 'Delete entry?' if lang == 'en' else 'Eintrag löschen?' }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-link text-danger p-0">
                                 <i class="bi bi-x"></i>
                             </button>
@@ -717,6 +727,7 @@
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         <form method="post" action="{{ url_for('projects.item_delete', project_id=project.id, issue_key=issue.key) }}" onsubmit="return confirm('{{ 'Archive this issue?' if lang == 'en' else 'Dieses Issue archivieren?' }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-secondary w-100 action-btn">
                                 <i class="bi bi-archive me-2"></i>{{ 'Archive' if lang == 'en' else 'Archivieren' }}
                             </button>
@@ -744,6 +755,7 @@
                     <div class="collapse" id="addReviewerForm">
                         <div class="collapse-form">
                             <form method="post" action="{{ url_for('projects.item_reviewer_add', project_id=project.id, issue_key=issue.key) }}" class="row g-2 align-items-end">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="col">
                                     <label class="form-label small text-muted mb-1">{{ 'Team member' if lang == 'en' else 'Teammitglied' }}</label>
                                     <select name="user_id" class="form-select form-select-sm" required style="border-radius: 6px;">
@@ -819,6 +831,7 @@
                         </div>
                         {% if project.is_admin(current_user) or issue.reporter_id == current_user.id %}
                         <form method="post" action="{{ url_for('projects.item_reviewer_remove', project_id=project.id, issue_key=issue.key, reviewer_id=reviewer.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-x"></i></button>
                         </form>
                         {% endif %}
@@ -845,6 +858,7 @@
                     {% endif %}
                     <div class="d-flex gap-2">
                         <form method="post" action="{{ url_for('projects.item_approve', project_id=project.id, issue_key=issue.key) }}" class="flex-grow-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-success btn-sm w-100 action-btn" {% if not is_in_review %}disabled{% endif %}>
                                 <i class="bi bi-check-lg me-1"></i>{{ 'Approve' if lang == 'en' else 'Genehmigen' }}
                             </button>
@@ -983,7 +997,7 @@
 
 <!-- Marked.js for Markdown -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const sourceEl = document.getElementById('description-source');
     const targetEl = document.getElementById('description-markdown');
@@ -1009,6 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius: 12px;">
             <form method="post" action="{{ url_for('projects.item_reject', project_id=project.id, issue_key=issue.key) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title">
                         <i class="bi bi-x-circle text-danger me-2"></i>

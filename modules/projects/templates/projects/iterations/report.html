@@ -2,7 +2,7 @@
 {% block title %}{{ (project.get_term('sprint', lang) + ' Report') if lang == 'en' else (project.get_term('sprint', lang) + '-Bericht') }} - {{ sprint.name }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* ============================================
        SPRINT REPORT - DELOITTE DESIGN
        Color: Teal #00A3E0 (Sprint accent)
@@ -523,7 +523,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Burndown Chart
     {% if burndown_data.labels %}

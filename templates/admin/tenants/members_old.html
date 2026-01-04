@@ -31,6 +31,7 @@
                     </h5>
                 </div>
                 <form action="{{ url_for('admin_tenants.tenant_add_member', tenant_id=tenant.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="card-body">
                         <div class="mb-3">
                             <label for="user_id" class="form-label">{{ 'Benutzer' if lang == 'de' else 'User' }}</label>
@@ -127,6 +128,7 @@
                                 <td>
                                     <form action="{{ url_for('admin_tenants.tenant_update_member', tenant_id=tenant.id, user_id=m.user.id) }}" 
                                           method="POST" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <select name="role" class="form-select form-select-sm" style="width: auto;" 
                                                 onchange="this.form.submit()">
                                             <option value="viewer" {% if m.role == 'viewer' %}selected{% endif %}>Viewer</option>
@@ -141,6 +143,7 @@
                                     <form action="{{ url_for('admin_tenants.tenant_remove_member', tenant_id=tenant.id, user_id=m.user.id) }}" 
                                           method="POST" class="d-inline"
                                           onsubmit="return confirm('{{ 'Benutzer wirklich entfernen?' if lang == 'de' else 'Really remove user?' }}');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" 
                                                 title="{{ 'Entfernen' if lang == 'de' else 'Remove' }}">
                                             <i class="bi bi-x-lg"></i>

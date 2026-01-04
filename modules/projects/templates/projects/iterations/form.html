@@ -3,7 +3,7 @@
 {% block title %}{{ (project.get_term('sprint_edit', lang) if sprint else project.get_term('sprint_new', lang)) }} - {{ project.name }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* Header Bar */
     .form-header-bar {
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -339,6 +339,7 @@
             <div class="form-card card">
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Name -->
                         <div class="mb-4">
                             <label for="name" class="form-label">
@@ -521,7 +522,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-set end date 2 weeks after start date if empty
     const startDate = document.getElementById('start_date');

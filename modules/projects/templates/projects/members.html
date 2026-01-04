@@ -3,7 +3,7 @@
 {% block title %}{{ 'Mitglieder' if lang == 'de' else 'Members' }} - {{ project.key }} - ProjectOps{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* Header Bar */
     .page-header-bar {
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -317,6 +317,7 @@
                                 <td>
                                     {% if can_edit %}
                                     <form action="{{ url_for('projects.project_member_role', project_id=project.id, member_id=member.id) }}" method="POST" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <select name="role" class="role-select" onchange="this.form.submit()">
                                             <option value="admin" {% if member.role == 'admin' %}selected{% endif %}>Admin</option>
                                             <option value="lead" {% if member.role == 'lead' %}selected{% endif %}>Lead</option>
@@ -336,6 +337,7 @@
                                     <form action="{{ url_for('projects.project_member_remove', project_id=project.id, member_id=member.id) }}" 
                                           method="POST" class="d-inline"
                                           onsubmit="return confirm('{{ 'Mitglied wirklich entfernen?' if lang == 'de' else 'Really remove member?' }}')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn-remove" title="{{ 'Entfernen' if lang == 'de' else 'Remove' }}">
                                             <i class="bi bi-x-lg"></i>
                                         </button>
@@ -371,6 +373,7 @@
                 <div class="card-body">
                     {% if available_users %}
                     <form action="{{ url_for('projects.project_member_add', project_id=project.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="user_id" class="form-label">{{ 'Benutzer' if lang == 'de' else 'User' }}</label>
                             <select class="form-select" id="user_id" name="user_id" required style="border-radius: 8px;">

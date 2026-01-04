@@ -198,6 +198,132 @@ def is_tenant_admin():
 # QUERY SCOPING HELPERS
 # =============================================================================
 
+def get_task_or_404_scoped(task_id):
+    """
+    Fetch a Task by ID, enforcing tenant scope.
+    
+    Returns 404 if task doesn't exist OR belongs to different tenant.
+    This prevents cross-tenant data leakage.
+    
+    Usage:
+        task = get_task_or_404_scoped(task_id)
+    """
+    from flask import abort
+    from models import Task
+    
+    if not g.tenant:
+        abort(404)
+    
+    task = Task.query.filter_by(id=task_id, tenant_id=g.tenant.id).first()
+    if not task:
+        abort(404)
+    return task
+
+
+def get_task_scoped(task_id):
+    """
+    Fetch a Task by ID, enforcing tenant scope.
+    
+    Returns None if task doesn't exist OR belongs to different tenant.
+    Use this in loops where 404 would be inappropriate.
+    
+    Usage:
+        task = get_task_scoped(task_id)
+        if task:
+            # process task
+    """
+    from models import Task
+    
+    if not g.tenant:
+        return None
+    
+    return Task.query.filter_by(id=task_id, tenant_id=g.tenant.id).first()
+
+
+def get_evidence_or_404_scoped(evidence_id, task_id=None):
+    """
+    Fetch TaskEvidence by ID, enforcing tenant scope via task relationship.
+    
+    Optionally verifies evidence belongs to specific task.
+    Returns 404 if evidence doesn't exist OR task belongs to different tenant.
+    
+    Usage:
+        evidence = get_evidence_or_404_scoped(evidence_id)
+        evidence = get_evidence_or_404_scoped(evidence_id, task_id=task.id)
+    """
+    from flask import abort
+    from models import TaskEvidence, Task
+    
+    if not g.tenant:
+        abort(404)
+    
+    # Join to Task to enforce tenant scoping
+    query = TaskEvidence.query.join(Task).filter(
+        TaskEvidence.id == evidence_id,
+        Task.tenant_id == g.tenant.id
+    )
+    
+    if task_id:
+        query = query.filter(TaskEvidence.task_id == task_id)
+    
+    evidence = query.first()
+    if not evidence:
+        abort(404)
+    return evidence
+
+
+def get_comment_or_404_scoped(comment_id, task_id=None):
+    """
+    Fetch Comment by ID, enforcing tenant scope via task relationship.
+    
+    Optionally verifies comment belongs to specific task.
+    Returns 404 if comment doesn't exist OR task belongs to different tenant.
+    
+    Usage:
+        comment = get_comment_or_404_scoped(comment_id)
+        comment = get_comment_or_404_scoped(comment_id, task_id=task.id)
+    """
+    from flask import abort
+    from models import Comment, Task
+    
+    if not g.tenant:
+        abort(404)
+    
+    # Join to Task to enforce tenant scoping
+    query = Comment.query.join(Task).filter(
+        Comment.id == comment_id,
+        Task.tenant_id == g.tenant.id
+    )
+    
+    if task_id:
+        query = query.filter(Comment.task_id == task_id)
+    
+    comment = query.first()
+    if not comment:
+        abort(404)
+    return comment
+
+
+def get_project_or_404_scoped(project_id):
+    """
+    Fetch a Project by ID, enforcing tenant scope.
+    
+    Returns 404 if project doesn't exist OR belongs to different tenant.
+    
+    Usage:
+        project = get_project_or_404_scoped(project_id)
+    """
+    from flask import abort
+    from models import Project
+    
+    if not g.tenant:
+        abort(404)
+    
+    project = Project.query.filter_by(id=project_id, tenant_id=g.tenant.id).first()
+    if not project:
+        abort(404)
+    return project
+
 def scope_query_to_tenant(query, model):
     """
     Filter a SQLAlchemy query to the current tenant.

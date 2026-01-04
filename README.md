@@ -2,7 +2,7 @@
 
 > **Enterprise Project & Task Management Platform** — A centralized platform for managing projects, tasks, and deadlines across teams and organizations with multi-tenant support.
 
-![Version](https://img.shields.io/badge/version-1.20.4-blue)
+![Version](https://img.shields.io/badge/version-1.21.0-blue)
 ![Tests](https://img.shields.io/badge/Tests-892%20passed-brightgreen?logo=pytest)
 ![Coverage](https://img.shields.io/badge/Coverage-68%25-green?logo=codecov)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
@@ -68,6 +68,18 @@ The **Deloitte ProjectOps** is a web application designed to centralize project 
 | ⚡ **Bulk Operations** | Select multiple tasks for status change, reassignment, deletion |
 | 📆 **Calendar Sync (iCal)** | Subscribe to personal calendar feed in Outlook/Google/Apple |
 | 📧 **Email Notifications** | Task assignment, status change, comment, due reminder emails |
+
+### Security Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Content Security Policy** | Nonce-based CSP protecting against XSS attacks |
+| 🛡️ **Security Headers** | X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
+| 🔑 **CSRF Protection** | Flask-WTF tokens on all state-changing forms |
+| ⏱️ **Rate Limiting** | Flask-Limiter protecting login and API endpoints |
+| 🔒 **Secure Sessions** | HttpOnly, Secure, SameSite cookies in production |
+| 🔐 **Password Security** | PBKDF2-SHA256 hashing via werkzeug.security |
+| 🏢 **Tenant Isolation** | Query-level filtering ensures complete data separation |
 
 ### Multi-Stage Approval Workflow
 

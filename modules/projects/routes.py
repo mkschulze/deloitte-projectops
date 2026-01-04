@@ -2752,7 +2752,7 @@ def item_reviewer_remove(project_id, issue_key, reviewer_id, project=None):
         return redirect(url_for('projects.item_detail', project_id=project_id, issue_key=issue_key))
     
     reviewer = IssueReviewer.query.get_or_404(reviewer_id)
-    if reviewer.item_id != issue.id:
+    if reviewer.issue_id != issue.id:
         flash('Ungültiger Reviewer.' if lang == 'de' else 'Invalid reviewer.', 'danger')
         return redirect(url_for('projects.item_detail', project_id=project_id, issue_key=issue_key))
     

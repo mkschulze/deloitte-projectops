@@ -2,7 +2,7 @@
 {% block title %}{{ tenant.name }} - {{ app_name }}{% endblock %}
 
 {% block content %}
-<style>
+<style nonce="{{ csp_nonce }}">
     .tenant-hero {
         background: linear-gradient(135deg, #0076A8 0%, #005a82 50%, #003d5c 100%);
         color: white;
@@ -219,6 +219,7 @@
                     <div class="d-flex gap-2 flex-wrap">
                         {% if not tenant.is_archived %}
                         <form action="{{ url_for('admin_tenants.enter_tenant', tenant_id=tenant.id) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn action-btn action-btn-primary">
                                 <i class="bi bi-box-arrow-in-right me-2"></i>{{ 'Einloggen' if lang == 'de' else 'Enter' }}
                             </button>
@@ -239,6 +240,7 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
                                     <form action="{{ url_for('admin_tenants.tenant_export', tenant_id=tenant.id) }}" method="POST" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="dropdown-item">
                                             <i class="bi bi-filetype-json me-2 text-warning"></i>JSON Export
                                         </button>
@@ -246,6 +248,7 @@
                                 </li>
                                 <li>
                                     <form action="{{ url_for('admin_tenants.tenant_export_excel', tenant_id=tenant.id) }}" method="POST" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="dropdown-item">
                                             <i class="bi bi-file-earmark-excel me-2 text-success"></i>Excel Export (Compliance)
                                         </button>
@@ -430,12 +433,14 @@
                         <form action="{{ url_for('admin_tenants.tenant_archive', tenant_id=tenant.id) }}" 
                               method="POST" 
                               onsubmit="return confirm('{{ 'Mandant wirklich archivieren? Der Mandant wird deaktiviert und Benutzer können nicht mehr darauf zugreifen.' if lang == 'de' else 'Really archive tenant? The tenant will be deactivated and users will no longer have access.' }}');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-warning w-100" style="border-radius: 0.5rem;">
                                 <i class="bi bi-archive me-2"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
                             </button>
                         </form>
                         {% else %}
                         <form action="{{ url_for('admin_tenants.tenant_restore', tenant_id=tenant.id) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-success w-100" style="border-radius: 0.5rem;">
                                 <i class="bi bi-arrow-counterclockwise me-2"></i>{{ 'Wiederherstellen' if lang == 'de' else 'Restore' }}
                             </button>
@@ -444,6 +449,7 @@
                         <form action="{{ url_for('admin_tenants.tenant_delete', tenant_id=tenant.id) }}" 
                               method="POST" 
                               onsubmit="return confirm('{{ 'ACHTUNG: Mandant und alle Daten werden ENDGÜLTIG gelöscht! Diese Aktion kann NICHT rückgängig gemacht werden. Fortfahren?' if lang == 'de' else 'WARNING: Tenant and all data will be PERMANENTLY deleted! This action CANNOT be undone. Continue?' }}');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger w-100" style="border-radius: 0.5rem;">
                                 <i class="bi bi-trash me-2"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Delete permanently' }}
                             </button>

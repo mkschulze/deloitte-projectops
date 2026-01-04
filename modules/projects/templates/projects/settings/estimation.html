@@ -2,7 +2,7 @@
 {% block title %}{{ 'Schätzskala' if lang == 'de' else 'Estimation Scale' }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     .settings-header-bar {
         background: white;
         border-bottom: 3px solid #62378a;
@@ -197,6 +197,7 @@
         <!-- Main Content -->
         <div class="col-lg-9">
             <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="settings-card">
                     <div class="settings-card-header">
                         <h5><i class="bi bi-collection me-2"></i>{{ 'Skala auswählen' if lang == 'de' else 'Select Scale' }}</h5>
@@ -367,7 +368,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Scale option selection
     document.querySelectorAll('.scale-option').forEach(option => {

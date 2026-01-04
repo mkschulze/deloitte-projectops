@@ -2,7 +2,7 @@
 {% block title %}{{ 'Mitglieder' if lang == 'de' else 'Members' }} - {{ tenant.name }} - {{ app_name }}{% endblock %}
 
 {% block content %}
-<style>
+<style nonce="{{ csp_nonce }}">
     .members-hero {
         background: linear-gradient(135deg, #0076A8 0%, #005a82 50%, #003d5c 100%);
         color: white;
@@ -139,6 +139,7 @@
                     {{ 'Benutzer hinzufügen' if lang == 'de' else 'Add User' }}
                 </h5>
                 <form action="{{ url_for('admin_tenants.tenant_add_member', tenant_id=tenant.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="user_id" class="form-label fw-medium">{{ 'Benutzer' if lang == 'de' else 'User' }}</label>
                         <select class="form-select" id="user_id" name="user_id" required>
@@ -260,6 +261,7 @@
                                     <td>
                                         <form action="{{ url_for('admin_tenants.tenant_update_member', tenant_id=tenant.id, user_id=m.user.id) }}" 
                                               method="POST" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <select name="role" class="form-select form-select-sm" 
                                                     style="width: auto; border-radius: 0.5rem;" 
                                                     onchange="this.form.submit()">
@@ -279,6 +281,7 @@
                                             <form action="{{ url_for('admin_tenants.tenant_remove_member', tenant_id=tenant.id, user_id=m.user.id) }}" 
                                                   method="POST" 
                                                   onsubmit="return confirm('{{ 'Benutzer wirklich entfernen? Der Zugriff auf diesen Mandanten wird entzogen.' if lang == 'de' else 'Really remove user? Access to this tenant will be revoked.' }}');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" 
                                                         style="border-radius: 0.5rem;"
                                                         title="{{ 'Entfernen' if lang == 'de' else 'Remove' }}">

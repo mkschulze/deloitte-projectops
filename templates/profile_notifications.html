@@ -22,6 +22,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <!-- Master Toggle -->
                         <div class="mb-4 p-3 rounded" style="background: var(--dtt-neutral-6);">
                             <div class="form-check form-switch">
@@ -150,7 +151,7 @@
             
             <!-- Link to Calendar Subscription -->
             <div class="text-center mt-4">
-                <a href="{{ url_for('calendar_subscription') }}" class="text-decoration-none">
+                <a href="{{ url_for('main.calendar_subscription') }}" class="text-decoration-none">
                     <i class="bi bi-calendar3 me-1"></i>
                     {{ 'Kalender-Abonnement verwalten' if lang == 'de' else 'Manage calendar subscription' }}
                 </a>
@@ -159,7 +160,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function toggleAllPreferences(enabled) {
     const container = document.getElementById('emailPreferences');
     const checkboxes = container.querySelectorAll('.pref-checkbox');

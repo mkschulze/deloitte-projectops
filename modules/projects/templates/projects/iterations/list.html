@@ -176,6 +176,7 @@
                         </a>
                         <form action="{{ url_for('projects.iteration_complete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline" 
                               onsubmit="return confirm('{{ (project.get_term('sprint', lang) + ' wirklich abschließen?') if lang == 'de' else ('Really complete this ' + project.get_term('sprint', lang)|lower + '?') }}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-success">
                                 <i class="bi bi-check-circle me-1"></i>
                                 {{ 'Abschließen' if lang == 'de' else 'Complete' }}
@@ -230,6 +231,7 @@
                         <div class="sprint-actions-sm">
                             {% if not active_sprints %}
                             <form action="{{ url_for('projects.iteration_start', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-deloitte-green">
                                     <i class="bi bi-play-fill me-1"></i>
                                     {{ 'Starten' if lang == 'de' else 'Start' }}
@@ -241,6 +243,7 @@
                             </a>
                             <form action="{{ url_for('projects.iteration_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
                                   onsubmit="return confirm('{{ (project.get_term('sprint', lang) + ' wirklich löschen?') if lang == 'de' else ('Really delete this ' + project.get_term('sprint', lang)|lower + '?') }}')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -320,6 +323,7 @@
                                     </a>
                                     <form action="{{ url_for('projects.iteration_delete', project_id=project.id, sprint_id=sprint.id) }}" method="POST" class="d-inline"
                                           onsubmit="return confirm('{{ (project.get_term('sprint', lang) + ' wirklich löschen?') if lang == 'de' else ('Really delete this ' + project.get_term('sprint', lang)|lower + '?') }}')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="{{ 'Löschen' if lang == 'de' else 'Delete' }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -350,7 +354,7 @@
     {% endif %}
 </div>
 
-<style>
+<style nonce="{{ csp_nonce }}">
 /* Hero Section */
 .sprints-hero {
     background: linear-gradient(135deg, #00A3E0 0%, #0076A8 50%, #000000 100%);

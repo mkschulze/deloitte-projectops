@@ -7,7 +7,7 @@
     <div class="page-header d-flex justify-content-between align-items-center">
         <h1><i class="bi bi-bookmark-star me-2"></i>{{ 'Task Presets' if lang == 'en' else 'Aufgabenvorlagen' }}</h1>
         <div class="d-flex gap-2">
-            <a href="{{ url_for('admin_preset_new') }}" class="btn btn-success">
+            <a href="{{ url_for('presets.preset_new') }}" class="btn btn-success">
                 <i class="bi bi-plus-lg me-1"></i> {{ t('create') }}
             </a>
         </div>
@@ -46,13 +46,14 @@
                 <!-- Import/Export -->
                 <div class="col-md-4">
                     <div class="d-flex gap-2 justify-content-end">
-                        <a href="{{ url_for('admin_preset_template') }}" class="btn btn-outline-primary btn-sm" title="Excel-Vorlage herunterladen">
+                        <a href="{{ url_for('presets.preset_template') }}" class="btn btn-outline-primary btn-sm" title="Excel-Vorlage herunterladen">
                             <i class="bi bi-download me-1"></i> Vorlage
                         </a>
                         <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
                             <i class="bi bi-upload me-1"></i> Import
                         </button>
-                        <form method="POST" action="{{ url_for('admin_preset_seed') }}" class="d-inline">
+                        <form method="POST" action="{{ url_for('presets.preset_seed') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-outline-secondary btn-sm" 
                                     onclick="return confirm('JSON-Dateien aus data/ Ordner importieren?')"
                                     title="Aus data/ Ordner laden">
@@ -124,7 +125,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" 
+                                <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" 
                                    class="text-decoration-none">
                                     {{ preset.get_title(lang) }}
                                 </a>
@@ -157,12 +158,13 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" 
+                                    <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" 
                                        class="btn btn-outline-primary" title="{{ t('edit') }}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <form method="POST" action="{{ url_for('admin_preset_delete', preset_id=preset.id) }}" 
+                                    <form method="POST" action="{{ url_for('presets.preset_delete', preset_id=preset.id) }}" 
                                           class="d-inline" onsubmit="return confirm('{{ t('confirm_delete') }}');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-outline-danger" title="{{ t('delete') }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -181,10 +183,11 @@
                     {{ 'No presets found.' if lang == 'en' else 'Keine Vorlagen gefunden.' }}
                 </p>
                 <div class="d-flex gap-2 justify-content-center">
-                    <a href="{{ url_for('admin_preset_new') }}" class="btn btn-primary">
+                    <a href="{{ url_for('presets.preset_new') }}" class="btn btn-primary">
                         <i class="bi bi-plus-lg me-1"></i> {{ t('create') }}
                     </a>
-                    <form method="POST" action="{{ url_for('admin_preset_seed') }}" class="d-inline">
+                    <form method="POST" action="{{ url_for('presets.preset_seed') }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-outline-secondary">
                             <i class="bi bi-database-add me-1"></i> Aus JSON laden
                         </button>
@@ -206,7 +209,8 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('admin_preset_import') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ url_for('presets.preset_import') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="file" class="form-label">{{ 'File' if lang == 'en' else 'Datei' }}</label>
@@ -223,7 +227,7 @@
                         <ul class="mb-0 mt-2">
                             <li>{{ 'Column "Titel" or "Aufgabe" required' if lang == 'en' else 'Spalte "Titel" oder "Aufgabe" erforderlich' }}</li>
                             <li>{{ 'Optional: Kategorie, Steuerart, § Paragraph, Beschreibung' }}</li>
-                            <li><a href="{{ url_for('admin_preset_template') }}">{{ 'Download template' if lang == 'en' else 'Vorlage herunterladen' }}</a></li>
+                            <li><a href="{{ url_for('presets.preset_template') }}">{{ 'Download template' if lang == 'en' else 'Vorlage herunterladen' }}</a></li>
                         </ul>
                     </div>
                 </div>
@@ -241,7 +245,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

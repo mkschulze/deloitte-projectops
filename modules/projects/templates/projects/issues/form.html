@@ -2,7 +2,7 @@
 {% block title %}{{ issue.key if issue else (('New ' + project.get_term('issue', lang)) if lang == 'en' else ('Neue ' + project.get_term('issue', lang))) }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* Form Header Bar */
     .form-header-bar {
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -224,6 +224,7 @@
     </div>
 
     <form method="post" class="needs-validation" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="row">
             <!-- Main Form -->
             <div class="col-lg-8">
@@ -409,7 +410,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function selectType(label, color) {
     // Remove selected from all
     document.querySelectorAll('.type-btn').forEach(btn => {

@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.0] - 2026-01-04
+
+### 🔐 Security Hardening Release
+
+This release implements comprehensive security improvements including Content Security Policy (CSP), security headers, CSRF protection fixes, and rate limiting.
+
+#### Added
+- **Content Security Policy (CSP)** with nonce-based script/style protection
+  - Cryptographic nonce generation per request via `secrets.token_urlsafe(16)`
+  - Nonce injection into all templates via `{{ csp_nonce }}`
+  - 35+ templates updated with `nonce="{{ csp_nonce }}"` on inline `<script>` and `<style>` tags
+  - Allows CDN resources from jsdelivr.net and socket.io
+  - WebSocket connections via `wss:` for real-time notifications
+
+- **Security Headers Middleware** (`@app.after_request`)
+  - `X-Content-Type-Options: nosniff` - Prevents MIME-type sniffing
+  - `X-Frame-Options: SAMEORIGIN` - Clickjacking protection
+  - `Referrer-Policy: strict-origin-when-cross-origin` - Controls referrer leakage
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()` - Restricts browser features
+
+- **Rate Limiting** via Flask-Limiter
+  - Login endpoint: 10 requests per minute
+  - Tenant switching: 30 requests per minute
+  - Added `flask-limiter` to Pipfile
+
+#### Fixed
+- **CSRF Token Display** - Fixed tokens appearing as visible text instead of hidden form fields
+  - Changed `{{ csrf_token() }}` to `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">`
+  - Updated `select_tenant.html` and project reviewer forms
+
+- **Template Endpoint Names** - Fixed blueprint-qualified endpoint references
+  - `export_tasks_excel` → `tasks.export_excel`
+  - `export_summary_report` → `tasks.export_summary`
+  - `export_task_pdf` → `tasks.export_pdf`
+
+#### Security Audit Completed
+| Check | Status | Details |
+|-------|--------|---------|
+| Auth & Session Security | ✅ Pass | Rate-limited, pbkdf2:sha256 hashing, secure cookies in production |
+| SQL Injection | ✅ Pass | SQLAlchemy ORM only, no raw SQL with user input |
+| XSS Vulnerabilities | ✅ Pass | Jinja2 auto-escaping, minimal `\|safe` usage |
+| CSRF Protection | ✅ Pass | Flask-WTF with hidden tokens on all forms |
+| Authorization | ✅ Pass | @login_required, tenant isolation via g.tenant |
+| File Uploads | ✅ Pass | secure_filename, whitelist extensions, UUID prefix |
+| Security Headers | ✅ Pass | CSP, X-Frame-Options, X-Content-Type-Options |
+
+#### CSP Configuration
+```
+default-src 'self';
+img-src 'self' data:;
+style-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net;
+style-src-attr 'unsafe-inline';
+script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.socket.io;
+script-src-attr 'unsafe-inline';
+font-src 'self' https://cdn.jsdelivr.net;
+connect-src 'self' wss:;
+frame-ancestors 'self';
+base-uri 'self';
+form-action 'self';
+object-src 'none'
+```
+
+> **Note:** `script-src-attr` and `style-src-attr` allow inline event handlers (`onclick`, `onsubmit`) and style attributes pending future refactoring to pure JavaScript event listeners.
+
+---
+
 ## [1.20.4] - 2026-01-04
 
 ### 🧪 Test Coverage Continued Expansion

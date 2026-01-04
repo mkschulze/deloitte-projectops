@@ -145,8 +145,9 @@
                         {{ 'Wenn Sie glauben, dass Ihre Kalender-URL kompromittiert wurde, können Sie eine neue generieren. Dies macht die alte URL ungültig und Sie müssen alle Kalender-Abonnements aktualisieren.' if lang == 'de' else 'If you believe your calendar URL has been compromised, you can generate a new one. This will invalidate the old URL and you will need to update all calendar subscriptions.' }}
                     </p>
                     
-                    <form action="{{ url_for('regenerate_calendar_token') }}" method="POST" 
+                    <form action="{{ url_for('main.regenerate_calendar_token') }}" method="POST" 
                           onsubmit="return confirm('{{ 'Sind Sie sicher? Alle bestehenden Kalender-Abonnements werden ungültig.' if lang == 'de' else 'Are you sure? All existing calendar subscriptions will become invalid.' }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-outline-warning">
                             <i class="bi bi-arrow-repeat me-1"></i>
                             {{ 'Neue URL generieren' if lang == 'de' else 'Generate New URL' }}
@@ -160,7 +161,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 function copySubscriptionUrl() {
     const urlInput = document.getElementById('subscriptionUrl');
     const copyBtn = document.getElementById('copyBtn');

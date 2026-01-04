@@ -2,14 +2,54 @@
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening
 
-**Last Updated:** 2026-01-04 (Session 23)  
-**Version:** 1.20.4
+**Last Updated:** 2026-01-04 (Session 24)  
+**Version:** 1.21.0
 
 ---
 
 ## Recent Releases
+
+### v1.21.0 - Security Hardening Release (2026-01-04)
+
+**Status: ✅ Complete**
+
+- **Content Security Policy (CSP)**:
+  - Nonce-based script/style protection via `secrets.token_urlsafe(16)`
+  - 35+ templates updated with `nonce="{{ csp_nonce }}"`
+  - Allows CDN resources (jsdelivr.net, socket.io)
+  - WebSocket support via `connect-src 'self' wss:`
+  - `script-src-attr` and `style-src-attr` for inline handlers (pragmatic approach)
+
+- **Security Headers Middleware**:
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: SAMEORIGIN`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+
+- **Rate Limiting**:
+  - Added Flask-Limiter to Pipfile
+  - Login: 10 requests/minute
+  - Tenant switching: 30 requests/minute
+
+- **CSRF Fixes**:
+  - Fixed tokens displaying as visible text instead of hidden fields
+  - Updated select_tenant.html and project reviewer forms
+
+- **Template Endpoint Fixes**:
+  - `export_tasks_excel` → `tasks.export_excel`
+  - `export_summary_report` → `tasks.export_summary`
+  - `export_task_pdf` → `tasks.export_pdf`
+
+- **Security Audit Completed**:
+  - Auth & Session Security ✅
+  - SQL Injection ✅
+  - XSS Vulnerabilities ✅
+  - CSRF Protection ✅
+  - Authorization & Tenant Isolation ✅
+  - File Upload Security ✅
+  - Security Headers ✅
 
 ### v1.20.4 - Test Coverage Continued Expansion (2026-01-04)
 

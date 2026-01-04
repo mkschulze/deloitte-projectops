@@ -2,7 +2,7 @@
 {% block title %}{{ 'API-Schlüssel' if lang == 'de' else 'API Keys' }} - {{ tenant.name }} - {{ app_name }}{% endblock %}
 
 {% block content %}
-<style>
+<style nonce="{{ csp_nonce }}">
     .api-card {
         background: white;
         border-radius: 1rem;
@@ -125,6 +125,7 @@
                             <td class="pe-4 text-end">
                                 <form action="{{ url_for('admin_tenants.tenant_api_key_toggle', tenant_id=tenant.id, key_id=key.id) }}" 
                                       method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-secondary" title="{{ 'Umschalten' if lang == 'de' else 'Toggle' }}">
                                         {% if key.is_active %}
                                         <i class="bi bi-pause-fill"></i>
@@ -136,6 +137,7 @@
                                 <form action="{{ url_for('admin_tenants.tenant_api_key_delete', tenant_id=tenant.id, key_id=key.id) }}" 
                                       method="POST" class="d-inline"
                                       onsubmit="return confirm('{{ 'Schlüssel wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.' if lang == 'de' else 'Really delete this key? This action cannot be undone.' }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="{{ 'Löschen' if lang == 'de' else 'Delete' }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -165,6 +167,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="{{ url_for('admin_tenants.tenant_api_key_create', tenant_id=tenant.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header">
                     <h5 class="modal-title">
                         <i class="bi bi-key me-2 text-warning"></i>

@@ -3,7 +3,7 @@
 {% block title %}{{ 'Task Presets' if lang == 'en' else 'Aufgabenvorlagen' }} - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* Page Header */
     .page-header {
         background: linear-gradient(135deg, var(--dtt-green-dark) 0%, var(--dtt-green-deep) 100%);
@@ -349,7 +349,7 @@
                     <i class="bi bi-list"></i>
                 </button>
             </div>
-            <a href="{{ url_for('admin_preset_new') }}" class="btn btn-deloitte">
+            <a href="{{ url_for('presets.preset_new') }}" class="btn btn-deloitte">
                 <i class="bi bi-plus-lg me-1"></i> {{ t('create') }}
             </a>
         </div>
@@ -382,13 +382,13 @@
                 </div>
                 <div class="col-md-5 text-end">
                     <div class="btn-group btn-group-sm action-btn-group">
-                        <a href="{{ url_for('admin_preset_template') }}" class="btn btn-outline-primary btn-template" title="{{ 'Download template' if lang == 'en' else 'Vorlage herunterladen' }}" style="border-color: var(--dtt-sec-blue-4); color: var(--dtt-sec-blue-4);">
+                        <a href="{{ url_for('presets.preset_template') }}" class="btn btn-outline-primary btn-template" title="{{ 'Download template' if lang == 'en' else 'Vorlage herunterladen' }}" style="border-color: var(--dtt-sec-blue-4); color: var(--dtt-sec-blue-4);">
                             <i class="bi bi-download me-1"></i>{{ 'Template' if lang == 'en' else 'Vorlage' }}
                         </a>
                         <button type="button" class="btn btn-outline-success btn-import" data-bs-toggle="modal" data-bs-target="#importModal" style="border-color: var(--dtt-green-mid); color: var(--dtt-green-mid);">
                             <i class="bi bi-upload me-1"></i>Import
                         </button>
-                        <a href="{{ url_for('admin_preset_export') }}" class="btn btn-outline-secondary btn-export" title="{{ 'Export all' if lang == 'en' else 'Alle exportieren' }}" style="border-color: var(--dtt-sec-teal-6); color: var(--dtt-sec-teal-6);">
+                        <a href="{{ url_for('presets.preset_export') }}" class="btn btn-outline-secondary btn-export" title="{{ 'Export all' if lang == 'en' else 'Alle exportieren' }}" style="border-color: var(--dtt-sec-teal-6); color: var(--dtt-sec-teal-6);">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Export
                         </a>
                     </div>
@@ -440,7 +440,7 @@
                             <span class="badge bg-primary me-2"><i class="bi bi-check2-square"></i></span>
                             {% endif %}
                             <div>
-                                <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" class="text-decoration-none fw-medium">
+                                <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" class="text-decoration-none fw-medium">
                                     {{ preset.get_title(lang) }}
                                 </a>
                                 {% if preset.law_reference %}
@@ -455,7 +455,7 @@
                             <button type="button" class="btn btn-outline-secondary" onclick="quickEdit({{ preset.id }})" title="Quick Edit">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" class="btn btn-outline-primary" title="{{ t('edit') }}" style="border-color: var(--dtt-sec-blue-4); color: var(--dtt-sec-blue-4);">
+                            <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" class="btn btn-outline-primary" title="{{ t('edit') }}" style="border-color: var(--dtt-sec-blue-4); color: var(--dtt-sec-blue-4);">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </a>
                         </div>
@@ -500,7 +500,7 @@
                     <p class="small text-muted mb-0" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ preset.get_description(lang)[:80] }}</p>
                     {% endif %}
                     <div class="mt-2 pt-2 border-top">
-                        <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" class="btn btn-sm btn-deloitte w-100">
+                        <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" class="btn btn-sm btn-deloitte w-100">
                             <i class="bi bi-pencil me-1"></i>{{ t('edit') }}
                         </a>
                     </div>
@@ -543,7 +543,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" class="text-decoration-none" style="color: var(--dtt-green-dark); font-weight: 500;">
+                                    <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" class="text-decoration-none" style="color: var(--dtt-green-dark); font-weight: 500;">
                                         {{ preset.get_title(lang) }}
                                     </a>
                                     {% if preset.is_recurring %}
@@ -573,10 +573,11 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('admin_preset_edit', preset_id=preset.id) }}" class="btn btn-outline-primary" title="{{ t('edit') }}">
+                                        <a href="{{ url_for('presets.preset_edit', preset_id=preset.id) }}" class="btn btn-outline-primary" title="{{ t('edit') }}">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <form method="POST" action="{{ url_for('admin_preset_delete', preset_id=preset.id) }}" class="d-inline">
+                                        <form method="POST" action="{{ url_for('presets.preset_delete', preset_id=preset.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn btn-outline-danger" title="{{ t('delete') }}" onclick="return confirm('{{ t('confirm_delete') }}')">
                                                 <i class="bi bi-trash"></i>
                                             </button>
@@ -639,7 +640,8 @@
                 <h5 class="modal-title"><i class="bi bi-upload me-2"></i>{{ 'Import Presets' if lang == 'en' else 'Vorlagen importieren' }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('admin_preset_import') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ url_for('presets.preset_import') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="file" class="form-label">{{ 'File' if lang == 'en' else 'Datei' }}</label>
@@ -658,7 +660,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
     const lang = '{{ lang }}';
     let currentView = localStorage.getItem('presetView') || 'tree';
     

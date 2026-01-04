@@ -15,6 +15,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="name_de" class="form-label">
@@ -80,7 +81,7 @@
                         {% endif %}
                         
                         <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('admin_entities') }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('admin.entities') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i>{{ t('back') }}
                             </a>
                             <button type="submit" class="btn btn-primary">

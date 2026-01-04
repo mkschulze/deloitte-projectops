@@ -15,6 +15,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row">
                             <div class="col-md-8">
                                 <div class="row mb-3">
@@ -107,7 +108,7 @@
                         <hr>
                         
                         <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('admin_teams') }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('admin.teams') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i>{{ t('back') }}
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -151,7 +152,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 // Sync color picker with text input
 document.getElementById('color').addEventListener('input', function() {
     document.getElementById('color_text').value = this.value;

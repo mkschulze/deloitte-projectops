@@ -5,7 +5,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="bi bi-archive me-2"></i>{{ t('archive') }}</h1>
-        <a href="{{ url_for('task_list') }}" class="btn btn-outline-secondary">
+        <a href="{{ url_for('tasks.task_list') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>{{ 'Zurück zu Aufgaben' if lang == 'de' else 'Back to Tasks' }}
         </a>
     </div>
@@ -52,7 +52,7 @@
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="bi bi-funnel me-1"></i>{{ 'Filtern' if lang == 'de' else 'Filter' }}
                     </button>
-                    <a href="{{ url_for('task_archive_list') }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ url_for('tasks.task_archive_list') }}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-x-lg me-1"></i>{{ 'Zurücksetzen' if lang == 'de' else 'Reset' }}
                     </a>
                 </div>
@@ -116,7 +116,7 @@
                             </td>
                             {% endif %}
                             <td>
-                                <a href="{{ url_for('task_detail', task_id=task.id) }}" class="text-decoration-none fw-medium">
+                                <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}" class="text-decoration-none fw-medium">
                                     {{ task.title }}
                                 </a>
                                 {% if task.archive_reason %}
@@ -135,7 +135,8 @@
                             <td class="text-end">
                                 <div class="btn-group" role="group">
                                     {% if current_user.is_admin() or current_user.is_manager() %}
-                                    <form method="POST" action="{{ url_for('task_restore', task_id=task.id) }}" class="d-inline">
+                                    <form method="POST" action="{{ url_for('tasks.task_restore', task_id=task.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-success btn-sm" style="width: 36px; height: 32px;"
                                                 title="{{ 'Wiederherstellen' if lang == 'de' else 'Restore' }}"
                                                 onclick="return confirm('{{ 'Aufgabe wirklich wiederherstellen?' if lang == 'de' else 'Really restore this task?' }}')">
@@ -150,7 +151,7 @@
                                         <i class="bi bi-trash"></i>
                                     </button>
                                     {% endif %}
-                                    <a href="{{ url_for('task_detail', task_id=task.id) }}" class="btn btn-outline-primary btn-sm" style="width: 36px; height: 32px;"
+                                    <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}" class="btn btn-outline-primary btn-sm" style="width: 36px; height: 32px;"
                                        title="{{ 'Details anzeigen' if lang == 'de' else 'View details' }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
@@ -168,7 +169,7 @@
                 <ul class="pagination mb-0">
                     {% if pagination.has_prev %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('task_archive_list', page=pagination.prev_num, **current_filters) }}">
+                        <a class="page-link" href="{{ url_for('tasks.task_archive_list', page=pagination.prev_num, **current_filters) }}">
                             <i class="bi bi-chevron-left"></i>
                         </a>
                     </li>
@@ -177,7 +178,7 @@
                     {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                         {% if p %}
                             <li class="page-item {{ 'active' if p == pagination.page else '' }}">
-                                <a class="page-link" href="{{ url_for('task_archive_list', page=p, **current_filters) }}">{{ p }}</a>
+                                <a class="page-link" href="{{ url_for('tasks.task_archive_list', page=p, **current_filters) }}">{{ p }}</a>
                             </li>
                         {% else %}
                             <li class="page-item disabled"><span class="page-link">…</span></li>
@@ -186,7 +187,7 @@
                     
                     {% if pagination.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="{{ url_for('task_archive_list', page=pagination.next_num, **current_filters) }}">
+                        <a class="page-link" href="{{ url_for('tasks.task_archive_list', page=pagination.next_num, **current_filters) }}">
                             <i class="bi bi-chevron-right"></i>
                         </a>
                     </li>
@@ -253,6 +254,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ 'Abbrechen' if lang == 'de' else 'Cancel' }}</button>
                 <form id="singleDeleteForm" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash me-1"></i>{{ 'Endgültig löschen' if lang == 'de' else 'Permanently Delete' }}
                     </button>
@@ -263,7 +265,7 @@
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.task-checkbox');

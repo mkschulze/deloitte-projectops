@@ -6,7 +6,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="bi bi-building me-2"></i>{{ t('entities') }}</h1>
-        <a href="{{ url_for('admin_entity_new') }}" class="btn btn-primary">
+        <a href="{{ url_for('admin.entity_new') }}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i>{{ t('new_entity') }}
         </a>
     </div>
@@ -44,19 +44,20 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <a href="{{ url_for('admin_entity_users', entity_id=entity.id) }}" 
+                                <a href="{{ url_for('admin.entity_users', entity_id=entity.id) }}" 
                                    class="btn btn-sm btn-outline-secondary me-1"
                                    title="{{ 'Benutzerberechtigungen' if lang == 'de' else 'User Permissions' }}">
                                     <i class="bi bi-people"></i>
                                 </a>
-                                <a href="{{ url_for('admin_entity_edit', entity_id=entity.id) }}" 
+                                <a href="{{ url_for('admin.entity_edit', entity_id=entity.id) }}" 
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% if entity.is_active %}
-                                <form action="{{ url_for('admin_entity_delete', entity_id=entity.id) }}" 
+                                <form action="{{ url_for('admin.entity_delete', entity_id=entity.id) }}" 
                                       method="POST" class="d-inline"
                                       onsubmit="return confirm('{{ t('confirm_delete') }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>

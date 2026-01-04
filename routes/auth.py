@@ -11,7 +11,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Tenant, AuditLog
 
 auth_bp = Blueprint('auth', __name__)
@@ -39,6 +39,7 @@ def log_action(action, entity_type=None, entity_id=None, entity_name=None, old_v
 # ============================================================================
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")  # Rate limit login attempts
 def login():
     """Login page"""
     if current_user.is_authenticated:
@@ -102,6 +103,7 @@ def select_tenant():
 
 @auth_bp.route('/switch-tenant/<int:tenant_id>', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")  # Rate limit tenant switching
 def switch_tenant(tenant_id):
     """Switch to a different tenant"""
     tenant = Tenant.query.get_or_404(tenant_id)
@@ -133,6 +135,7 @@ def switch_tenant(tenant_id):
 
 @auth_bp.route('/api/switch-tenant/<int:tenant_id>', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")  # Rate limit tenant switching
 def api_switch_tenant(tenant_id):
     """API endpoint for tenant switching (for AJAX calls)"""
     tenant = Tenant.query.get(tenant_id)

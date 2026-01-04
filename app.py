@@ -2,15 +2,16 @@
 Deloitte ProjectOps
 Project & Task Management Platform for enterprises.
 """
+import secrets
 from datetime import datetime
 from functools import wraps
 
-from flask import Flask, redirect, url_for, flash, request, session
+from flask import Flask, redirect, url_for, flash, request, session, g
 from flask_login import login_required, current_user
 from flask_socketio import emit, join_room, leave_room
 
 from config import config
-from extensions import db, migrate, socketio, login_manager
+from extensions import db, migrate, socketio, login_manager, csrf, limiter
 from models import User, AuditLog
 from translations import get_translation as t
 from services import ApprovalService, WorkflowService, email_service
@@ -45,12 +46,70 @@ def create_app(config_name='default'):
     db.init_app(app)
     migrate.init_app(app, db)
     
-    # Initialize SocketIO with threading mode (works everywhere, no special dependencies)
-    # For production with high concurrency, consider using gevent or an ASGI server
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='threading')
+    # Initialize SocketIO with CORS restrictions
+    # Production: same-origin only; Development: allow all for local testing
+    if app.config.get('DEBUG'):
+        cors_origins = "*"
+    else:
+        cors_origins_env = app.config.get('CORS_ORIGINS', '')
+        if cors_origins_env:
+            cors_origins = [origin.strip() for origin in cors_origins_env.split(',')]
+        else:
+            cors_origins = None  # Same-origin only
+    socketio.init_app(app, cors_allowed_origins=cors_origins, async_mode='threading')
+    
+    # Initialize CSRF protection
+    csrf.init_app(app)
+    
+    # Initialize rate limiting
+    limiter.init_app(app)
     
     # Initialize Login Manager
     login_manager.init_app(app)
+
+    @app.before_request
+    def generate_csp_nonce():
+        """Generate a unique nonce for each request for CSP."""
+        g.csp_nonce = secrets.token_urlsafe(16)
+
+    @app.context_processor
+    def inject_csp_nonce():
+        """Make csp_nonce available in all templates."""
+        return {'csp_nonce': getattr(g, 'csp_nonce', '')}
+
+    @app.after_request
+    def add_security_headers(response):
+        """Apply baseline security headers to all responses."""
+        security_headers = {
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'SAMEORIGIN',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        }
+        for header, value in security_headers.items():
+            response.headers.setdefault(header, value)
+
+        csp = app.config.get('CONTENT_SECURITY_POLICY')
+        if csp is None:
+            nonce = getattr(g, 'csp_nonce', '')
+            csp = (
+                "default-src 'self'; "
+                "img-src 'self' data:; "
+                f"style-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
+                "style-src-attr 'unsafe-inline'; "
+                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.socket.io; "
+                "script-src-attr 'unsafe-inline'; "
+                "font-src 'self' https://cdn.jsdelivr.net; "
+                "connect-src 'self' wss:; "
+                "frame-ancestors 'self'; "
+                "base-uri 'self'; "
+                "form-action 'self'; "
+                "object-src 'none'"
+            )
+        if csp:
+            response.headers.setdefault('Content-Security-Policy', csp)
+
+        return response
     
     @login_manager.user_loader
     def load_user(user_id):
@@ -58,6 +117,9 @@ def create_app(config_name='default'):
     
     # Initialize module system
     ModuleRegistry.init_app(app)
+    
+    # Wire notification helper to app for access via current_app in blueprints
+    app.emit_notifications_to_users = lambda notifications, lang='de': emit_notifications_to_users(notifications, lang)
     
     # Register admin blueprints
     from admin import admin_tenants

@@ -12,13 +12,14 @@ Handles:
 
 from datetime import date, timedelta
 import calendar
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, make_response
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, make_response, g
 from flask_login import login_required, current_user
 
 from extensions import db
 from models import User, Task, Notification
 from services import CalendarService
 from modules import ModuleRegistry
+from middleware.tenant import scope_query_to_tenant
 
 main_bp = Blueprint('main', __name__)
 
@@ -42,9 +43,12 @@ def dashboard():
     from modules.projects.models import Project, ProjectMember, Issue, Sprint
     
     # Get user's tasks based on role and entity permissions (exclude archived)
+    # Always scope to current tenant
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    
     if current_user.is_admin() or current_user.is_manager():
-        # Admins and managers see all tasks
-        base_query = Task.query.filter((Task.is_archived == False) | (Task.is_archived == None))
+        # Admins and managers see all tasks in tenant
+        base_query = Task.query.filter(tenant_filter, (Task.is_archived == False) | (Task.is_archived == None))
     else:
         # Get accessible entity IDs for this user
         accessible_entity_ids = current_user.get_accessible_entity_ids('view')
@@ -52,6 +56,7 @@ def dashboard():
         # Others see their tasks + tasks for accessible entities
         if accessible_entity_ids:
             base_query = Task.query.filter(
+                tenant_filter,
                 ((Task.is_archived == False) | (Task.is_archived == None)),
                 (Task.owner_id == current_user.id) | 
                 (Task.reviewer_id == current_user.id) |
@@ -59,6 +64,7 @@ def dashboard():
             )
         else:
             base_query = Task.query.filter(
+                tenant_filter,
                 ((Task.is_archived == False) | (Task.is_archived == None)),
                 (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
             )
@@ -195,8 +201,10 @@ def calendar_view():
     cal = calendar.Calendar(firstweekday=0)  # Monday first
     month_days = cal.monthdayscalendar(year, month)
     
-    # Get tasks for this month (exclude archived)
+    # Get tasks for this month (exclude archived, scope to tenant)
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
     query = Task.query.filter(
+        tenant_filter,
         Task.due_date >= first_day,
         Task.due_date <= last_day,
         (Task.is_archived == False) | (Task.is_archived == None)
@@ -243,11 +251,13 @@ def calendar_year_view():
     """Calendar year view of tasks"""
     year = request.args.get('year', type=int, default=date.today().year)
     
-    # Get all tasks for the year (exclude archived)
+    # Get all tasks for the year (exclude archived, scope to tenant)
     first_day = date(year, 1, 1)
     last_day = date(year, 12, 31)
     
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
     query = Task.query.filter(
+        tenant_filter,
         Task.due_date >= first_day,
         Task.due_date <= last_day,
         (Task.is_archived == False) | (Task.is_archived == None)
@@ -310,8 +320,10 @@ def calendar_week_view():
     week_start = jan4 - timedelta(days=jan4.weekday()) + timedelta(weeks=week - 1)
     week_end = week_start + timedelta(days=6)
     
-    # Get tasks for this week (exclude archived)
+    # Get tasks for this week (exclude archived, scope to tenant)
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
     query = Task.query.filter(
+        tenant_filter,
         Task.due_date >= week_start,
         Task.due_date <= week_end,
         (Task.is_archived == False) | (Task.is_archived == None)
@@ -470,14 +482,20 @@ def calendar_ical_feed(token):
     if not user:
         return 'Invalid token', 404
     
-    # Get user's tasks
+    # Get user's default tenant for scoping
+    user_tenant_id = user.current_tenant_id or (user.default_tenant.id if user.default_tenant else None)
+    
+    # Get user's tasks (scoped to their tenant)
+    base_filter = (
+        (Task.tenant_id == user_tenant_id) if user_tenant_id else False,
+        (Task.is_archived == False) | (Task.is_archived == None)
+    )
+    
     if user.is_admin() or user.is_manager():
-        tasks = Task.query.filter(
-            (Task.is_archived == False) | (Task.is_archived == None)
-        ).all()
+        tasks = Task.query.filter(*base_filter).all()
     else:
         tasks = Task.query.filter(
-            ((Task.is_archived == False) | (Task.is_archived == None)),
+            *base_filter,
             (Task.owner_id == user.id) | (Task.reviewer_id == user.id)
         ).all()
     

@@ -3,7 +3,7 @@
 {% block title %}{{ project.get_term('sprint', lang) }} Board - {{ sprint.name }} - {{ project.name }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* ============================================
        SPRINT BOARD - DELOITTE DESIGN
        Color: Teal #00A3E0
@@ -571,7 +571,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize drag and drop for each column
     const columns = document.querySelectorAll('.sortable-column');

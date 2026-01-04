@@ -2,7 +2,7 @@
 {% block title %}{{ t('dashboard') }} - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     .chart-container {
         position: relative;
         height: 280px;
@@ -121,7 +121,7 @@
                         <div>
                             <h2 class="mb-0 fw-bold text-danger">{{ stats.overdue }}</h2>
                         </div>
-                        <a href="{{ url_for('task_list', status='overdue') }}" class="btn btn-sm btn-outline-danger rounded-circle">
+                        <a href="{{ url_for('tasks.task_list', status='overdue') }}" class="btn btn-sm btn-outline-danger rounded-circle">
                             <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
@@ -138,7 +138,7 @@
                         <div>
                             <h2 class="mb-0 fw-bold text-warning">{{ stats.due_soon }}</h2>
                         </div>
-                        <a href="{{ url_for('task_list', status='due_soon') }}" class="btn btn-sm btn-outline-warning rounded-circle">
+                        <a href="{{ url_for('tasks.task_list', status='due_soon') }}" class="btn btn-sm btn-outline-warning rounded-circle">
                             <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
@@ -155,7 +155,7 @@
                         <div>
                             <h2 class="mb-0 fw-bold text-info">{{ stats.in_review }}</h2>
                         </div>
-                        <a href="{{ url_for('task_list', status='in_review') }}" class="btn btn-sm btn-outline-info rounded-circle">
+                        <a href="{{ url_for('tasks.task_list', status='in_review') }}" class="btn btn-sm btn-outline-info rounded-circle">
                             <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
@@ -172,7 +172,7 @@
                         <div>
                             <h2 class="mb-0 fw-bold text-success">{{ stats.completed }}</h2>
                         </div>
-                        <a href="{{ url_for('task_list', status='completed') }}" class="btn btn-sm btn-outline-success rounded-circle">
+                        <a href="{{ url_for('tasks.task_list', status='completed') }}" class="btn btn-sm btn-outline-success rounded-circle">
                             <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
@@ -382,7 +382,7 @@
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         {% for task in overdue_tasks %}
-                        <a href="{{ url_for('task_detail', task_id=task.id) }}" class="list-group-item list-group-item-action issue-link">
+                        <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}" class="list-group-item list-group-item-action issue-link">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <strong>{{ task.title }}</strong>
@@ -414,14 +414,14 @@
                     <h6 class="mb-0">
                         <i class="bi bi-person-check me-2" style="color: var(--dtt-green);"></i>{{ t('my_tasks') }}
                     </h6>
-                    <a href="{{ url_for('task_list') }}" class="btn btn-sm btn-outline-light">
+                    <a href="{{ url_for('tasks.task_list') }}" class="btn btn-sm btn-outline-light">
                         {{ t('all') if lang == 'en' else 'Alle' }} <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         {% for task in my_tasks[:8] %}
-                        <a href="{{ url_for('task_detail', task_id=task.id) }}" class="list-group-item list-group-item-action issue-link">
+                        <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}" class="list-group-item list-group-item-action issue-link">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <strong>{{ task.title }}</strong>
@@ -517,7 +517,7 @@
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     // Chart instances
     let statusChart = null;

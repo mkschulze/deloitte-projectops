@@ -13,7 +13,7 @@ Handles all task-related routes:
 import os
 import uuid
 from datetime import datetime, date, timedelta
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify, send_file
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify, send_file, g
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -22,14 +22,21 @@ from models import (
     Task, TaskTemplate, TaskCategory, TaskEvidence, TaskPreset, TaskReviewer,
     Entity, User, Team, Comment, Notification, AuditLog
 )
-from services import NotificationService, ApprovalService, ApprovalResult
+from services import NotificationService, ApprovalService, ApprovalResult, build_task_query
 from translations import TRANSLATIONS
+from middleware.tenant import (
+    get_task_or_404_scoped, get_evidence_or_404_scoped, get_comment_or_404_scoped
+)
 
 tasks_bp = Blueprint('tasks', __name__, url_prefix='/tasks')
 
 
 def log_action(action, entity_type, entity_id, entity_name, old_value=None, new_value=None):
-    """Helper to log actions to audit log"""
+    """Helper to log actions to audit log.
+    
+    Note: Does NOT commit - caller should commit after main operation completes
+    to ensure transactional integrity.
+    """
     log = AuditLog(
         user_id=current_user.id if current_user.is_authenticated else None,
         action=action,
@@ -40,13 +47,12 @@ def log_action(action, entity_type, entity_id, entity_name, old_value=None, new_
         new_value=str(new_value)[:500] if new_value else None
     )
     db.session.add(log)
-    db.session.commit()
 
 
 def emit_notifications_to_users(notifications, lang='de'):
-    """Emit socket notifications - stub for import"""
-    # This will be imported from app at runtime via current_app
-    pass
+    """Emit socket notifications via app-level function"""
+    if hasattr(current_app, 'emit_notifications_to_users'):
+        current_app.emit_notifications_to_users(notifications, lang)
 
 
 def allowed_file(filename):
@@ -71,46 +77,14 @@ def task_list():
     year_filter = request.args.get('year', type=int, default=date.today().year)
     show_archived = request.args.get('show_archived', 'false') == 'true'
     
-    # Base query - exclude archived tasks by default
-    query = Task.query
-    if not show_archived:
-        query = query.filter((Task.is_archived == False) | (Task.is_archived == None))
-    
-    # Apply role-based and entity scoping filtering
-    if not (current_user.is_admin() or current_user.is_manager()):
-        # Get accessible entity IDs for this user
-        accessible_entity_ids = current_user.get_accessible_entity_ids('view')
-        
-        # Filter by owned/reviewed tasks OR tasks for accessible entities
-        if accessible_entity_ids:
-            query = query.filter(
-                (Task.owner_id == current_user.id) | 
-                (Task.reviewer_id == current_user.id) |
-                (Task.entity_id.in_(accessible_entity_ids))
-            )
-        else:
-            query = query.filter(
-                (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
-            )
-    
-    # Apply filters
-    if status_filter:
-        if status_filter == 'overdue':
-            query = query.filter(Task.due_date < date.today(), Task.status != 'completed')
-        elif status_filter == 'due_soon':
-            soon = date.today() + timedelta(days=7)
-            query = query.filter(Task.due_date >= date.today(), Task.due_date <= soon, Task.status != 'completed')
-        else:
-            query = query.filter_by(status=status_filter)
-    
-    if entity_filter:
-        query = query.filter_by(entity_id=entity_filter)
-    
-    if tax_type_filter:
-        query = query.join(TaskTemplate).filter(TaskTemplate.tax_type_id == tax_type_filter)
-    
-    if year_filter:
-        query = query.filter_by(year=year_filter)
+    # Build access-scoped query using shared helper
+    filters = {
+        'status': status_filter or None,
+        'entity_id': entity_filter,
+        'tax_type_id': tax_type_filter,
+        'year': year_filter
+    }
+    query = build_task_query(current_user, filters=filters, show_archived=show_archived)
     
     # Order by due date
     tasks = query.order_by(Task.due_date).all()
@@ -147,7 +121,7 @@ def task_list():
 @login_required
 def task_detail(task_id):
     """Task detail view"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     # Check access (admin, manager, owner, or any assigned reviewer)
     if not (current_user.is_admin() or current_user.is_manager() or 
@@ -227,6 +201,7 @@ def task_create():
                 db.session.commit()
                 
                 log_action('CREATE', 'Task', task.id, task.title)
+                db.session.commit()
                 
                 # Send notifications
                 lang = session.get('lang', 'de')
@@ -289,7 +264,7 @@ def task_create():
 def task_edit(task_id):
     """Edit an existing task"""
     
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     # Check permission
     if not (current_user.is_admin() or current_user.is_manager() or task.owner_id == current_user.id):
@@ -327,6 +302,7 @@ def task_edit(task_id):
         
         new_values = f"title={task.title}, due_date={task.due_date}"
         log_action('UPDATE', 'Task', task.id, task.title, old_values, new_values)
+        db.session.commit()
         
         # Notify newly added reviewers
         lang = session.get('lang', 'de')
@@ -370,7 +346,7 @@ def task_change_status(task_id):
     """Change task status with multi-stage approval workflow"""
     from services import email_service
     
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     new_status = request.form.get('status')
     note = request.form.get('note', '').strip()
     
@@ -383,6 +359,7 @@ def task_change_status(task_id):
         old_status = task.transition_to(new_status, current_user, note)
         db.session.commit()
         log_action('STATUS_CHANGE', 'Task', task.id, task.title, old_status, new_status)
+        db.session.commit()
         
         # Send notifications for status change
         lang = session.get('lang', 'de')
@@ -449,7 +426,9 @@ def task_change_status(task_id):
 @login_required
 def task_reviewer_action(task_id):
     """Handle individual reviewer approval/rejection using ApprovalService"""
-    task = Task.query.get_or_404(task_id)
+    from services import email_service
+    
+    task = get_task_or_404_scoped(task_id)
     action = request.form.get('action')
     note = request.form.get('note', '').strip()
     
@@ -463,16 +442,24 @@ def task_reviewer_action(task_id):
             log_action('REVIEWER_APPROVE', 'Task', task.id, task.title, 
                        f'Reviewer: {current_user.name}', 'Final approval')
             log_action('STATUS_CHANGE', 'Task', task.id, task.title, 'in_review', 'approved')
+            db.session.commit()
             
             # Notify owner that task is fully approved
             if task.owner_id and task.owner_id != current_user.id:
                 notification = NotificationService.notify_task_approved(task, task.owner_id, current_user.id, note)
                 db.session.commit()
+                emit_notifications_to_users([notification], lang)
+                
+                # Send email notification
+                owner = User.query.get(task.owner_id)
+                if owner:
+                    email_service.send_status_changed(task, owner, 'in_review', 'approved', lang)
             
             flash('Alle Prüfer haben genehmigt. Aufgabe ist nun genehmigt.', 'success')
         elif result == ApprovalResult.SUCCESS:
             log_action('REVIEWER_APPROVE', 'Task', task.id, task.title, 
                        f'Reviewer: {current_user.name}', note or 'No note')
+            db.session.commit()
             flash(message, 'success')
         else:
             flash(message, 'danger')
@@ -485,11 +472,18 @@ def task_reviewer_action(task_id):
             log_action('REVIEWER_REJECT', 'Task', task.id, task.title, 
                        f'Reviewer: {current_user.name}', note or 'No note')
             log_action('STATUS_CHANGE', 'Task', task.id, task.title, 'in_review', 'rejected')
+            db.session.commit()
             
             # Notify owner that task was rejected
             if task.owner_id and task.owner_id != current_user.id:
                 notification = NotificationService.notify_task_rejected(task, task.owner_id, current_user.id, note)
                 db.session.commit()
+                emit_notifications_to_users([notification], lang)
+                
+                # Send email notification
+                owner = User.query.get(task.owner_id)
+                if owner:
+                    email_service.send_status_changed(task, owner, 'in_review', 'rejected', lang)
             
             flash('Aufgabe wurde von Ihnen abgelehnt und zur Überarbeitung zurückgewiesen.', 'warning')
         else:
@@ -506,7 +500,7 @@ def task_reviewer_action(task_id):
 @login_required
 def task_archive(task_id):
     """Archive a task (soft-delete)"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     lang = session.get('lang', 'de')
     
     # Only admin, manager, or owner can archive
@@ -523,6 +517,7 @@ def task_archive(task_id):
     db.session.commit()
     
     log_action('ARCHIVE', 'Task', task.id, task.title, 'active', 'archived')
+    db.session.commit()
     
     flash('Aufgabe wurde archiviert.' if lang == 'de' else 'Task has been archived.', 'success')
     return redirect(url_for('tasks.task_list'))
@@ -532,7 +527,7 @@ def task_archive(task_id):
 @login_required
 def task_restore(task_id):
     """Restore a task from archive"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     lang = session.get('lang', 'de')
     
     # Only admin or manager can restore
@@ -548,6 +543,7 @@ def task_restore(task_id):
     db.session.commit()
     
     log_action('RESTORE', 'Task', task.id, task.title, 'archived', 'active')
+    db.session.commit()
     
     flash('Aufgabe wurde wiederhergestellt.' if lang == 'de' else 'Task has been restored.', 'success')
     return redirect(url_for('tasks.task_detail', task_id=task_id))
@@ -559,8 +555,9 @@ def task_archive_list():
     """View archived tasks"""
     lang = session.get('lang', 'de')
     
-    # Build query for archived tasks
-    query = Task.query.filter_by(is_archived=True)
+    # Build query for archived tasks - scoped to current tenant
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    query = Task.query.filter(tenant_filter, Task.is_archived == True)
     
     # Non-admin/manager users only see their own archived tasks
     if not (current_user.is_admin() or current_user.is_manager()):
@@ -617,7 +614,7 @@ def task_permanent_delete(task_id):
         flash('Nur Administratoren können Aufgaben endgültig löschen.' if lang == 'de' else 'Only administrators can permanently delete tasks.', 'danger')
         return redirect(url_for('tasks.task_archive_list'))
     
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     if not task.is_archived:
         flash('Nur archivierte Aufgaben können endgültig gelöscht werden.' if lang == 'de' else 'Only archived tasks can be permanently deleted.', 'warning')
@@ -636,6 +633,7 @@ def task_permanent_delete(task_id):
     db.session.commit()
     
     log_action('DELETE', 'Task', task_id_log, task_title, 'archived', 'deleted')
+    db.session.commit()
     
     flash(f'Aufgabe "{task_title}" wurde endgültig gelöscht.' if lang == 'de' else f'Task "{task_title}" has been permanently deleted.', 'success')
     return redirect(url_for('tasks.task_archive_list'))
@@ -649,7 +647,7 @@ def task_permanent_delete(task_id):
 @login_required
 def task_upload_evidence(task_id):
     """Upload file evidence to a task"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     # Check permission (admin, manager, owner, or any assigned reviewer)
     if not (current_user.is_admin() or current_user.is_manager() or 
@@ -695,6 +693,7 @@ def task_upload_evidence(task_id):
         db.session.commit()
         
         log_action('UPLOAD', 'Task', task_id, task.title, None, f'Datei: {original_filename}')
+        db.session.commit()
         flash(f'Datei "{original_filename}" erfolgreich hochgeladen.', 'success')
     else:
         allowed = ', '.join(current_app.config.get('ALLOWED_EXTENSIONS', []))
@@ -707,7 +706,7 @@ def task_upload_evidence(task_id):
 @login_required
 def task_add_link(task_id):
     """Add link evidence to a task"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     # Check permission (admin, manager, owner, or any assigned reviewer)
     if not (current_user.is_admin() or current_user.is_manager() or 
@@ -737,6 +736,7 @@ def task_add_link(task_id):
     db.session.commit()
     
     log_action('LINK_ADD', 'Task', task_id, task.title, None, f'Link: {link_title or url[:50]}')
+    db.session.commit()
     flash('Link erfolgreich hinzugefügt.', 'success')
     
     return redirect(url_for('tasks.task_detail', task_id=task_id) + '#evidence')
@@ -746,7 +746,14 @@ def task_add_link(task_id):
 @login_required
 def task_download_evidence(task_id, evidence_id):
     """Download file evidence"""
-    evidence = TaskEvidence.query.filter_by(id=evidence_id, task_id=task_id).first_or_404()
+    task = get_task_or_404_scoped(task_id)
+    evidence = get_evidence_or_404_scoped(evidence_id, task_id=task_id)
+    
+    # Check access - admin, manager, owner, or reviewer only
+    if not (current_user.is_admin() or current_user.is_manager() or 
+            task.owner_id == current_user.id or task.is_reviewer(current_user)):
+        flash('Keine Berechtigung für diesen Download.', 'danger')
+        return redirect(url_for('tasks.task_list'))
     
     if evidence.evidence_type != 'file':
         flash('Nur Dateien können heruntergeladen werden.', 'warning')
@@ -763,7 +770,14 @@ def task_download_evidence(task_id, evidence_id):
 @login_required
 def task_preview_evidence(task_id, evidence_id):
     """Preview file evidence inline (for images, PDFs, text files)"""
-    evidence = TaskEvidence.query.filter_by(id=evidence_id, task_id=task_id).first_or_404()
+    task = get_task_or_404_scoped(task_id)
+    evidence = get_evidence_or_404_scoped(evidence_id, task_id=task_id)
+    
+    # Check access - admin, manager, owner, or reviewer only
+    if not (current_user.is_admin() or current_user.is_manager() or 
+            task.owner_id == current_user.id or task.is_reviewer(current_user)):
+        flash('Keine Berechtigung für diese Vorschau.', 'danger')
+        return redirect(url_for('tasks.task_list'))
     
     if evidence.evidence_type != 'file':
         flash('Nur Dateien können angezeigt werden.', 'warning')
@@ -783,8 +797,8 @@ def task_preview_evidence(task_id, evidence_id):
 @login_required
 def task_delete_evidence(task_id, evidence_id):
     """Delete evidence from a task"""
-    evidence = TaskEvidence.query.filter_by(id=evidence_id, task_id=task_id).first_or_404()
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
+    evidence = get_evidence_or_404_scoped(evidence_id, task_id=task_id)
     
     # Check permission - only uploader, owner, or admin can delete
     if not (current_user.is_admin() or current_user.id == evidence.uploaded_by_id or 
@@ -802,6 +816,7 @@ def task_delete_evidence(task_id, evidence_id):
     db.session.commit()
     
     log_action('EVIDENCE_DELETE', 'Task', task_id, task.title, f'Nachweis: {description[:50]}', None)
+    db.session.commit()
     flash('Nachweis gelöscht.', 'success')
     
     return redirect(url_for('tasks.task_detail', task_id=task_id) + '#evidence')
@@ -815,7 +830,13 @@ def task_delete_evidence(task_id, evidence_id):
 @login_required
 def task_add_comment(task_id):
     """Add a comment to a task"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
+    
+    # Check access - admin, manager, owner, or reviewer only
+    if not (current_user.is_admin() or current_user.is_manager() or 
+            task.owner_id == current_user.id or task.is_reviewer(current_user)):
+        flash('Keine Berechtigung zum Kommentieren dieser Aufgabe.', 'danger')
+        return redirect(url_for('tasks.task_list'))
     
     text = request.form.get('text', '').strip()
     
@@ -832,6 +853,7 @@ def task_add_comment(task_id):
     db.session.commit()
     
     log_action('COMMENT', 'Task', task_id, task.title, None, text[:100] + ('...' if len(text) > 100 else ''))
+    db.session.commit()
     
     # Notify relevant users about the comment
     lang = session.get('lang', 'de')
@@ -866,10 +888,18 @@ def task_add_comment(task_id):
 @login_required
 def task_delete_comment(task_id, comment_id):
     """Delete a comment from a task"""
-    comment = Comment.query.filter_by(id=comment_id, task_id=task_id).first_or_404()
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
-    # Check permission - only comment author, task owner, or admin can delete
+    # First check task access - admin, manager, owner, or reviewer only
+    # (prevents leaking comment existence to unauthorized users)
+    if not (current_user.is_admin() or current_user.is_manager() or 
+            task.owner_id == current_user.id or task.is_reviewer(current_user)):
+        flash('Keine Berechtigung für diese Aufgabe.', 'danger')
+        return redirect(url_for('tasks.task_list'))
+    
+    comment = get_comment_or_404_scoped(comment_id, task_id=task_id)
+    
+    # Then check delete permission - only comment author, task owner, or admin can delete
     if not (current_user.is_admin() or current_user.id == comment.created_by_id or 
             current_user.id == task.owner_id):
         flash('Keine Berechtigung zum Löschen.', 'danger')
@@ -882,6 +912,7 @@ def task_delete_comment(task_id, comment_id):
     db.session.commit()
     
     log_action('COMMENT_DELETE', 'Task', task_id, task.title, comment_text, None)
+    db.session.commit()
     flash('Kommentar gelöscht.', 'success')
     
     return redirect(url_for('tasks.task_detail', task_id=task_id) + '#comments')
@@ -906,33 +937,14 @@ def export_excel():
     tax_type_filter = request.args.get('tax_type', type=int)
     year_filter = request.args.get('year', type=int, default=date.today().year)
     
-    # Base query
-    query = Task.query
-    
-    # Apply role-based filtering
-    if not (current_user.is_admin() or current_user.is_manager()):
-        query = query.filter(
-            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
-        )
-    
-    # Apply filters
-    if status_filter:
-        if status_filter == 'overdue':
-            query = query.filter(Task.due_date < date.today(), Task.status != 'completed')
-        elif status_filter == 'due_soon':
-            soon = date.today() + timedelta(days=7)
-            query = query.filter(Task.due_date >= date.today(), Task.due_date <= soon, Task.status != 'completed')
-        else:
-            query = query.filter_by(status=status_filter)
-    
-    if entity_filter:
-        query = query.filter_by(entity_id=entity_filter)
-    
-    if tax_type_filter:
-        query = query.join(TaskTemplate).filter(TaskTemplate.tax_type_id == tax_type_filter)
-    
-    if year_filter:
-        query = query.filter_by(year=year_filter)
+    # Build access-scoped query using shared helper
+    filters = {
+        'status': status_filter or None,
+        'entity_id': entity_filter,
+        'tax_type_id': tax_type_filter,
+        'year': year_filter
+    }
+    query = build_task_query(current_user, filters=filters, show_archived=True)
     
     tasks = query.order_by(Task.due_date).all()
     
@@ -957,18 +969,12 @@ def export_summary():
     
     lang = session.get('lang', 'de')
     
-    # Get all tasks (with role-based filtering)
-    query = Task.query
-    
-    if not (current_user.is_admin() or current_user.is_manager()):
-        query = query.filter(
-            (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
-        )
-    
     # Apply year filter if provided
     year_filter = request.args.get('year', type=int, default=date.today().year)
-    if year_filter:
-        query = query.filter_by(year=year_filter)
+    
+    # Build access-scoped query using shared helper
+    filters = {'year': year_filter} if year_filter else {}
+    query = build_task_query(current_user, filters=filters, show_archived=True)
     
     tasks = query.all()
     
@@ -991,7 +997,7 @@ def export_pdf(task_id):
     from flask import Response
     from services import ExportService
     
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     lang = session.get('lang', 'de')
     
     # Check access

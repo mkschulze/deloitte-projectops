@@ -845,3 +845,555 @@ class TestEstimation:
         
         response = client.get(f'/projects/{test_project.id}/settings/estimation')
         assert response.status_code == 200
+
+
+# =============================================================================
+# EXTENDED POST ROUTE TESTS
+# =============================================================================
+
+class TestProjectArchive:
+    """Test project archive functionality."""
+    
+    def test_archive_project(self, client, user_with_module, test_project, projects_module):
+        """Test archiving a project."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(f'/projects/{test_project.id}/archive', follow_redirects=False)
+        # Should redirect after archiving
+        assert response.status_code in [200, 302]
+
+
+class TestMemberManagement:
+    """Test project member management."""
+    
+    def test_add_member(self, client, db, user_with_module, test_project, regular_user, projects_module):
+        """Test adding a member to project."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/members/add',
+            data={
+                'user_id': regular_user.id,
+                'role': 'member'
+            },
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_add_member_no_user(self, client, user_with_module, test_project, projects_module):
+        """Test adding member without user_id should fail."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/members/add',
+            data={'role': 'member'},
+            follow_redirects=False
+        )
+        assert response.status_code in [302, 400]  # Redirect with flash or bad request
+    
+    def test_change_member_role(self, client, db, user_with_module, test_project, regular_user, projects_module):
+        """Test changing a member's role."""
+        # First add the user as a member
+        member = ProjectMember(
+            project_id=test_project.id,
+            user_id=regular_user.id,
+            role='member',
+            added_by_id=user_with_module.id
+        )
+        db.session.add(member)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/members/{member.id}/role',
+            data={'role': 'developer'},
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_remove_member(self, client, db, user_with_module, test_project, regular_user, projects_module):
+        """Test removing a member from project."""
+        # First add the user as a member
+        member = ProjectMember(
+            project_id=test_project.id,
+            user_id=regular_user.id,
+            role='member',
+            added_by_id=user_with_module.id
+        )
+        db.session.add(member)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/members/{member.id}/remove',
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestIssueTransition:
+    """Test issue status transitions."""
+    
+    def test_transition_issue(self, client, db, user_with_module, test_issue, projects_module):
+        """Test transitioning an issue to a new status."""
+        # Need a valid status to transition to
+        next_status = IssueStatus.query.filter_by(
+            project_id=test_issue.project_id
+        ).filter(IssueStatus.id != test_issue.status_id).first()
+        
+        if not next_status:
+            pytest.skip("No other status available for transition")
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/items/{test_issue.key}/transition',
+            data={'status_id': next_status.id},
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestBoardOperations:
+    """Test board operations."""
+    
+    def test_board_move_issue(self, client, db, user_with_module, test_issue, projects_module):
+        """Test moving an issue on the board."""
+        # Get a valid status to move to
+        next_status = IssueStatus.query.filter_by(
+            project_id=test_issue.project_id
+        ).filter(IssueStatus.id != test_issue.status_id).first()
+        
+        if not next_status:
+            pytest.skip("No other status available for move")
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/board/move',
+            json={
+                'issue_id': test_issue.id,
+                'status_id': next_status.id,
+                'position': 0
+            },
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 302, 400]  # OK, redirect, or validation error
+    
+    def test_board_quick_create_issue(self, client, db, user_with_module, test_project, projects_module):
+        """Test quick-creating an issue from the board."""
+        # Get a valid issue type and status
+        issue_type = IssueType.query.filter_by(project_id=test_project.id).first()
+        issue_status = IssueStatus.query.filter_by(project_id=test_project.id).first()
+        
+        if not issue_type or not issue_status:
+            pytest.skip("No issue type or status available")
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/board/quick-create',
+            json={
+                'title': 'Quick Board Issue',
+                'issue_type_id': issue_type.id,
+                'status_id': issue_status.id
+            },
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 201, 302]
+
+
+class TestBacklogOperations:
+    """Test backlog operations."""
+    
+    def test_backlog_reorder(self, client, db, user_with_module, test_issue, projects_module):
+        """Test reordering issues in backlog."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/backlog/reorder',
+            json={
+                'issue_ids': [test_issue.id]
+            },
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 302, 400]
+    
+    def test_backlog_bulk_assign_to_sprint(self, client, db, user_with_module, test_issue, projects_module):
+        """Test bulk assigning issues to a sprint."""
+        # Create a sprint first
+        sprint = Sprint(
+            project_id=test_issue.project_id,
+            name='Bulk Test Sprint'
+        )
+        db.session.add(sprint)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/backlog/bulk',
+            json={
+                'action': 'assign_sprint',
+                'sprint_id': sprint.id,
+                'issue_ids': [test_issue.id]
+            },
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 302, 400]
+
+
+class TestSprintIssueManagement:
+    """Test sprint issue management."""
+    
+    def test_add_issues_to_sprint(self, client, db, user_with_module, test_issue, projects_module):
+        """Test adding issues to a sprint."""
+        # Create a sprint
+        sprint = Sprint(
+            project_id=test_issue.project_id,
+            name='Issue Add Test Sprint'
+        )
+        db.session.add(sprint)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/iterations/{sprint.id}/add-issues',
+            json={'issue_ids': [test_issue.id]},
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_remove_issue_from_sprint(self, client, db, user_with_module, test_issue, projects_module):
+        """Test removing an issue from a sprint."""
+        # Create a sprint and add issue to it
+        sprint = Sprint(
+            project_id=test_issue.project_id,
+            name='Issue Remove Test Sprint'
+        )
+        db.session.add(sprint)
+        db.session.commit()
+        
+        test_issue.sprint_id = sprint.id
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/iterations/{sprint.id}/remove-issue',
+            json={'issue_id': test_issue.id},
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestCommentManagement:
+    """Test issue comment management."""
+    
+    def test_edit_comment(self, client, db, user_with_module, test_issue, projects_module):
+        """Test editing a comment."""
+        # First add a comment
+        comment = IssueComment(
+            issue_id=test_issue.id,
+            author_id=user_with_module.id,
+            content='Original comment'
+        )
+        db.session.add(comment)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/items/{test_issue.key}/comments/{comment.id}/edit',
+            data={'content': 'Updated comment'},
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_delete_comment(self, client, db, user_with_module, test_issue, projects_module):
+        """Test deleting a comment."""
+        comment = IssueComment(
+            issue_id=test_issue.id,
+            author_id=user_with_module.id,
+            content='Comment to delete'
+        )
+        db.session.add(comment)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/items/{test_issue.key}/comments/{comment.id}/delete',
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestWorklogManagement:
+    """Test issue worklog management."""
+    
+    def test_delete_worklog(self, client, db, user_with_module, test_issue, projects_module):
+        """Test deleting a worklog entry."""
+        worklog = Worklog(
+            issue_id=test_issue.id,
+            author_id=user_with_module.id,
+            time_spent=60,
+            description='Work to delete'
+        )
+        db.session.add(worklog)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/items/{test_issue.key}/worklog/{worklog.id}/delete',
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestIssueReviewers:
+    """Test issue reviewer management."""
+    
+    def test_add_reviewer_post(self, client, db, user_with_module, test_issue, regular_user, projects_module):
+        """Test adding a reviewer to an issue via POST."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/items/{test_issue.key}/reviewer/add',
+            data={'user_id': regular_user.id},
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_remove_reviewer(self, client, db, user_with_module, project_with_types_statuses, regular_user, projects_module):
+        """Test removing a reviewer from an issue."""
+        import uuid
+        # Create a fresh issue for this test
+        project = project_with_types_statuses
+        issue_type = IssueType.query.filter_by(project_id=project.id).first()
+        issue_status = IssueStatus.query.filter_by(project_id=project.id).first()
+        
+        if not issue_type or not issue_status:
+            pytest.skip("No issue type or status available")
+        
+        unique_key = f"{project.key}-RR{uuid.uuid4().hex[:4].upper()}"
+        issue = Issue(
+            project_id=project.id,
+            key=unique_key,
+            summary='Remove Reviewer Test Issue',
+            type_id=issue_type.id,
+            status_id=issue_status.id,
+            reporter_id=user_with_module.id
+        )
+        db.session.add(issue)
+        db.session.flush()
+        
+        # Add reviewer first
+        reviewer = IssueReviewer(
+            issue_id=issue.id,
+            user_id=regular_user.id
+        )
+        db.session.add(reviewer)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{project.id}/items/{issue.key}/reviewer/{reviewer.id}/remove',
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_approve_issue(self, client, db, user_with_module, project_with_types_statuses, projects_module):
+        """Test approving an issue."""
+        import uuid
+        # Create a fresh issue for this test
+        project = project_with_types_statuses
+        issue_type = IssueType.query.filter_by(project_id=project.id).first()
+        issue_status = IssueStatus.query.filter_by(project_id=project.id).first()
+        
+        if not issue_type or not issue_status:
+            pytest.skip("No issue type or status available")
+        
+        unique_key = f"{project.key}-AP{uuid.uuid4().hex[:4].upper()}"
+        issue = Issue(
+            project_id=project.id,
+            key=unique_key,
+            summary='Approve Test Issue',
+            type_id=issue_type.id,
+            status_id=issue_status.id,
+            reporter_id=user_with_module.id
+        )
+        db.session.add(issue)
+        db.session.flush()
+        
+        # Add user as reviewer first
+        reviewer = IssueReviewer(
+            issue_id=issue.id,
+            user_id=user_with_module.id
+        )
+        db.session.add(reviewer)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{project.id}/items/{issue.key}/approve',
+            data={'note': 'Approved'},
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_reject_issue(self, client, db, user_with_module, project_with_types_statuses, regular_user, projects_module):
+        """Test rejecting an issue."""
+        import uuid
+        # Create a fresh issue for this test
+        project = project_with_types_statuses
+        issue_type = IssueType.query.filter_by(project_id=project.id).first()
+        issue_status = IssueStatus.query.filter_by(project_id=project.id).first()
+        
+        if not issue_type or not issue_status:
+            pytest.skip("No issue type or status available")
+        
+        unique_key = f"{project.key}-RJ{uuid.uuid4().hex[:4].upper()}"
+        issue = Issue(
+            project_id=project.id,
+            key=unique_key,
+            summary='Reject Test Issue',
+            type_id=issue_type.id,
+            status_id=issue_status.id,
+            reporter_id=user_with_module.id
+        )
+        db.session.add(issue)
+        db.session.flush()
+        
+        # Use regular_user as reviewer to avoid conflicts with other tests
+        reviewer = IssueReviewer(
+            issue_id=issue.id,
+            user_id=regular_user.id
+        )
+        db.session.add(reviewer)
+        db.session.commit()
+        
+        with client.session_transaction() as sess:
+            # Login as the reviewer to reject
+            sess['_user_id'] = str(regular_user.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{project.id}/items/{issue.key}/reject',
+            data={'note': 'Needs work'},
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestSettingsManagement:
+    """Test project settings management."""
+    
+    def test_add_issue_type(self, client, user_with_module, test_project, projects_module):
+        """Test adding an issue type."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/settings/types/add',
+            data={
+                'name': 'Custom Type',
+                'name_en': 'Custom Type EN',
+                'icon': 'bi-bookmark'
+            },
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_add_issue_status(self, client, user_with_module, test_project, projects_module):
+        """Test adding an issue status."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/settings/statuses/add',
+            data={
+                'name': 'Custom Status',
+                'name_en': 'Custom Status EN',
+                'category': 'in_progress',
+                'color': '#FF5722'
+            },
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+    
+    def test_reset_methodology(self, client, user_with_module, test_project, projects_module):
+        """Test resetting project methodology settings."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_project.id}/settings/methodology/reset',
+            follow_redirects=False
+        )
+        assert response.status_code in [200, 302]
+
+
+class TestEstimationUpdate:
+    """Test estimation update."""
+    
+    def test_update_estimation(self, client, db, user_with_module, test_issue, projects_module):
+        """Test updating issue estimation."""
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(user_with_module.id)
+            sess['_fresh'] = True
+        
+        response = client.post(
+            f'/projects/{test_issue.project_id}/estimation/update',
+            json={
+                'issue_id': test_issue.id,
+                'estimate': 5
+            },
+            content_type='application/json'
+        )
+        assert response.status_code in [200, 302, 400]

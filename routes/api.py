@@ -12,11 +12,15 @@ Additional API routes remain in app.py for gradual migration.
 """
 
 from datetime import date, timedelta
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, g
 from flask_login import login_required, current_user
 
 from extensions import db
 from models import Task, TaskPreset, TaskReviewer, TaskEvidence, Comment, Notification, AuditLog
+from modules.projects.models import Project
+from middleware.tenant import (
+    get_task_or_404_scoped, get_task_scoped, get_project_or_404_scoped
+)
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -54,10 +58,17 @@ def bulk_archive():
     if not task_ids:
         return jsonify({'success': False, 'error': 'No tasks selected'}), 400
     
-    archived_count = 0
+    # Verify all task IDs belong to current tenant before processing
+    tasks_to_process = []
     for task_id in task_ids:
-        task = Task.query.get(task_id)
-        if task and not task.is_archived:
+        task = get_task_scoped(task_id)
+        if task is None:
+            return jsonify({'success': False, 'error': f'Task {task_id} not found or access denied'}), 403
+        tasks_to_process.append(task)
+    
+    archived_count = 0
+    for task in tasks_to_process:
+        if not task.is_archived:
             task.archive(current_user, reason)
             log_action('ARCHIVE', 'Task', task.id, task.title, 'active', 'archived')
             archived_count += 1
@@ -85,10 +96,17 @@ def bulk_restore():
     if not task_ids:
         return jsonify({'success': False, 'error': 'No tasks selected'}), 400
     
-    restored_count = 0
+    # Verify all task IDs belong to current tenant before processing
+    tasks_to_process = []
     for task_id in task_ids:
-        task = Task.query.get(task_id)
-        if task and task.is_archived:
+        task = get_task_scoped(task_id)
+        if task is None:
+            return jsonify({'success': False, 'error': f'Task {task_id} not found or access denied'}), 403
+        tasks_to_process.append(task)
+    
+    restored_count = 0
+    for task in tasks_to_process:
+        if task.is_archived:
             task.restore()
             log_action('RESTORE', 'Task', task.id, task.title, 'archived', 'active')
             restored_count += 1
@@ -116,21 +134,30 @@ def bulk_permanent_delete():
     if not task_ids:
         return jsonify({'success': False, 'error': 'No tasks selected'}), 400
     
-    deleted_count = 0
+    # Verify all task IDs belong to current tenant before processing
+    tasks_to_process = []
     for task_id in task_ids:
-        task = Task.query.get(task_id)
-        if task and task.is_archived:
-            task_title = task.title
-            
-            # Delete related records first
-            TaskEvidence.query.filter_by(task_id=task_id).delete()
-            Comment.query.filter_by(task_id=task_id).delete()
-            TaskReviewer.query.filter_by(task_id=task_id).delete()
-            Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
-            
-            db.session.delete(task)
-            log_action('DELETE', 'Task', task_id, task_title, 'archived', 'deleted')
-            deleted_count += 1
+        task = get_task_scoped(task_id)
+        if task is None:
+            return jsonify({'success': False, 'error': f'Task {task_id} not found or access denied'}), 403
+        if not task.is_archived:
+            return jsonify({'success': False, 'error': f'Task {task_id} is not archived'}), 400
+        tasks_to_process.append(task)
+    
+    deleted_count = 0
+    for task in tasks_to_process:
+        task_title = task.title
+        task_id = task.id
+        
+        # Delete related records first
+        TaskEvidence.query.filter_by(task_id=task_id).delete()
+        Comment.query.filter_by(task_id=task_id).delete()
+        TaskReviewer.query.filter_by(task_id=task_id).delete()
+        Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
+        
+        db.session.delete(task)
+        log_action('DELETE', 'Task', task_id, task_title, 'archived', 'deleted')
+        deleted_count += 1
     
     db.session.commit()
     
@@ -159,10 +186,17 @@ def bulk_status():
     if not new_status:
         return jsonify({'success': False, 'error': 'No status specified'}), 400
     
-    updated_count = 0
+    # Verify all task IDs belong to current tenant before processing
+    tasks_to_process = []
     for task_id in task_ids:
-        task = Task.query.get(task_id)
-        if task and task.status != new_status:
+        task = get_task_scoped(task_id)
+        if task is None:
+            return jsonify({'success': False, 'error': f'Task {task_id} not found or access denied'}), 403
+        tasks_to_process.append(task)
+    
+    updated_count = 0
+    for task in tasks_to_process:
+        if task.status != new_status:
             old_status = task.status
             task.status = new_status
             log_action('STATUS_CHANGE', 'Task', task.id, task.title, old_status, new_status)
@@ -192,14 +226,20 @@ def bulk_assign_owner():
     if not task_ids:
         return jsonify({'success': False, 'error': 'No tasks selected'}), 400
     
-    updated_count = 0
+    # Verify all task IDs belong to current tenant before processing
+    tasks_to_process = []
     for task_id in task_ids:
-        task = Task.query.get(task_id)
-        if task:
-            old_owner = task.owner_id
-            task.owner_id = owner_id
-            log_action('ASSIGN', 'Task', task.id, task.title, f'owner_id={old_owner}', f'owner_id={owner_id}')
-            updated_count += 1
+        task = get_task_scoped(task_id)
+        if task is None:
+            return jsonify({'success': False, 'error': f'Task {task_id} not found or access denied'}), 403
+        tasks_to_process.append(task)
+    
+    updated_count = 0
+    for task in tasks_to_process:
+        old_owner = task.owner_id
+        task.owner_id = owner_id
+        log_action('ASSIGN', 'Task', task.id, task.title, f'owner_id={old_owner}', f'owner_id={owner_id}')
+        updated_count += 1
     
     db.session.commit()
     
@@ -224,21 +264,28 @@ def bulk_delete():
     if not task_ids:
         return jsonify({'success': False, 'error': 'No tasks selected'}), 400
     
-    deleted_count = 0
+    # Verify all task IDs belong to current tenant before processing
+    tasks_to_process = []
     for task_id in task_ids:
-        task = Task.query.get(task_id)
-        if task:
-            task_title = task.title
-            
-            # Delete related records first
-            TaskEvidence.query.filter_by(task_id=task_id).delete()
-            Comment.query.filter_by(task_id=task_id).delete()
-            TaskReviewer.query.filter_by(task_id=task_id).delete()
-            Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
-            
-            db.session.delete(task)
-            log_action('DELETE', 'Task', task_id, task_title, '', 'deleted')
-            deleted_count += 1
+        task = get_task_scoped(task_id)
+        if task is None:
+            return jsonify({'success': False, 'error': f'Task {task_id} not found or access denied'}), 403
+        tasks_to_process.append(task)
+    
+    deleted_count = 0
+    for task in tasks_to_process:
+        task_title = task.title
+        task_id = task.id
+        
+        # Delete related records first
+        TaskEvidence.query.filter_by(task_id=task_id).delete()
+        Comment.query.filter_by(task_id=task_id).delete()
+        TaskReviewer.query.filter_by(task_id=task_id).delete()
+        Notification.query.filter(Notification.entity_type == 'task', Notification.entity_id == task_id).delete()
+        
+        db.session.delete(task)
+        log_action('DELETE', 'Task', task_id, task_title, '', 'deleted')
+        deleted_count += 1
     
     db.session.commit()
     
@@ -258,7 +305,7 @@ def bulk_delete():
 @login_required
 def task_approval_status(task_id):
     """Get approval status for a task"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     reviewers = []
     for tr in task.reviewers:
@@ -283,7 +330,7 @@ def task_approval_status(task_id):
 @login_required
 def task_workflow_timeline(task_id):
     """Get workflow timeline for a task"""
-    task = Task.query.get_or_404(task_id)
+    task = get_task_or_404_scoped(task_id)
     
     # Get audit logs for this task
     logs = AuditLog.query.filter_by(
@@ -315,8 +362,9 @@ def task_workflow_timeline(task_id):
 @login_required
 def dashboard_status_chart():
     """Get task status data for dashboard chart"""
-    # Build base query
-    query = Task.query.filter((Task.is_archived == False) | (Task.is_archived == None))
+    # Build base query - scoped to current tenant
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    query = Task.query.filter(tenant_filter, (Task.is_archived == False) | (Task.is_archived == None))
     
     if not (current_user.is_admin() or current_user.is_manager()):
         accessible_entity_ids = current_user.get_accessible_entity_ids('view')
@@ -352,8 +400,10 @@ def dashboard_monthly_chart():
     """Get monthly task data for dashboard chart"""
     year = request.args.get('year', type=int, default=date.today().year)
     
-    # Build base query
+    # Build base query - scoped to current tenant
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
     query = Task.query.filter(
+        tenant_filter,
         Task.year == year,
         (Task.is_archived == False) | (Task.is_archived == None)
     )
@@ -447,8 +497,9 @@ def dashboard_team_chart():
     
     lang = session.get('lang', 'de')
     
-    # Get active tasks (not completed)
-    tasks = Task.query.filter(Task.status != 'completed').all()
+    # Get active tasks (not completed) - scoped to current tenant
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    tasks = Task.query.filter(tenant_filter, Task.status != 'completed').all()
     
     # Count by team
     team_counts = Counter()
@@ -484,7 +535,7 @@ def dashboard_project_velocity(project_id):
     """Get velocity chart data for a project (last 6 sprints)"""
     from modules.projects.models import Project, Sprint, Issue
     
-    project = Project.query.get_or_404(project_id)
+    project = get_project_or_404_scoped(project_id)
     
     # Check access
     if not project.is_member(current_user):
@@ -547,22 +598,29 @@ def dashboard_trends():
     daily_completed = defaultdict(int)
     daily_created = defaultdict(int)
     
+    # Tenant scoping
+    tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
+    
     # Get completed tasks
     if current_user.is_admin() or current_user.is_manager():
         completed_tasks = Task.query.filter(
+            tenant_filter,
             Task.status == 'completed',
             Task.updated_at >= start_date
         ).all()
         created_tasks = Task.query.filter(
+            tenant_filter,
             Task.created_at >= start_date
         ).all()
     else:
         completed_tasks = Task.query.filter(
+            tenant_filter,
             Task.status == 'completed',
             Task.updated_at >= start_date,
             (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
         ).all()
         created_tasks = Task.query.filter(
+            tenant_filter,
             Task.created_at >= start_date,
             (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
         ).all()
@@ -619,13 +677,16 @@ def dashboard_project_distribution():
     
     lang = session.get('lang', 'de')
     
+    # Tenant scoping for projects
+    tenant_filter = (Project.tenant_id == g.tenant.id) if g.tenant else False
+    
     # Get user's projects
     if current_user.is_admin():
-        projects = Project.query.filter_by(is_archived=False).all()
+        projects = Project.query.filter(tenant_filter, Project.is_archived == False).all()
     else:
         project_ids = db.session.query(ProjectMember.project_id).filter_by(user_id=current_user.id).all()
         project_ids = [p[0] for p in project_ids]
-        projects = Project.query.filter(Project.id.in_(project_ids), Project.is_archived == False).all()
+        projects = Project.query.filter(tenant_filter, Project.id.in_(project_ids), Project.is_archived == False).all()
     
     labels = []
     data = []

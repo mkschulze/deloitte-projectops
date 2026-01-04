@@ -2,7 +2,7 @@
 {% block title %}{{ 'Methodology' if lang == 'en' else 'Methodik' }} - {{ project.key }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<style nonce="{{ csp_nonce }}">
     /* ============================================
        SETTINGS: METHODOLOGY - DELOITTE DESIGN
        Color: Purple #62378a (Settings accent)
@@ -313,6 +313,7 @@
 
 <div class="container-fluid">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <!-- Methodology Selection -->
         <div class="settings-card">
             <div class="settings-card-header">
@@ -421,7 +422,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 // Methodology configuration from server
 const methodologyConfig = {{ methodology_config|tojson|safe }};
 const lang = '{{ lang }}';

@@ -58,6 +58,7 @@
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form action="{{ url_for('projects.project_archive', project_id=project.id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ 'Projekt wirklich archivieren?' if lang == 'de' else 'Really archive project?' }}')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="dropdown-item text-danger">
                                     <i class="bi bi-archive me-2"></i>{{ 'Archivieren' if lang == 'de' else 'Archive' }}
                                 </button>
@@ -384,7 +385,7 @@
     </div>
 </div>
 
-<style>
+<style nonce="{{ csp_nonce }}">
 /* Card Headers - ensure readable text */
 .card-header.bg-white h5,
 .card-header.bg-white .mb-0 {

@@ -189,6 +189,7 @@
                         {% if not tenant.is_archived %}
                         <form action="{{ url_for('admin_tenants.enter_tenant', tenant_id=tenant.id) }}" 
                               method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm" 
                                     style="background-color: #86BC25; color: white;"
                                     title="{{ 'Als Mandant einloggen' if lang == 'de' else 'Enter tenant' }}">
@@ -220,7 +221,7 @@
     </div>
 </div>
 
-<style>
+<style nonce="{{ csp_nonce }}">
 .tenant-card {
     transition: all 0.2s ease;
 }

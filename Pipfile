@@ -17,6 +17,7 @@ flask-socketio = "*"
 eventlet = "*"
 weasyprint = "*"
 icalendar = "*"
+flask-limiter = "*"
 
 [dev-packages]
 pytest = "*"
