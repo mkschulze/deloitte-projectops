@@ -50,13 +50,13 @@ def projects_module_required(f):
         module = Module.query.filter_by(code='projects', is_active=True).first()
         if not module:
             flash('Projektmanagement-Modul ist nicht aktiv.' if session.get('lang', 'de') == 'de' else 'Project management module is not active.', 'warning')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         
         # Check if user has module assignment
         user_module = UserModule.query.filter_by(user_id=current_user.id, module_id=module.id).first()
         if not user_module:
             flash('Sie haben keinen Zugriff auf das Projektmanagement-Modul.' if session.get('lang', 'de') == 'de' else 'You do not have access to the project management module.', 'warning')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         
         return f(*args, **kwargs)
     return decorated_function

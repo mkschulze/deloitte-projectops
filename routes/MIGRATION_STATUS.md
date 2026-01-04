@@ -143,10 +143,10 @@ Routes are being migrated from `app.py` to Flask Blueprints in the `routes/` pac
 
 ---
 
-## Code Coverage (v1.20.0)
+## Code Coverage (v1.20.3)
 
-**Overall: 35%** (8,818 statements, 5,691 missed)  
-**Tests: 641 passed**, 12 skipped, 9 xfailed
+**Overall: 65%** (6,775 statements, 2,380 missed)  
+**Tests: 814 passed**, 12 skipped, 97 xfailed
 
 ### By Module
 
@@ -162,17 +162,18 @@ Routes are being migrated from `app.py` to Flask Blueprints in the `routes/` pac
 | models.py | 74% | |
 | modules/projects/models.py | 69% | |
 | routes/main.py | 68% | |
+| services.py | 65% | ✅ (up from 52%) |
+| admin/tenants.py | 63% | ✅ (up from 17%) |
 | routes/auth.py | 57% | |
 | routes/api.py | 43% | |
-| services.py | 37% | |
+| modules/projects/routes.py | 42% | (up from 19%) |
 | routes/tasks.py | 28% | |
 | routes/admin.py | 24% | |
 | routes/presets.py | 20% | |
-| modules/projects/routes.py | 19% | |
 | app.py | 17% | Legacy |
-| admin/tenants.py | 17% | |
 
 ### Coverage Goals
-- **Next target**: 50% overall coverage
-- **Priority areas**: routes/tasks.py, routes/admin.py, services.py
+- **Current**: 65% overall coverage ✅
+- **Next target**: 75% overall coverage
+- **Priority areas**: routes/tasks.py, routes/admin.py, routes/presets.py
 - **High coverage maintained**: Core modules (config, extensions, translations)

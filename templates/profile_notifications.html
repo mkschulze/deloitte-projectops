@@ -8,7 +8,7 @@
             <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="mb-4">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">{{ t('dashboard') }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">{{ t('dashboard') }}</a></li>
                     <li class="breadcrumb-item active">{{ 'E-Mail-Einstellungen' if lang == 'de' else 'Email Preferences' }}</li>
                 </ol>
             </nav>
@@ -116,7 +116,7 @@
                         
                         <!-- Submit Button -->
                         <div class="mt-4 d-flex justify-content-between">
-                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-1"></i>
                                 {{ 'Zurück' if lang == 'de' else 'Back' }}
                             </a>

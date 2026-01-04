@@ -343,6 +343,33 @@ class TaskReviewer(db.Model):
         self.has_rejected = False
         self.rejected_at = None
         self.rejection_note = None
+    
+    @property
+    def decision(self):
+        """Get the reviewer's decision status"""
+        if self.has_approved:
+            return 'approved'
+        elif self.has_rejected:
+            return 'rejected'
+        return 'pending'
+    
+    @property
+    def decided_at(self):
+        """Get the timestamp when decision was made"""
+        if self.has_approved:
+            return self.approved_at
+        elif self.has_rejected:
+            return self.rejected_at
+        return None
+    
+    @property
+    def note(self):
+        """Get the decision note"""
+        if self.has_approved:
+            return self.approval_note
+        elif self.has_rejected:
+            return self.rejection_note
+        return None
 
 
 # ============================================================================

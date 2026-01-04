@@ -73,7 +73,8 @@ def clean_db_tables(db):
     from models import (
         User, Tenant, TenantMembership, TenantApiKey, Notification,
         Task, TaskReviewer, Team, Entity, UserEntity, TaskEvidence, Comment,
-        team_members
+        team_members, TaskPreset, PresetCustomField, TaskCustomFieldValue, AuditLog,
+        Module, UserModule, TaskCategory
     )
     from modules.projects.models import (
         Project, ProjectMember, Sprint, Issue, IssueType, IssueStatus,
@@ -97,12 +98,21 @@ def clean_db_tables(db):
         db.session.query(TaskReviewer).delete()
         db.session.query(Comment).delete()
         db.session.query(TaskEvidence).delete()
+        db.session.query(TaskCustomFieldValue).delete()
         db.session.query(Task).delete()
         db.session.query(UserEntity).delete()
+        # Clean preset custom fields before presets
+        db.session.query(PresetCustomField).delete()
+        db.session.query(TaskPreset).delete()
+        db.session.query(AuditLog).delete()
         # Clean team_members association table
         db.session.execute(team_members.delete())
         db.session.query(Team).delete()
         db.session.query(Entity).delete()
+        # Clean modules and categories
+        db.session.query(UserModule).delete()
+        db.session.query(Module).delete()
+        db.session.query(TaskCategory).delete()
         db.session.query(Tenant).delete()
         db.session.query(User).delete()
         db.session.commit()
@@ -452,3 +462,58 @@ def api_headers():
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     }
+
+
+# =============================================================================
+# PRESET FIXTURES
+# =============================================================================
+
+@pytest.fixture
+def task_preset(db):
+    """Create a test task preset."""
+    from models import TaskPreset
+    
+    preset = TaskPreset(
+        title='Test Preset',
+        title_de='Test Vorlage',
+        title_en='Test Preset',
+        category='aufgabe',
+        tax_type='Umsatzsteuer',
+        law_reference='§18 UStG',
+        description='Test description',
+        description_de='Test Beschreibung',
+        description_en='Test description',
+        source='manual',
+        is_active=True
+    )
+    
+    db.session.add(preset)
+    db.session.commit()
+    
+    yield preset
+    # Cleanup handled by clean_db_tables fixture
+
+
+@pytest.fixture
+def preset_custom_field(db, task_preset):
+    """Create a test custom field for a preset."""
+    from models import PresetCustomField
+    
+    field = PresetCustomField(
+        preset_id=task_preset.id,
+        name='test_field',
+        label_de='Testfeld',
+        label_en='Test Field',
+        field_type='text',
+        is_required=False,
+        placeholder_de='Wert eingeben',
+        placeholder_en='Enter value',
+        default_value='',
+        sort_order=1
+    )
+    
+    db.session.add(field)
+    db.session.commit()
+    
+    yield field
+    # Cleanup handled by clean_db_tables fixture

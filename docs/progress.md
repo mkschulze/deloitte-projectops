@@ -4,12 +4,35 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
-**Last Updated:** 2026-01-04 (Session 21)  
-**Version:** 1.20.2
+**Last Updated:** 2026-01-04 (Session 22)  
+**Version:** 1.20.3
 
 ---
 
 ## Recent Releases
+
+### v1.20.3 - Test Coverage Major Expansion (2026-01-04)
+
+**Status: ✅ Complete**
+
+- **New Test Files Created**:
+  - `tests/integration/test_admin_tenants_routes.py` - 32 tests
+  - `tests/unit/test_services_coverage.py` - 41 tests
+  - `tests/integration/test_projects_routes.py` - 36 tests
+
+- **Dashboard Endpoint Bug Fixed**:
+  - Fixed `url_for('dashboard')` → `url_for('main.dashboard')` across 8 files
+  - Templates: base.html, profile_notifications.html, calendar_subscription.html
+  - Python: admin/tenants.py, middleware/tenant.py, modules/projects/routes.py
+
+- **Coverage Improvements**:
+  - admin/tenants.py: 17% → 63% (+46%)
+  - modules/projects/routes.py: 19% → 42% (+23%)
+  - services.py: 52% → 65% (+13%)
+
+- **Test Results**:
+  - Total tests: 814 passed, 12 skipped, 97 xfailed
+  - Overall Coverage: 65% (up from 46%)
 
 ### v1.20.2 - Test Coverage Improvements (2026-01-04)
 

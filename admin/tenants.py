@@ -330,7 +330,7 @@ def enter_tenant(tenant_id):
     db.session.commit()
     
     flash(f'Sie arbeiten jetzt im Mandanten: {tenant.name}', 'info')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('main.dashboard'))
 
 
 # ============================================================================

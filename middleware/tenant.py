@@ -127,7 +127,7 @@ def tenant_admin_required(f):
         
         if g.tenant_role != 'admin' and not current_user.is_superadmin:
             flash('Sie benötigen Admin-Rechte für diese Aktion.', 'error')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -148,7 +148,7 @@ def tenant_manager_required(f):
         
         if g.tenant_role not in ('admin', 'manager') and not current_user.is_superadmin:
             flash('Sie benötigen Manager-Rechte für diese Aktion.', 'error')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -167,7 +167,7 @@ def superadmin_required(f):
         
         if not current_user.is_superadmin:
             flash('Diese Funktion ist nur für System-Administratoren.', 'error')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         
         return f(*args, **kwargs)
     return decorated_function
