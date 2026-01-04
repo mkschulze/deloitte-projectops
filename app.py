@@ -72,6 +72,19 @@ def create_app(config_name='default'):
     app.register_blueprint(api_bp)
     app.register_blueprint(presets_bp)
     
+    # Add legacy route aliases for template compatibility
+    @app.endpoint('index')
+    def index_alias():
+        return redirect(url_for('main.index'))
+    
+    @app.endpoint('login')
+    def login_alias():
+        return redirect(url_for('auth.login'))
+    
+    @app.endpoint('logout')
+    def logout_alias():
+        return redirect(url_for('auth.logout'))
+    
     return app
 
 

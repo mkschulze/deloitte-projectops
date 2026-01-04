@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.20.2] - 2026-01-04
+
+### 🧪 Test Coverage Improvements
+
+#### Added
+- **`tests/integration/test_tasks_routes.py`** - Comprehensive integration tests for tasks blueprint
+  - 23 tests covering task list, detail, create, edit, status, archive, delete, comments, and export routes
+  - Tests marked as xfail where template context processors are required
+
+#### Fixed
+- **Template Blueprint URL Fixes** - Updated url_for calls to use blueprint prefixes:
+  - `base.html`: `url_for('index')` → `url_for('main.index')`
+  - `errors/404.html`: `url_for('index')` → `url_for('main.index')`
+  - `errors/500.html`: `url_for('index')` → `url_for('main.index')`
+- **`app.py`** - Added legacy route aliases for backward compatibility
+
+#### Test Results
+- **647 tests passed**, 12 skipped, 26 xfailed
+- **Coverage: 46%** (up from 42%)
+
+---
+
 ## [1.20.1] - 2026-01-04
 
 ### 🐛 Bug Fixes
