@@ -597,7 +597,7 @@ def client(app):
 
 ### Current Coverage (v1.20.2)
 
-**Overall: 35%** (8,818 statements, 5,691 missed)
+**Overall: 46%** (6,754 statements, 3,627 missed)
 
 | Module | Coverage | Notes |
 |--------|----------|-------|
@@ -608,19 +608,19 @@ def client(app):
 | modules/core/__init__.py | 100% | ✅ |
 | middleware/tenant.py | 98% | ✅ |
 | modules/__init__.py | 88% | |
-| models.py | 74% | |
-| modules/projects/models.py | 69% | |
+| models.py | 76% | |
 | routes/main.py | 68% | |
+| modules/projects/models.py | 69% | |
+| app.py | 64% | Cleaned up, legacy removed |
+| routes/tasks.py | 62% | +34% with new tests |
 | routes/auth.py | 57% | |
+| services.py | 51% | |
 | routes/api.py | 43% | |
-| services.py | 37% | |
-| routes/tasks.py | 28% | |
 | routes/admin.py | 24% | |
 | routes/presets.py | 20% | |
 | modules/projects/routes.py | 19% | |
-| app.py | 17% | Legacy routes |
 | admin/tenants.py | 17% | |
-| **Total** | **35%** | **641 tests** |
+| **Total** | **46%** | **647 tests** |
 
 > See [testCoveragePlan.md](testCoveragePlan.md) for the roadmap to 100% coverage.
 
