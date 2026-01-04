@@ -5,13 +5,13 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
 
 **Last Updated:** 2026-01-03 (Session 20)  
-**Version:** 1.20.0
+**Version:** 1.20.2
 
 ---
 
 ## Recent Releases
 
-### v1.20.0 - Phase 4b Complete Route Migration (2026-01-03)
+### v1.20.2 - Phase 4b Complete Route Migration (2026-01-03)
 
 **Status: ✅ Complete**
 

@@ -595,7 +595,7 @@ def client(app):
 | **Integration Tests** | Component interactions | Database operations, workflows |
 | **Feature Tests** | End-to-end features | Multi-tenant isolation, approvals |
 
-### Current Coverage (v1.20.0)
+### Current Coverage (v1.20.2)
 
 **Overall: 35%** (8,818 statements, 5,691 missed)
 
