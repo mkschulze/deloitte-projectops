@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.1] - 2026-01-04
+
+### 🛡️ ZAP Pen Test Remediation
+
+Fixes for findings from OWASP ZAP penetration testing.
+
+#### Added
+- **Subresource Integrity (SRI)** hashes for all CDN resources
+  - Bootstrap CSS: `sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN`
+  - Bootstrap JS: `sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL`
+  - Bootstrap Icons: `sha384-4LISEZ5TT/QFaJMRLBv0bQ0SwlBrPUxJyLp9tp0gJeRHEozxzV5xo4FHWtB0HuZN`
+  - Socket.IO: `sha384-mZLpKeeBgwqSNjMXy/+PFOjsIeZuT4khM5sLWSJN/TAf6CPmA5DkR+P34G3gBGJo`
+
+- **SameSite Cookie Attribute** for development config
+  - `SESSION_COOKIE_SAMESITE = 'Lax'` prevents CSRF in cross-site requests
+
+#### Changed
+- **Server Header Masking** - Now returns `Server: ProjectOps` instead of exposing Werkzeug/Python version
+- **CSP connect-src Restriction** - Changed from `wss:` wildcard to explicit localhost WebSocket origins:
+  - `ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*`
+- Security headers now force-set (not setdefault) to override Werkzeug defaults
+
+#### ZAP Findings Resolved
+| Finding | Severity | Status |
+|---------|----------|--------|
+| Sub Resource Integrity Missing | Medium | ✅ Fixed |
+| CSP Wildcard Directive (connect-src) | Medium | ✅ Fixed |
+| Cookie without SameSite | Low | ✅ Fixed |
+| Server Version Disclosure | Low | ✅ Fixed |
+
+---
+
 ## [1.21.0] - 2026-01-04
 
 ### 🔐 Security Hardening Release

@@ -85,9 +85,10 @@ def create_app(config_name='default'):
             'X-Frame-Options': 'SAMEORIGIN',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
             'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+            'Server': 'ProjectOps',  # Mask server version info
         }
         for header, value in security_headers.items():
-            response.headers.setdefault(header, value)
+            response.headers[header] = value  # Force set to override defaults
 
         csp = app.config.get('CONTENT_SECURITY_POLICY')
         if csp is None:
@@ -100,7 +101,7 @@ def create_app(config_name='default'):
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.socket.io; "
                 "script-src-attr 'unsafe-inline'; "
                 "font-src 'self' https://cdn.jsdelivr.net; "
-                "connect-src 'self' wss:; "
+                "connect-src 'self' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*; "
                 "frame-ancestors 'self'; "
                 "base-uri 'self'; "
                 "form-action 'self'; "

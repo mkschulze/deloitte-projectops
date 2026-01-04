@@ -7,7 +7,7 @@ class Config:
     """Base configuration"""
     # App Info - CUSTOMIZE THESE
     APP_NAME = 'Deloitte ProjectOps'
-    APP_VERSION = '1.21.0'
+    APP_VERSION = '1.21.1'
     
     # Secret key for session management
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
@@ -55,6 +55,7 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection for dev
 
 
 class ProductionConfig(Config):

@@ -11,10 +11,14 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-icon-180x180.png') }}">
     
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+          crossorigin="anonymous">
     
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet"
+          integrity="sha384-4LISEZ5TT/QFaJMRLBv0bQ0SwlBrPUxJyLp9tp0gJeRHEozxzV5xo4FHWtB0HuZN"
+          crossorigin="anonymous">
     
     <!-- Deloitte Special Icons -->
     <link href="{{ url_for('static', filename='Deloitte Special Case Web Icons/Web font/css/deloitte-special-use-icon-font.css') }}" rel="stylesheet">
@@ -481,11 +485,15 @@
     </footer>
     
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+            crossorigin="anonymous"></script>
     
     {% if current_user.is_authenticated %}
     <!-- Socket.IO for real-time notifications -->
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"
+            integrity="sha384-mZLpKeeBgwqSNjMXy/+PFOjsIeZuT4khM5sLWSJN/TAf6CPmA5DkR+P34G3gBGJo"
+            crossorigin="anonymous"></script>
     <script nonce="{{ csp_nonce }}">
         // Initialize Socket.IO connection
         const socket = io();
