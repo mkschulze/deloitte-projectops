@@ -2,7 +2,7 @@
 Project Management Module - Routes
 """
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -1398,27 +1398,41 @@ def backlog(project_id, project=None):
 @project_access_required
 def backlog_reorder(project_id, project=None):
     """API endpoint to reorder issues in the backlog"""
-    if project is None:
-        project = Project.query.get_or_404(project_id)
-    
-    if not project.can_user_manage_issues(current_user):
-        return jsonify({'error': 'No permission'}), 403
-    
-    data = request.get_json()
-    issue_ids = data.get('issue_ids', [])
-    
-    if not issue_ids:
-        return jsonify({'error': 'No issue_ids provided'}), 400
-    
-    # Update positions based on array order
-    for position, issue_id in enumerate(issue_ids):
-        issue = Issue.query.filter_by(id=issue_id, project_id=project_id).first()
-        if issue:
-            issue.backlog_position = position
-    
-    db.session.commit()
-    
-    return jsonify({'success': True, 'count': len(issue_ids)})
+    try:
+        if project is None:
+            project = Project.query.get_or_404(project_id)
+
+        if not project.can_user_manage_issues(current_user):
+            return jsonify({'error': 'No permission'}), 403
+
+        data = request.get_json(silent=True)
+        if not data:
+            return jsonify({
+                'error': 'Invalid JSON data',
+                'content_type': request.content_type
+            }), 400
+
+        issue_ids = data.get('issue_ids')
+
+        if not isinstance(issue_ids, list) or not issue_ids:
+            return jsonify({'error': 'No issue_ids provided'}), 400
+
+        # Update positions based on array order
+        for position, issue_id in enumerate(issue_ids):
+            issue = Issue.query.filter_by(id=issue_id, project_id=project_id).first()
+            if issue:
+                issue.backlog_position = position
+
+        db.session.commit()
+
+        return jsonify({'success': True, 'count': len(issue_ids)})
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception(
+            'Backlog reorder failed',
+            extra={'project_id': project_id, 'user_id': current_user.id}
+        )
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @bp.route('/<int:project_id>/backlog/bulk', methods=['POST'])

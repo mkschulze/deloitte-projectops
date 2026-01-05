@@ -273,16 +273,27 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active');
             
             try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                };
+                if (window.csrfToken) {
+                    headers['X-CSRFToken'] = window.csrfToken;
+                }
+                
                 const response = await fetch('{{ url_for("projects.estimation_update", project_id=project.id) }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: headers,
                     body: JSON.stringify({
                         issue_id: issueId,
                         story_points: points
                     })
                 });
+                
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response');
+                }
                 
                 const data = await response.json();
                 

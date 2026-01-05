@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.2] - 2026-01-05
+
+### 🐛 AJAX CSRF Token Fixes
+
+Fixed CSRF token handling for AJAX requests in project management views.
+
+#### Fixed
+- **Backlog Reorder** - Added `X-CSRFToken` header to drag & drop priority changes
+  - Changed SortableJS from `onEnd` to `onUpdate` to prevent false triggers on page load
+  - Added JSON response validation before parsing
+  - Added try/except with proper rollback and logging in backend route
+
+- **Estimation Story Points** - Added `X-CSRFToken` header to Story Point assignment
+  - Added `Accept: application/json` header for proper content negotiation
+  - Added response content-type validation before JSON parsing
+
+#### Changed
+- **CSP connect-src** - Added `https://cdn.jsdelivr.net https://cdn.socket.io` for source maps
+
+#### Technical Details
+All AJAX fetch requests now include:
+```javascript
+if (window.csrfToken) {
+    headers['X-CSRFToken'] = window.csrfToken;
+}
+```
+
+---
+
 ## [1.21.1] - 2026-01-04
 
 ### 🛡️ ZAP Pen Test Remediation

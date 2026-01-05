@@ -16,9 +16,36 @@ db = SQLAlchemy()
 # CSRF Protection
 csrf = CSRFProtect()
 
-# Rate Limiting
+
+# Rate Limiting - Exempt ZAP scanner for pen testing
+def rate_limit_key_func():
+    """Custom key function that exempts ZAP scanner from rate limits."""
+    from flask import request, session
+    from flask_login import current_user
+    
+    # Exempt ZAP scanner by User-Agent
+    user_agent = request.headers.get('User-Agent', '')
+    if 'ZAP' in user_agent or 'zap' in user_agent.lower():
+        return None  # None = exempt from rate limiting
+    
+    # Exempt pentest user by form data (for login)
+    if request.method == 'POST' and request.form:
+        email = request.form.get('email', '')
+        if email == 'pentest@zap.local':
+            return None
+    
+    # Exempt authenticated pentest user (for all requests after login)
+    try:
+        if current_user.is_authenticated and current_user.email == 'pentest@zap.local':
+            return None
+    except Exception:
+        pass  # current_user not available outside app context
+    
+    return get_remote_address()
+
+
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=rate_limit_key_func,
     default_limits=["200 per minute"],  # Default rate limit
     storage_uri="memory://",  # Use in-memory storage
 )

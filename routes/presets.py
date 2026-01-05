@@ -480,6 +480,145 @@ def preset_template():
                      as_attachment=True, download_name='Aufgabenvorlagen_Vorlage.xlsx')
 
 
+@presets_bp.route('/admin/presets/import', methods=['POST'])
+@admin_required
+def preset_import():
+    """Import presets from JSON or Excel file"""
+    if 'file' not in request.files:
+        flash('Keine Datei hochgeladen.', 'error')
+        return redirect(url_for('presets.preset_list'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('Keine Datei ausgewählt.', 'error')
+        return redirect(url_for('presets.preset_list'))
+    
+    filename = file.filename.lower()
+    imported = 0
+    skipped = 0
+    errors = []
+    
+    try:
+        if filename.endswith('.json'):
+            # Import JSON
+            data = json_module.load(file)
+            if not isinstance(data, list):
+                data = [data]
+            
+            for preset_data in data:
+                title = preset_data.get('title_de') or preset_data.get('title')
+                if not title:
+                    skipped += 1
+                    continue
+                
+                # Check for duplicates
+                existing = TaskPreset.query.filter_by(
+                    title_de=title,
+                    category=preset_data.get('category', 'aufgabe')
+                ).first()
+                
+                if existing:
+                    skipped += 1
+                    continue
+                
+                preset = TaskPreset(
+                    category=preset_data.get('category', 'aufgabe'),
+                    tax_type=preset_data.get('tax_type'),
+                    title_de=title,
+                    title_en=preset_data.get('title_en'),
+                    law_reference=preset_data.get('law_reference'),
+                    description_de=preset_data.get('description_de'),
+                    description_en=preset_data.get('description_en'),
+                    is_recurring=preset_data.get('is_recurring', False),
+                    recurrence_frequency=preset_data.get('recurrence_frequency'),
+                    recurrence_day_offset=preset_data.get('recurrence_day_offset'),
+                    recurrence_rrule=preset_data.get('recurrence_rrule'),
+                    is_active=preset_data.get('is_active', True),
+                    source='import'
+                )
+                db.session.add(preset)
+                db.session.flush()
+                
+                # Import custom fields if present
+                for field_data in preset_data.get('custom_fields', []):
+                    field = PresetCustomField(
+                        preset_id=preset.id,
+                        name=field_data.get('name', ''),
+                        label_de=field_data.get('label_de'),
+                        label_en=field_data.get('label_en'),
+                        field_type=field_data.get('field_type', 'text'),
+                        is_required=field_data.get('is_required', False),
+                        placeholder_de=field_data.get('placeholder_de'),
+                        placeholder_en=field_data.get('placeholder_en'),
+                        default_value=field_data.get('default_value'),
+                        options=field_data.get('options'),
+                        help_text_de=field_data.get('help_text_de'),
+                        help_text_en=field_data.get('help_text_en'),
+                        condition_field=field_data.get('condition_field'),
+                        condition_operator=field_data.get('condition_operator'),
+                        condition_value=field_data.get('condition_value'),
+                        sort_order=field_data.get('sort_order', 0)
+                    )
+                    db.session.add(field)
+                
+                imported += 1
+        
+        elif filename.endswith(('.xlsx', '.xls')):
+            # Import Excel
+            import openpyxl
+            
+            workbook = openpyxl.load_workbook(file)
+            sheet = workbook.active
+            
+            # Get header row
+            headers = [cell.value for cell in sheet[1]]
+            
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                row_data = dict(zip(headers, row))
+                title = row_data.get('Titel (DE)') or row_data.get('title_de') or row_data.get('Titel')
+                
+                if not title:
+                    skipped += 1
+                    continue
+                
+                category = row_data.get('Kategorie') or row_data.get('category') or 'aufgabe'
+                existing = TaskPreset.query.filter_by(title_de=title, category=category).first()
+                
+                if existing:
+                    skipped += 1
+                    continue
+                
+                preset = TaskPreset(
+                    category=category,
+                    tax_type=row_data.get('Steuerart') or row_data.get('tax_type'),
+                    title_de=title,
+                    title_en=row_data.get('Titel (EN)') or row_data.get('title_en'),
+                    law_reference=row_data.get('Gesetzesreferenz') or row_data.get('law_reference'),
+                    description_de=row_data.get('Beschreibung (DE)') or row_data.get('description_de'),
+                    description_en=row_data.get('Beschreibung (EN)') or row_data.get('description_en'),
+                    is_recurring=str(row_data.get('Wiederkehrend', '')).lower() in ('ja', 'yes', 'true', '1'),
+                    recurrence_frequency=row_data.get('Häufigkeit') or row_data.get('recurrence_frequency'),
+                    is_active=str(row_data.get('Aktiv', 'ja')).lower() in ('ja', 'yes', 'true', '1'),
+                    source='import'
+                )
+                db.session.add(preset)
+                imported += 1
+        
+        else:
+            flash('Nicht unterstütztes Dateiformat. Bitte JSON oder Excel verwenden.', 'error')
+            return redirect(url_for('presets.preset_list'))
+        
+        db.session.commit()
+        log_action('IMPORT', 'TaskPreset', None, f'{imported} imported, {skipped} skipped')
+        flash(f'{imported} Vorlagen importiert, {skipped} übersprungen.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Fehler beim Import: {str(e)}', 'error')
+    
+    return redirect(url_for('presets.preset_list'))
+
+
 @presets_bp.route('/admin/presets/seed', methods=['POST'])
 @admin_required
 def preset_seed():

@@ -588,26 +588,52 @@ document.addEventListener('DOMContentLoaded', function() {
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             
-            onEnd: function(evt) {
+            // Use onUpdate instead of onEnd - only fires when sort order changes
+            onUpdate: function(evt) {
                 const issueIds = Array.from(backlogList.querySelectorAll('.backlog-row'))
-                    .map(row => parseInt(row.dataset.issueId));
+                    .map(row => parseInt(row.dataset.issueId))
+                    .filter(id => !isNaN(id));
                 
+                if (issueIds.length === 0) {
+                    console.warn('No issue IDs found for reorder');
+                    return;
+                }
+                
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                };
+                if (window.csrfToken) {
+                    headers['X-CSRFToken'] = window.csrfToken;
+                }
+
                 fetch(reorderUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({ issue_ids: issueIds })
                 })
-                .then(response => response.json())
+                .then(async response => {
+                    const contentType = response.headers.get('content-type') || '';
+                    const isJson = contentType.includes('application/json');
+                    const payload = isJson ? await response.json() : null;
+
+                    if (!response.ok) {
+                        const message = payload && payload.error ? payload.error : MSG_REORDER_FAILED;
+                        throw new Error(message);
+                    }
+
+                    return payload;
+                })
                 .then(data => {
-                    if (data.success) {
+                    if (data && data.success) {
                         showToast(MSG_REORDER_SUCCESS, 'success');
                     } else {
-                        showToast(data.error || MSG_REORDER_FAILED, 'danger');
+                        showToast((data && data.error) || MSG_REORDER_FAILED, 'danger');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showToast(MSG_REORDER_FAILED, 'danger');
+                    showToast(error.message || MSG_REORDER_FAILED, 'danger');
                 });
             }
         });

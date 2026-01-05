@@ -8,14 +8,38 @@
 
 ## Session Information
 
-**Date:** 2026-01-04 (Session 23)  
-**Last Action:** Test Coverage Continued Expansion v1.20.4  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests
-**Version:** 1.20.4
+**Date:** 2026-01-05 (Session 25)  
+**Last Action:** AJAX CSRF Token Fixes v1.21.2  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening
+**Version:** 1.21.2
 
 ---
 
 ## Current State
+
+### ✅ What Was Accomplished (Session 25)
+
+1. **AJAX CSRF Token Fixes v1.21.2** (Complete)
+
+   #### Backlog Reorder Fix
+   - Added `X-CSRFToken` header to drag & drop fetch requests
+   - Changed SortableJS from `onEnd` to `onUpdate` to prevent false triggers on page load
+   - Added JSON response validation before parsing
+   - Added try/except with proper rollback and logging in `backlog_reorder()` route
+
+   #### Estimation Story Points Fix
+   - Added `X-CSRFToken` header to Story Point assignment fetch
+   - Added `Accept: application/json` header for proper content negotiation
+   - Added response content-type validation before JSON parsing
+
+   #### CSP Update
+   - Added `https://cdn.jsdelivr.net https://cdn.socket.io` to `connect-src` for source maps
+
+   #### Files Modified
+   - `modules/projects/templates/projects/backlog.html` - CSRF token in fetch
+   - `modules/projects/templates/projects/estimation.html` - CSRF token in fetch
+   - `modules/projects/routes.py` - Enhanced error handling in backlog_reorder()
+   - `app.py` - Updated CSP connect-src directive
 
 ### ✅ What Was Accomplished (Session 23)
 

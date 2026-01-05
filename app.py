@@ -101,7 +101,7 @@ def create_app(config_name='default'):
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://cdn.socket.io; "
                 "script-src-attr 'unsafe-inline'; "
                 "font-src 'self' https://cdn.jsdelivr.net; "
-                "connect-src 'self' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*; "
+                "connect-src 'self' ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:* https://cdn.jsdelivr.net https://cdn.socket.io; "
                 "frame-ancestors 'self'; "
                 "base-uri 'self'; "
                 "form-action 'self'; "
