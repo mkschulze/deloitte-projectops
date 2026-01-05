@@ -34,6 +34,25 @@ from modules.projects.models import (
 
 
 # ============================================================================
+# WSGI MIDDLEWARE
+# ============================================================================
+
+class ServerHeaderMiddleware:
+    """WSGI middleware to mask the Server header after Werkzeug sets it."""
+    
+    def __init__(self, app):
+        self.app = app
+    
+    def __call__(self, environ, start_response):
+        def custom_start_response(status, headers, exc_info=None):
+            # Filter out Server header and add our own
+            headers = [(name, value) for name, value in headers if name.lower() != 'server']
+            headers.append(('Server', 'ProjectOps'))
+            return start_response(status, headers, exc_info)
+        return self.app(environ, custom_start_response)
+
+
+# ============================================================================
 # APP INITIALIZATION
 # ============================================================================
 
@@ -85,7 +104,7 @@ def create_app(config_name='default'):
             'X-Frame-Options': 'SAMEORIGIN',
             'Referrer-Policy': 'strict-origin-when-cross-origin',
             'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-            'Server': 'ProjectOps',  # Mask server version info
+            # Note: Server header is masked by ServerHeaderMiddleware at WSGI level
         }
         for header, value in security_headers.items():
             response.headers[header] = value  # Force set to override defaults
@@ -152,6 +171,9 @@ def create_app(config_name='default'):
 
 
 app = create_app()
+
+# Apply WSGI middleware to mask server version
+app.wsgi_app = ServerHeaderMiddleware(app.wsgi_app)
 
 # Initialize email service
 email_service.init_app(app)

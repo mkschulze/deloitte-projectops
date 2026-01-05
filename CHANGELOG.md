@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.4] - 2026-01-05
+
+### 🔒 Security Hardening - Server Header Masking
+
+#### Added
+- **WSGI Middleware for Server Header** - Masks Werkzeug/Python version information
+  - New `ServerHeaderMiddleware` class intercepts response headers at WSGI layer
+  - Replaces default `Werkzeug/3.x.x Python/3.x.x` with neutral `ProjectOps`
+  - Applied after Werkzeug sets headers (more reliable than Flask after_request)
+
+#### Security
+- **Server Version Information Disclosure** - Fixed vulnerability found by ZAP scan
+  - Previously leaked: `Server: Werkzeug/3.1.4 Python/3.14.2`
+  - Now shows: `Server: ProjectOps`
+
+#### Technical Details
+- WSGI middleware wraps `start_response` to filter and replace Server header
+- Applied via `app.wsgi_app = ServerHeaderMiddleware(app.wsgi_app)`
+- Removed redundant Server header from `after_request` handler
+
+---
+
 ## [1.21.3] - 2026-01-05
 
 ### 📦 Demo Data & Module System Improvements

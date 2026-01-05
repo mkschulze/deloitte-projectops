@@ -4,12 +4,34 @@
 
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening
 
-**Last Updated:** 2026-01-05 (Session 25)  
-**Version:** 1.21.2
+**Last Updated:** 2026-01-05 (Session 26)  
+**Version:** 1.21.4
 
 ---
 
 ## Recent Releases
+
+### v1.21.4 - Server Header Security (2026-01-05)
+
+**Status: ✅ Complete**
+
+- **WSGI Middleware for Server Header Masking**:
+  - New `ServerHeaderMiddleware` class in app.py
+  - Intercepts response at WSGI layer (after Werkzeug sets headers)
+  - Replaces `Werkzeug/3.x.x Python/3.x.x` with neutral `ProjectOps`
+  - More reliable than Flask `after_request` approach
+
+- **Security Fix** (found by ZAP penetration test):
+  - Server version information disclosure fixed
+  - No longer leaks framework/language version info
+
+### v1.21.3 - Demo Data & Module System (2026-01-05)
+
+**Status: ✅ Complete**
+
+- **Module Creation in Demo Script** - Creates `core` and `projects` modules automatically
+- **UserModule Assignments** - Non-admin users get projects module access
+- **current_tenant_id** - All users have default tenant set for data visibility
 
 ### v1.21.2 - AJAX CSRF Token Fixes (2026-01-05)
 
