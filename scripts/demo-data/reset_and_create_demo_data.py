@@ -27,7 +27,7 @@ from extensions import db
 from models import (
     Tenant, TenantMembership, User, Team, Entity, TaxType, 
     Task, TaskPreset, TaskCategory, Notification, NotificationType,
-    AuditLog, UserEntity, Comment, TaskReviewer
+    AuditLog, UserEntity, Comment, TaskReviewer, Module, UserModule
 )
 from modules.projects.models import (
     Project, ProjectMember, ProjectMethodology,
@@ -421,6 +421,48 @@ def reset_database():
     print("✅ Database reset complete!")
 
 
+def create_modules():
+    """Create application modules."""
+    print("\n📦 Creating modules...")
+    
+    modules = []
+    
+    # Core module (always available)
+    core = Module(
+        code='core',
+        name_de='Kernfunktionen',
+        name_en='Core Functions',
+        description_de='Dashboard, Aufgaben, Kalender und grundlegende Funktionen',
+        description_en='Dashboard, tasks, calendar and basic functions',
+        icon='bi-house',
+        nav_order=0,
+        is_core=True,
+        is_active=True
+    )
+    db.session.add(core)
+    modules.append(core)
+    
+    # Projects module
+    projects = Module(
+        code='projects',
+        name_de='Projektmanagement',
+        name_en='Project Management',
+        description_de='Projekte, Sprints, Kanban-Boards und Issue-Tracking',
+        description_en='Projects, sprints, Kanban boards and issue tracking',
+        icon='bi-kanban',
+        nav_order=10,
+        is_core=False,
+        is_active=True
+    )
+    db.session.add(projects)
+    modules.append(projects)
+    
+    db.session.commit()
+    print(f"   ✅ Created {len(modules)} modules")
+    
+    return {m.code: m for m in modules}
+
+
 def create_users():
     """Create all demo users."""
     print("\n👥 Creating users...")
@@ -478,10 +520,46 @@ def create_tenants(users):
             role=role
         )
         db.session.add(membership)
+        
+        # Set default tenant for all users
+        user.current_tenant_id = main_tenant.id
     
     db.session.commit()
     print(f"✅ {len(tenants)} tenants created!")
     return tenants
+
+
+def create_user_modules(users, modules):
+    """Assign modules to non-admin users."""
+    print("\n🔐 Assigning module permissions...")
+    
+    projects_module = modules.get('projects')
+    if not projects_module:
+        print("   ⚠️  Projects module not found")
+        return []
+    
+    assignments = []
+    
+    # Assign projects module to all non-admin users
+    for user in users:
+        # Admins don't need explicit module assignments (they have access to all)
+        if user.role == 'admin':
+            continue
+        
+        # Check if already assigned
+        existing = UserModule.query.filter_by(user_id=user.id, module_id=projects_module.id).first()
+        if not existing:
+            um = UserModule(
+                user_id=user.id,
+                module_id=projects_module.id
+            )
+            db.session.add(um)
+            assignments.append(um)
+    
+    db.session.commit()
+    print(f"   ✅ Created {len(assignments)} module assignments")
+    
+    return assignments
 
 
 def create_teams(users, tenants):
@@ -1098,8 +1176,10 @@ def main():
         reset_database()
         
         # Create all demo data
+        modules = create_modules()
         users = create_users()
         tenants = create_tenants(users)
+        user_modules = create_user_modules(users, modules)
         teams = create_teams(users, tenants)
         entities = create_entities(users, tenants)
         tax_types = create_tax_types(tenants)
@@ -1118,7 +1198,9 @@ def main():
         print("="*70)
         print(f"""
 📊 Summary:
+   ├── Modules:         {len(modules)}
    ├── Users:           {len(users)}
+   ├── User Modules:    {len(user_modules)}
    ├── Tenants:         {len(tenants)}
    ├── Teams:           {len(teams)}
    ├── Entities:        {len(entities)}

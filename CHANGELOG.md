@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.3] - 2026-01-05
+
+### 📦 Demo Data & Module System Improvements
+
+#### Added
+- **Module Creation in Demo Script** - Creates `core` and `projects` modules automatically
+- **UserModule Assignments** - Non-admin users get projects module access automatically
+- **current_tenant_id** - All users now have default tenant set for proper data visibility
+
+#### Fixed
+- **Empty Module List** - `/admin/users/{id}/modules` now shows available modules
+- **Tasks not visible** - Tasks now appear in task list and calendar after login
+- **Tenant Context** - Superadmins properly see tenant-scoped data
+
+#### Technical Details
+- `reset_and_create_demo_data.py` now creates:
+  - 2 Modules (core + projects)
+  - 9 UserModule assignments for non-admins
+  - Sets `user.current_tenant_id` for all users
+- Added `scripts/create_modules.py` utility script
+
+---
+
 ## [1.21.2] - 2026-01-05
 
 ### 🐛 AJAX CSRF Token Fixes
