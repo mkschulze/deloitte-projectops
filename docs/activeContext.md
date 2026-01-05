@@ -9,9 +9,9 @@
 ## Session Information
 
 **Date:** 2026-01-05 (Session 26)  
-**Last Action:** Server Header Security Fix v1.21.4  
+**Last Action:** Kanban Board CSRF Fix v1.21.5  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening
-**Version:** 1.21.4
+**Version:** 1.21.5
 
 ---
 
@@ -45,6 +45,41 @@
 
    #### Verification
    - Tested via Flask test client: `Server header: ProjectOps` ✅
+
+2. **Kanban Board CSRF Fix v1.21.5** (Complete)
+
+   #### Problem
+   - Kanban-Karten ließen sich nicht per Drag & Drop verschieben
+   - Symptom: Keine Fehlermeldung im UI, aber POST-Requests scheiterten
+   - Root Cause: `fetch()` Requests ohne `X-CSRFToken` Header → 400 Response
+
+   #### Diagnose-Prozess
+   1. Zunächst CSP/SortableJS-Blockade vermutet → nicht zutreffend (CDN in CSP erlaubt)
+   2. Workflow-Transitions geprüft → `can_transition_to()` korrekt (leere Liste = alle erlaubt)
+   3. **CSRF-Token fehlt** → identifiziert durch Vergleich mit `backlog.html` (Session 25 Fix)
+
+   #### Lösung
+   - `X-CSRFToken` Header zu allen Board-Fetch-Requests hinzugefügt
+   - Pattern: `if (window.csrfToken) { headers['X-CSRFToken'] = window.csrfToken; }`
+
+   #### Files Modified
+   - `modules/projects/templates/projects/board.html` - CSRF für Move + Quick Create
+   - `modules/projects/templates/projects/sprints/board.html` - CSRF für Sprint Move
+   - `modules/projects/templates/projects/iterations/board.html` - CSRF für Iteration Move
+   - `modules/projects/templates/projects/settings/issue_statuses.html` - CSRF für Workflow Save
+
+   #### Zusätzliche Änderungen
+   - CSS: `cursor: grab` statt `pointer` für besseres Drag-Feedback
+   - Verbesserte Click/Drag-Erkennung mit Zeit- und Distanz-Schwellwerten
+
+   #### Lesson Learned
+   > **Bei JEDEM neuen `fetch()` mit POST/PUT/DELETE immer `X-CSRFToken` Header prüfen!**
+   > Dies war bereits das zweite Mal (nach Backlog in Session 25), dass fehlendes CSRF-Token 
+   > JavaScript-Features stillschweigend blockierte. Dokumentiert in `docs/systemPatterns.md`.
+
+   #### Verification
+   - Kanban Drag & Drop funktioniert ✅
+   - Network Tab: POST `/board/move` → 200 OK ✅
 
 ### ✅ What Was Accomplished (Session 25)
 

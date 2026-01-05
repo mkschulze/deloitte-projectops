@@ -560,6 +560,47 @@ fetch('/api/endpoint', {
 </script>
 ```
 
+#### ⚠️ CSRF Troubleshooting - Common Issue
+
+**Symptom:** JavaScript-basierte Features (Drag & Drop, AJAX-Buttons) funktionieren nicht - keine Fehlermeldung im UI, aber POST-Requests werden mit 400 abgelehnt.
+
+**Root Cause:** `fetch()` Requests ohne `X-CSRFToken` Header werden vom CSRF-Schutz blockiert.
+
+**Diagnose:**
+1. Browser DevTools → Network Tab öffnen
+2. Aktion ausführen (z.B. Karte ziehen)
+3. POST-Request prüfen: Status 400 = CSRF-Problem
+
+**Lösung:**
+```javascript
+// In base.html ist window.csrfToken bereits gesetzt via:
+// <script>window.csrfToken = "{{ csrf_token() }}";</script>
+
+// Bei JEDEM fetch() POST/PUT/DELETE Request:
+const headers = {
+    'Content-Type': 'application/json',
+};
+if (window.csrfToken) {
+    headers['X-CSRFToken'] = window.csrfToken;
+}
+
+fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(data)
+});
+```
+
+**Betroffene Features (bereits gefixt):**
+- Backlog Reorder (Session 25) - `backlog.html`
+- Estimation Story Points (Session 25) - `estimation.html`
+- **Kanban Board Move + Quick Create (Session 26)** - `board.html`
+- Sprint Board Move (Session 26) - `sprints/board.html`
+- Iteration Board Move (Session 26) - `iterations/board.html`
+- Workflow Status Transitions (Session 26) - `issue_statuses.html`
+
+**Merke:** Bei JEDEM neuen `fetch()` mit `method: 'POST'` immer `X-CSRFToken` Header hinzufügen!
+
 ### Rate Limiting Pattern
 
 ```python

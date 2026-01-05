@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from app import create_app
 from extensions import db
 from models import (
-    Tenant, TenantMembership, User, Team, Entity, TaxType, 
+    Tenant, TenantMembership, User, Team, Entity,
     Task, TaskPreset, TaskCategory, Notification, NotificationType,
     AuditLog, UserEntity, Comment, TaskReviewer, Module, UserModule
 )
@@ -138,22 +138,21 @@ DEMO_ENTITIES = [
     {'name': 'Family Office Schmidt', 'short_name': 'SCHMIDT', 'country': 'DE'},
 ]
 
-DEMO_TAX_TYPES = [
-    {'code': 'USt', 'name': 'Umsatzsteuer', 'name_en': 'VAT'},
-    {'code': 'KSt', 'name': 'Körperschaftsteuer', 'name_en': 'Corporate Tax'},
-    {'code': 'GewSt', 'name': 'Gewerbesteuer', 'name_en': 'Trade Tax'},
-    {'code': 'LohnSt', 'name': 'Lohnsteuer', 'name_en': 'Payroll Tax'},
-    {'code': 'ErbSt', 'name': 'Erbschaftsteuer', 'name_en': 'Inheritance Tax'},
-    {'code': 'GrundSt', 'name': 'Grundsteuer', 'name_en': 'Property Tax'},
-]
-
+# Task Categories (unified - replaces old TaxType and TaskCategory)
 DEMO_TASK_CATEGORIES = [
-    {'code': 'UST', 'name': 'Umsatzsteuer', 'name_en': 'VAT', 'color': '#0D8ABC'},
-    {'code': 'KST', 'name': 'Körperschaftsteuer', 'name_en': 'Corporate Tax', 'color': '#26890D'},
-    {'code': 'GEWST', 'name': 'Gewerbesteuer', 'name_en': 'Trade Tax', 'color': '#6B3FA0'},
-    {'code': 'LST', 'name': 'Lohnsteuer', 'name_en': 'Payroll Tax', 'color': '#DA291C'},
-    {'code': 'BUCH', 'name': 'Buchhaltung', 'name_en': 'Accounting', 'color': '#75787B'},
-    {'code': 'JAHRES', 'name': 'Jahresabschluss', 'name_en': 'Annual Statements', 'color': '#4BADE8'},
+    # Tax Types (Steuerarten)
+    {'code': 'UST', 'name': 'Umsatzsteuer', 'name_en': 'VAT', 'color': '#0D8ABC', 'icon': 'bi-calculator'},
+    {'code': 'KST', 'name': 'Körperschaftsteuer', 'name_en': 'Corporate Tax', 'color': '#26890D', 'icon': 'bi-calculator'},
+    {'code': 'GEWST', 'name': 'Gewerbesteuer', 'name_en': 'Trade Tax', 'color': '#6B3FA0', 'icon': 'bi-calculator'},
+    {'code': 'LST', 'name': 'Lohnsteuer', 'name_en': 'Payroll Tax', 'color': '#DA291C', 'icon': 'bi-calculator'},
+    {'code': 'ERBST', 'name': 'Erbschaftsteuer', 'name_en': 'Inheritance Tax', 'color': '#FF6B35', 'icon': 'bi-calculator'},
+    {'code': 'GRUNDST', 'name': 'Grundsteuer', 'name_en': 'Property Tax', 'color': '#8B4513', 'icon': 'bi-calculator'},
+    # General Categories
+    {'code': 'BUCH', 'name': 'Buchhaltung', 'name_en': 'Accounting', 'color': '#75787B', 'icon': 'bi-journal-text'},
+    {'code': 'JAHRES', 'name': 'Jahresabschluss', 'name_en': 'Annual Statements', 'color': '#4BADE8', 'icon': 'bi-file-earmark-text'},
+    {'code': 'COMPL', 'name': 'Compliance', 'name_en': 'Compliance', 'color': '#0076A8', 'icon': 'bi-shield-check'},
+    {'code': 'AUDIT', 'name': 'Prüfung', 'name_en': 'Audit', 'color': '#62B5E5', 'icon': 'bi-clipboard-check'},
+    {'code': 'SONST', 'name': 'Sonstige', 'name_en': 'Other', 'color': '#6c757d', 'icon': 'bi-folder'},
 ]
 
 DEMO_PROJECTS = [
@@ -628,30 +627,8 @@ def create_entities(users, tenants):
     return entities
 
 
-def create_tax_types(tenants):
-    """Create demo tax types."""
-    print("\n📋 Creating tax types...")
-    tax_types = []
-    main_tenant = tenants[0]
-    
-    for data in DEMO_TAX_TYPES:
-        tax_type = TaxType(
-            code=data['code'],
-            name=data['name'],
-            name_en=data['name_en'],
-            tenant_id=main_tenant.id
-        )
-        db.session.add(tax_type)
-        tax_types.append(tax_type)
-        print(f"  ✓ {data['code']} - {data['name']}")
-    
-    db.session.commit()
-    print(f"✅ {len(tax_types)} tax types created!")
-    return tax_types
-
-
 def create_task_categories(tenants):
-    """Create demo task categories."""
+    """Create demo task categories (includes tax types - unified model)."""
     print("\n📂 Creating task categories...")
     categories = []
     main_tenant = tenants[0]
@@ -660,8 +637,9 @@ def create_task_categories(tenants):
         category = TaskCategory(
             code=data['code'],
             name=data['name'],
-            name_en=data['name_en'],
-            color=data['color'],
+            name_en=data.get('name_en'),
+            color=data.get('color', '#6c757d'),
+            icon=data.get('icon', 'bi-folder'),
             tenant_id=main_tenant.id
         )
         db.session.add(category)
@@ -1182,7 +1160,6 @@ def main():
         user_modules = create_user_modules(users, modules)
         teams = create_teams(users, tenants)
         entities = create_entities(users, tenants)
-        tax_types = create_tax_types(tenants)
         categories = create_task_categories(tenants)
         presets = create_task_presets(tenants)
         projects = create_projects(users, tenants)
@@ -1204,7 +1181,6 @@ def main():
    ├── Tenants:         {len(tenants)}
    ├── Teams:           {len(teams)}
    ├── Entities:        {len(entities)}
-   ├── Tax Types:       {len(tax_types)}
    ├── Task Categories: {len(categories)}
    ├── Task Presets:    {len(presets)}
    ├── Projects:        {len(projects)}

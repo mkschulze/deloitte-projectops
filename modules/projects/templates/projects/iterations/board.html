@@ -592,12 +592,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show loading state
                     evt.item.style.opacity = '0.5';
                     
+                    const moveHeaders = {
+                        'Content-Type': 'application/json'
+                    };
+                    if (window.csrfToken) {
+                        moveHeaders['X-CSRFToken'] = window.csrfToken;
+                    }
+
                     // Move issue to new status
                     fetch(`{{ url_for('projects.kanban_move_issue', project_id=project.id) }}`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: moveHeaders,
                         body: JSON.stringify({
                             issue_id: parseInt(issueId),
                             status_id: parseInt(newStatusId),

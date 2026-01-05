@@ -996,11 +996,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>{{ 'Saving...' if lang == 'en' else 'Speichern...' }}';
                 
+                const transitionHeaders = {
+                    'Content-Type': 'application/json'
+                };
+                if (window.csrfToken) {
+                    transitionHeaders['X-CSRFToken'] = window.csrfToken;
+                }
+
                 const response = await fetch('{{ url_for("projects.save_workflow_transitions", project_id=project.id) }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: transitionHeaders,
                     body: JSON.stringify({ transitions: transitions })
                 });
                 

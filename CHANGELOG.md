@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.5] - 2026-01-05
+
+### 🐛 Kanban Board CSRF Fix
+
+Fixed CSRF token handling for Kanban board drag & drop operations.
+
+#### Fixed
+- **Kanban Board Drag & Drop** - Cards could not be moved between columns
+  - Root cause: `fetch()` POST requests missing `X-CSRFToken` header
+  - Added CSRF headers to move and quick-create endpoints
+- **Sprint Board Move** - Same CSRF fix applied
+- **Iteration Board Move** - Same CSRF fix applied
+- **Workflow Status Transitions** - CSRF header added to save endpoint
+
+#### Changed
+- **Drag Cursor** - Changed from `pointer` to `grab`/`grabbing` for better UX feedback
+- **Click/Drag Detection** - Improved with time (200ms) and distance (5px) thresholds
+
+#### Documentation
+- Added "CSRF Troubleshooting" section to `docs/systemPatterns.md`
+- Common pattern: Always add `X-CSRFToken` header to `fetch()` POST/PUT/DELETE requests
+
+#### Files Modified
+- `modules/projects/templates/projects/board.html`
+- `modules/projects/templates/projects/sprints/board.html`
+- `modules/projects/templates/projects/iterations/board.html`
+- `modules/projects/templates/projects/settings/issue_statuses.html`
+- `docs/systemPatterns.md`
+- `docs/activeContext.md`
+
+---
+
 ## [1.21.4] - 2026-01-05
 
 ### 🔒 Security Hardening - Server Header Masking

@@ -315,10 +315,14 @@
     padding-left: 1rem;
     margin-bottom: 0.5rem;
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    cursor: pointer;
+    cursor: grab;
     transition: transform 0.15s, box-shadow 0.15s;
     position: relative;
     overflow: hidden;
+}
+
+.issue-card:active {
+    cursor: grabbing;
 }
 
 .issue-card:hover {
@@ -575,11 +579,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         evt.from.appendChild(newPlaceholder);
                     }
                     
+                    const moveHeaders = {
+                        'Content-Type': 'application/json',
+                    };
+                    if (window.csrfToken) {
+                        moveHeaders['X-CSRFToken'] = window.csrfToken;
+                    }
+
                     fetch(moveUrl, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: moveHeaders,
                         body: JSON.stringify({
                             issue_id: parseInt(issueId),
                             status_id: parseInt(newStatusId),
@@ -613,11 +622,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const statusId = this.dataset.statusId;
                 const summary = this.value.trim();
                 
+                const createHeaders = {
+                    'Content-Type': 'application/json',
+                };
+                if (window.csrfToken) {
+                    createHeaders['X-CSRFToken'] = window.csrfToken;
+                }
+
                 fetch(quickCreateUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: createHeaders,
                     body: JSON.stringify({
                         summary: summary,
                         status_id: parseInt(statusId)
@@ -731,20 +745,29 @@ document.addEventListener('DOMContentLoaded', function() {
         bsToast.show();
     }
     
-    // Click handler for issue cards
-    let isDragging = false;
+    // Click handler for issue cards - with proper drag detection
+    let dragStartTime = 0;
+    let dragStartPos = { x: 0, y: 0 };
+    const DRAG_THRESHOLD = 5; // pixels
+    const CLICK_THRESHOLD = 200; // milliseconds
     
     document.querySelectorAll('.issue-card').forEach(function(card) {
-        card.addEventListener('mousedown', function() {
-            isDragging = false;
-        });
-        
-        card.addEventListener('mousemove', function() {
-            isDragging = true;
+        card.addEventListener('mousedown', function(e) {
+            dragStartTime = Date.now();
+            dragStartPos = { x: e.clientX, y: e.clientY };
         });
         
         card.addEventListener('click', function(e) {
-            if (!isDragging && !e.target.closest('a')) {
+            // Ignore if clicking a link
+            if (e.target.closest('a')) return;
+            
+            // Calculate time and distance since mousedown
+            const timeDiff = Date.now() - dragStartTime;
+            const distX = Math.abs(e.clientX - dragStartPos.x);
+            const distY = Math.abs(e.clientY - dragStartPos.y);
+            
+            // Only navigate if it was a quick click without significant movement
+            if (timeDiff < CLICK_THRESHOLD && distX < DRAG_THRESHOLD && distY < DRAG_THRESHOLD) {
                 const href = this.dataset.href;
                 if (href) {
                     window.location.href = href;
