@@ -36,7 +36,7 @@ def admin_client(client, admin_user, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = admin_user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -56,7 +56,7 @@ def regular_client(client, user, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -324,3 +324,63 @@ class TestBeforeRequestMiddleware:
         response = admin_client.get('/dashboard')
         # Just verify request completes (tenant context loaded)
         assert response.status_code in [200, 302, 500]
+
+
+# ============================================================================
+# CSP NONCE FALLBACK TESTS (T7 - ZAP Remediation)
+# ============================================================================
+
+class TestCSPNonceFallback:
+    """Tests for CSP nonce fallback in add_security_headers()"""
+    
+    def test_csp_nonce_fallback_when_missing(self, app):
+        """CSP header should have valid nonce even when g.csp_nonce is not set by before_request"""
+        import re
+        from flask import Response, g
+        
+        with app.test_request_context('/test'):
+            # Deliberately skip setting g.csp_nonce (simulating error/abort paths)
+            # Ensure g.csp_nonce is not set
+            if hasattr(g, 'csp_nonce'):
+                delattr(g, 'csp_nonce')
+            
+            response = Response('test')
+            processed = app.process_response(response)
+            csp = processed.headers.get('Content-Security-Policy', '')
+            
+            # Verify nonce exists and is non-empty (22+ chars from token_urlsafe(16))
+            match = re.search(r"'nonce-([A-Za-z0-9_-]+)'", csp)
+            assert match is not None, f"No valid nonce found in CSP: {csp}"
+            assert len(match.group(1)) >= 16, f"Nonce too short: {match.group(1)}"
+    
+    def test_csp_nonce_uses_existing_when_set(self, app):
+        """CSP header should use existing g.csp_nonce when already set by before_request"""
+        import re
+        from flask import Response, g
+        
+        with app.test_request_context('/test'):
+            # Set a known nonce value (simulating normal before_request flow)
+            g.csp_nonce = 'test-nonce-12345678'
+            
+            response = Response('test')
+            processed = app.process_response(response)
+            csp = processed.headers.get('Content-Security-Policy', '')
+            
+            # Verify the specific nonce is used
+            assert "'nonce-test-nonce-12345678'" in csp, f"Expected nonce not found in CSP: {csp}"
+    
+    def test_csp_nonce_fallback_sets_g_csp_nonce(self, app):
+        """Fallback should set g.csp_nonce so templates can access it"""
+        from flask import Response, g
+        
+        with app.test_request_context('/test'):
+            # Ensure g.csp_nonce is not set
+            if hasattr(g, 'csp_nonce'):
+                delattr(g, 'csp_nonce')
+            
+            response = Response('test')
+            app.process_response(response)
+            
+            # After processing, g.csp_nonce should be set
+            assert hasattr(g, 'csp_nonce'), "g.csp_nonce should be set after fallback"
+            assert len(g.csp_nonce) >= 16, f"Fallback nonce too short: {g.csp_nonce}"

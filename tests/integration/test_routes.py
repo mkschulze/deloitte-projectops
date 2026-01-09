@@ -64,7 +64,7 @@ class TestDashboardRoutes:
         
         # Set tenant in session
         with authenticated_client.session_transaction() as sess:
-            sess['tenant_id'] = tenant.id
+            sess['current_tenant_id'] = tenant.id
         
         response = authenticated_client.get('/dashboard')
         # Should be successful or redirect to tenant selection
@@ -87,7 +87,7 @@ class TestNotificationAPI:
         tenant, user = tenant_with_user
         
         with authenticated_client.session_transaction() as sess:
-            sess['tenant_id'] = tenant.id
+            sess['current_tenant_id'] = tenant.id
         
         response = authenticated_client.get('/api/notifications/unread-count')
         

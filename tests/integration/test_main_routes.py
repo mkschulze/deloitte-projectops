@@ -40,7 +40,7 @@ def admin_client(client, admin_user, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = admin_user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -61,7 +61,7 @@ def preparer_client(client, user, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 

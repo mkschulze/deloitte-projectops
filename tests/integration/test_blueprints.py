@@ -15,7 +15,10 @@ from flask import url_for
 from flask_login import login_user
 
 from extensions import db
-from models import User, Task, Entity, Notification, Team, TaskTemplate, TaskCategory
+from models import (
+    User, Task, Entity, Notification, Team, TaskTemplate, TaskCategory,
+    Tenant, TenantMembership
+)
 
 
 # ============================================================================
@@ -48,22 +51,44 @@ def bp_client(bp_app):
 def bp_logged_in_user(bp_client, bp_app):
     """Create and login a regular user"""
     with bp_app.app_context():
+        tenant = Tenant(
+            name='Test Tenant User',
+            slug='test-tenant-user',
+            is_active=True
+        )
+        db.session.add(tenant)
+        db.session.flush()
+
         user = User(
             email='user@example.com',
             name='Regular User',
-            role='user',
+            role='preparer',
             is_active=True
         )
         user.set_password('password123')
         db.session.add(user)
+        db.session.flush()
+
+        membership = TenantMembership(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            role='member',
+            is_default=True
+        )
+        db.session.add(membership)
+        user.current_tenant_id = tenant.id
         db.session.commit()
         user_id = user.id
+        tenant_id = tenant.id
     
     # Login via POST
     bp_client.post('/login', data={
         'email': 'user@example.com',
         'password': 'password123'
     })
+
+    with bp_client.session_transaction() as sess:
+        sess['current_tenant_id'] = tenant_id
     
     return user_id
 
@@ -72,6 +97,14 @@ def bp_logged_in_user(bp_client, bp_app):
 def bp_logged_in_admin(bp_client, bp_app):
     """Create and login an admin user"""
     with bp_app.app_context():
+        tenant = Tenant(
+            name='Test Tenant Admin',
+            slug='test-tenant-admin',
+            is_active=True
+        )
+        db.session.add(tenant)
+        db.session.flush()
+
         user = User(
             email='admin@example.com',
             name='Admin User',
@@ -80,14 +113,28 @@ def bp_logged_in_admin(bp_client, bp_app):
         )
         user.set_password('admin123')
         db.session.add(user)
+        db.session.flush()
+
+        membership = TenantMembership(
+            tenant_id=tenant.id,
+            user_id=user.id,
+            role='admin',
+            is_default=True
+        )
+        db.session.add(membership)
+        user.current_tenant_id = tenant.id
         db.session.commit()
         user_id = user.id
+        tenant_id = tenant.id
     
     # Login via POST
     bp_client.post('/login', data={
         'email': 'admin@example.com',
         'password': 'admin123'
     })
+
+    with bp_client.session_transaction() as sess:
+        sess['current_tenant_id'] = tenant_id
     
     return user_id
 

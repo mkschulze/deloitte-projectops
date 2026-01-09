@@ -8,18 +8,166 @@
 
 ## Session Information
 
-**Date:** 2026-01-05 (Session 26)  
-**Last Action:** Kanban Board CSRF Fix v1.21.5  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening
-**Version:** 1.21.5
+**Date:** 2026-01-06 (Session 27)  
+**Last Action:** ZAP Pentest Remediation (T1-T6 Complete)  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation In Progress
+**Version:** 1.21.6-dev
 
 ---
 
 ## Current State
 
+### 🔄 What Is In Progress (Session 27)
+
+#### ZAP Penetration Test Remediation
+
+A full ZAP scan was run on 2026-01-06 (reached 36% before getting stuck). The JSON report is at `docs/pentest/2026-01-06-ZAP-Report-.json`.
+
+**Key Findings on http://127.0.0.1:5005:**
+
+| Severity | Finding | Assessment |
+|----------|---------|------------|
+| HIGH | SQL Injection (13 instances) | Likely **false positive** - app uses SQLAlchemy ORM with parameterized queries. ZAP detected page changes from validation errors, not actual injection. Needs manual verification. |
+| MEDIUM | Session ID in URL | Socket.IO `sid` parameter - expected WebSocket behavior. **Accept risk**. |
+| MEDIUM | SRI Missing | CDN scripts lack `integrity` attribute. **Fix needed**. |
+| LOW | 500 Errors | 10 endpoints returning Internal Server Error. **Fixed in T1-T6**. |
+| LOW | CSP Empty Nonce | `'nonce-'` without value on some responses. **Fix needed**. |
+| LOW | Server Header Leak | `Werkzeug/...` visible on some responses. **Fix needed**. |
+
+#### Remediation Progress
+
+**✅ Completed (T1-T6):**
+- Added tenant guards to prevent 500 errors
+- Routes now return 302/403/404 instead of crashing
+
+**⏳ Pending (T7-T12):**
+
+| Task | Description | Priority |
+|------|-------------|----------|
+| T7 | CSP empty nonce - check `/admin/entities/*/delete` responses | High |
+| T8 | Server header leak - verify middleware covers static/errors | High |
+| T9 | Add SRI to CDN scripts (Chart.js, SortableJS) | Medium |
+| T10 | Verify SQLi alerts are false positives | Medium |
+| T11 | Document accepted risks (Socket.IO sid, X-Content-Type-Options) | Low |
+| T12 | Database cleanup - run `reset_and_create_demo_data.py` | Low |
+
+#### Files Modified (Session 27)
+
+1. **routes/main.py**
+   - Added `if not g.tenant:` guard to `/notifications` route
+   - Returns redirect to tenant selection instead of 500
+
+2. **routes/tasks.py**
+   - Added 8 tenant guards across task routes
+   - `/tasks`, `/tasks/archive`, `/tasks/<id>/status`, `/tasks/<id>/archive`, etc.
+   - Returns 302/403/404 instead of 500
+
+3. **modules/projects/routes.py**
+   - Enhanced `project_access_required` decorator
+   - Checks `g.tenant` and project tenant match
+   - Returns 404 for cross-tenant access attempts
+
+4. **admin/tenants.py**
+   - Wrapped `openpyxl` import in try/except
+   - Returns flash message + redirect if package missing (not 500)
+
+5. **app.py** (from earlier session)
+   - Moved `load_tenant_context`, `inject_tenant_context`, `inject_globals` registration into `create_app()`
+   - Changed `inject_globals()` to use `current_app.config` instead of module-level `app`
+   - Fixed function definition order (helpers before factory)
+
+---
+
+### 🔄 Test Fixes (Blocked - Resume After ZAP)
+
+9 tests still failing due to tenant context issues in test fixtures.
+
+**Root Cause:** Test fixtures use wrong session key and missing tenant setup.
+
+**Fixes Needed:**
+
+1. **Replace `sess['tenant_id']` → `sess['current_tenant_id']`** (12 occurrences in 6 files):
+   - `tests/integration/test_presets_routes.py` (lines 57, 77)
+   - `tests/integration/test_admin_routes.py` (lines 44, 64)
+   - `tests/integration/test_tasks_routes.py` (lines 46, 577)
+   - `tests/unit/test_app.py` (lines 39, 59)
+   - `tests/integration/test_routes.py` (lines 67, 90)
+   - `tests/integration/test_main_routes.py` (lines 43, 64)
+
+2. **Add tenant context to blueprint fixtures** (`test_blueprints.py`):
+   - Create `Tenant` + `TenantMembership` in `bp_logged_in_admin` / `bp_logged_in_user`
+   - Set `session['current_tenant_id']` after login POST
+   - Change `role='user'` → `role='preparer'` (valid UserRole)
+
+3. **Fix test expectation** (`test_api_routes.py`):
+   - `test_bulk_permanent_delete_skips_non_archived` expects 200
+   - API returns 400 when any task is not archived (fail-fast)
+   - Change assertion to expect 400 + error message
+
+---
+
 ### ✅ What Was Accomplished (Session 26)
 
-1. **Server Header Security Fix v1.21.4** (Complete)
+1. **Project Structure Cleanup** (Complete)
+
+   #### Files Reorganized
+   - `admin/PENTEST/` → `docs/pentest/` (security reports with docs)
+   - `.rules` → repo root (better visibility, editor-agnostic)
+   - `scripts/memory-bank/` created (organized memory bank scripts)
+
+   #### Files Deleted (Deprecated)
+   - `create_demo_data.py` (replaced by `scripts/demo-data/`)
+   - `create_zap_user.py` (replaced by `scripts/demo-data/`)
+
+   #### Generated Artifacts Cleaned
+   - `htmlcov/`, `.coverage`, `.pytest_cache/`
+   - `__pycache__/`, `*.pyc`, `.DS_Store`
+
+   #### New Structure
+   ```
+   scripts/
+   ├── create_modules.py
+   ├── demo-data/
+   ├── memory-bank/
+   └── release.py
+   ```
+
+2. **Future Refactoring Plan: v2.0.0** (Documented)
+
+   #### Application Package Pattern
+   Currently, core Python files (`extensions.py`, `models.py`, `services.py`, 
+   `translations.py`) are in the project root. Best practice for larger Flask 
+   apps is to use an application package structure.
+
+   #### Planned Target Structure
+   ```
+   deloitte-projectops/
+   ├── projectops/              # Application package
+   │   ├── __init__.py          # create_app() factory
+   │   ├── extensions.py
+   │   ├── models.py
+   │   ├── services.py
+   │   ├── translations.py
+   │   ├── config.py
+   │   ├── routes/
+   │   ├── admin/
+   │   ├── middleware/
+   │   └── modules/
+   ├── run.py                   # Entry point
+   └── ...
+   ```
+
+   #### Benefits
+   - Clean separation of app code from project config
+   - Standard imports: `from projectops.models import User`
+   - Better for packaging/deployment
+
+   #### Decision
+   - **Deferred to v2.0.0** - significant refactor (2-3 hours)
+   - All imports across codebase would need updating
+   - Requires full test coverage to catch breaks
+
+3. **Kanban Board CSRF Fix v1.21.5** (Complete)
 
    #### WSGI Middleware Implementation
    - Created `ServerHeaderMiddleware` class in app.py

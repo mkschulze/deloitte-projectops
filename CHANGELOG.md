@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.6] - 2026-01-09
+
+### 📚 Documentation & Pentest Infrastructure
+
+#### Changed
+- **README Installation Instructions** - Updated to use the reset and install script
+  - Added "Quick Start (Recommended)" section using `reset_and_create_demo_data.py`
+  - Added "Manual Installation" section for step-by-step setup
+  - Updated test credentials to match demo data script
+  - Added penetration testing account section
+
+#### Added
+- **Pentest Infrastructure** (`docs/pentest/`)
+  - `ProjectOps.context` - ZAP context file for import
+  - `zap_config.py` - Python script for automated ZAP configuration
+  - `README.md` - Pentest setup and usage documentation
+  - `evidence-T7-csp-nonce.txt` - CSP nonce test evidence
+
+- **Memory Bank Scripts** (`scripts/memory-bank/`)
+  - `check_memory_bank.py` - Script for reviewing memory bank files before release
+  - `update_memory_bank.py` - AI-powered memory bank updates
+  - `memory_bank_prompt.md` - Prompt template for AI updates
+
+---
+
 ## [1.21.5] - 2026-01-05
 
 ### 🐛 Kanban Board CSRF Fix

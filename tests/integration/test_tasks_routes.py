@@ -43,7 +43,7 @@ def task_client(client, tenant, user, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -574,7 +574,7 @@ class TestTaskArchive:
         with client.session_transaction() as sess:
             sess['_user_id'] = user.id
             sess['_fresh'] = True
-            sess['tenant_id'] = task.tenant_id
+            sess['current_tenant_id'] = task.tenant_id
         
         response = client.post(
             f'/tasks/{task.id}/restore',
@@ -698,4 +698,3 @@ class TestTaskListFilters:
         
         response = task_client.get('/tasks?year=2025')
         assert response.status_code == 200
-

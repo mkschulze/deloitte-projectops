@@ -69,6 +69,9 @@ def allowed_file(filename):
 @login_required
 def task_list():
     """Task list with filters"""
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if session.get('lang', 'de') == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
     
     # Get filter parameters
     status_filter = request.args.get('status', '')
@@ -345,6 +348,9 @@ def task_edit(task_id):
 def task_change_status(task_id):
     """Change task status with multi-stage approval workflow"""
     from services import email_service
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if session.get('lang', 'de') == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
     
     task = get_task_or_404_scoped(task_id)
     new_status = request.form.get('status')
@@ -500,6 +506,10 @@ def task_reviewer_action(task_id):
 @login_required
 def task_archive(task_id):
     """Archive a task (soft-delete)"""
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if session.get('lang', 'de') == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
+
     task = get_task_or_404_scoped(task_id)
     lang = session.get('lang', 'de')
     
@@ -527,6 +537,10 @@ def task_archive(task_id):
 @login_required
 def task_restore(task_id):
     """Restore a task from archive"""
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if session.get('lang', 'de') == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
+
     task = get_task_or_404_scoped(task_id)
     lang = session.get('lang', 'de')
     
@@ -554,6 +568,9 @@ def task_restore(task_id):
 def task_archive_list():
     """View archived tasks"""
     lang = session.get('lang', 'de')
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if lang == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
     
     # Build query for archived tasks - scoped to current tenant
     tenant_filter = (Task.tenant_id == g.tenant.id) if g.tenant else False
@@ -609,6 +626,9 @@ def task_archive_list():
 def task_permanent_delete(task_id):
     """Permanently delete an archived task (admin only)"""
     lang = session.get('lang', 'de')
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if lang == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
     
     if not current_user.is_admin():
         flash('Nur Administratoren können Aufgaben endgültig löschen.' if lang == 'de' else 'Only administrators can permanently delete tasks.', 'danger')

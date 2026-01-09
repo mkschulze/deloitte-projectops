@@ -2,7 +2,7 @@
 
 > **Enterprise Project & Task Management Platform** — A centralized platform for managing projects, tasks, and deadlines across teams and organizations with multi-tenant support.
 
-![Version](https://img.shields.io/badge/version-1.21.2-blue)
+![Version](https://img.shields.io/badge/version-1.21.6-blue)
 ![Tests](https://img.shields.io/badge/Tests-892%20passed-brightgreen?logo=pytest)
 ![Coverage](https://img.shields.io/badge/Coverage-68%25-green?logo=codecov)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green?logo=flask)
@@ -163,6 +163,39 @@ Pre-defined task templates for common tax compliance tasks:
 
 ### Installation
 
+#### Quick Start (Recommended)
+
+The easiest way to set up the application with demo data is using the reset and install script:
+
+```bash
+# Clone the repository
+git clone https://github.com/mkschulze/deloitte-projectops.git
+cd deloitte-projectops
+
+# Install dependencies
+pipenv install
+
+# Activate virtual environment
+pipenv shell
+
+# Create .env file
+cat > .env << EOF
+FLASK_APP=app.py
+FLASK_ENV=development
+SECRET_KEY=your-super-secret-key-change-in-production
+EOF
+
+# Reset database and create demo data (one command does it all)
+pipenv run python scripts/demo-data/reset_and_create_demo_data.py
+
+# Run development server
+flask run
+```
+
+#### Manual Installation (Step by Step)
+
+If you prefer more control over the setup process:
+
 ```bash
 # Clone the repository
 git clone https://github.com/mkschulze/deloitte-projectops.git
@@ -182,13 +215,10 @@ SECRET_KEY=your-super-secret-key-change-in-production
 EOF
 
 # Initialize database
-flask initdb
+flask db upgrade
 
 # Create admin user
-flask createadmin
-
-# Load sample data (optional)
-flask seed
+python init_db.py
 
 # Run development server
 flask run
@@ -198,14 +228,22 @@ flask run
 
 Open http://127.0.0.1:5000 in your browser.
 
-**Test Credentials (from seed command):**
+**Test Credentials (from reset_and_create_demo_data.py script):**
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@deloitte.de | password | Admin |
-| manager@deloitte.de | password | Manager |
-| reviewer@deloitte.de | password | Reviewer |
-| preparer@deloitte.de | password | Preparer |
+| admin@example.com | admin123 | Superadmin |
+| maria.mueller@deloitte.de | Demo2026! | Admin |
+| anna.weber@deloitte.de | Demo2026! | Manager |
+| lisa.hoffmann@deloitte.de | Demo2026! | Reviewer |
+| sarah.koch@deloitte.de | Demo2026! | Preparer |
+| guest@client.de | Guest2026! | Read-only |
+
+**Penetration Testing Account:**
+
+| Email | Password | Role |
+|-------|----------|------|
+| pentest@zap.local | ZapTest2026! | Superadmin (no rate limiting) |
 
 ---
 

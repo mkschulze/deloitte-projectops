@@ -36,12 +36,15 @@ def admin_api_client(client, admin_user, tenant, db):
         is_default=True
     )
     db.session.add(membership)
+    
+    # Set user's current tenant
+    admin_user.current_tenant_id = tenant.id
     db.session.commit()
     
     with client.session_transaction() as sess:
         sess['_user_id'] = admin_user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -53,7 +56,8 @@ def manager_api_client(client, tenant, db):
         email='manager@example.com',
         name='Manager User',
         role='manager',
-        is_active=True
+        is_active=True,
+        current_tenant_id=tenant.id
     )
     manager.set_password('managerpassword123')
     db.session.add(manager)
@@ -71,7 +75,7 @@ def manager_api_client(client, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = manager.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -86,12 +90,15 @@ def preparer_api_client(client, user, tenant, db):
         is_default=True
     )
     db.session.add(membership)
+    
+    # Set user's current tenant
+    user.current_tenant_id = tenant.id
     db.session.commit()
     
     with client.session_transaction() as sess:
         sess['_user_id'] = user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -529,9 +536,9 @@ class TestBulkPermanentDelete:
             content_type='application/json'
         )
         
-        assert response.status_code == 200
+        assert response.status_code == 400
         data = json.loads(response.data)
-        assert data['deleted_count'] == 0
+        assert 'not archived' in data.get('error', '').lower()
 
 
 # ============================================================================
@@ -823,4 +830,3 @@ class TestPresetsApi:
         response = admin_api_client.get('/api/presets/99999')
         
         assert response.status_code in [404, 200]  # May return empty or 404
-

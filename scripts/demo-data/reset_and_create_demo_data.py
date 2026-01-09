@@ -228,11 +228,16 @@ DEMO_ISSUE_TYPES = [
 ]
 
 DEMO_ISSUE_STATUSES = [
-    {'name': 'Offen', 'name_en': 'Open', 'category': 'todo', 'color': '#75787B', 'is_initial': True, 'sort_order': 1},
-    {'name': 'In Bearbeitung', 'name_en': 'In Progress', 'category': 'in_progress', 'color': '#0D8ABC', 'sort_order': 2},
-    {'name': 'In Review', 'name_en': 'In Review', 'category': 'in_progress', 'color': '#4BADE8', 'sort_order': 3},
-    {'name': 'Blockiert', 'name_en': 'Blocked', 'category': 'in_progress', 'color': '#DA291C', 'sort_order': 4},
-    {'name': 'Erledigt', 'name_en': 'Done', 'category': 'done', 'color': '#26890D', 'is_final': True, 'sort_order': 5},
+    {'name': 'Offen', 'name_en': 'Open', 'category': 'todo', 'color': '#75787B', 'is_initial': True, 'sort_order': 1,
+     'transitions_to': ['In Bearbeitung', 'Blockiert']},
+    {'name': 'In Bearbeitung', 'name_en': 'In Progress', 'category': 'in_progress', 'color': '#0D8ABC', 'sort_order': 2,
+     'transitions_to': ['In Review', 'Blockiert', 'Offen']},
+    {'name': 'In Review', 'name_en': 'In Review', 'category': 'in_progress', 'color': '#4BADE8', 'sort_order': 3,
+     'transitions_to': ['Erledigt', 'In Bearbeitung', 'Blockiert']},
+    {'name': 'Blockiert', 'name_en': 'Blocked', 'category': 'in_progress', 'color': '#DA291C', 'sort_order': 4,
+     'transitions_to': ['Offen', 'In Bearbeitung']},
+    {'name': 'Erledigt', 'name_en': 'Done', 'category': 'done', 'color': '#26890D', 'is_final': True, 'sort_order': 5,
+     'transitions_to': []},  # Final status - no transitions out
 ]
 
 DEMO_ISSUES = [
@@ -799,6 +804,19 @@ def create_projects(users, tenants):
             )
             db.session.add(status)
             created_statuses.append(status)
+        
+        db.session.flush()
+        
+        # Set allowed_transitions (now that we have IDs)
+        status_name_to_id = {s.name: s.id for s in created_statuses}
+        for i, st_data in enumerate(DEMO_ISSUE_STATUSES):
+            transitions_to = st_data.get('transitions_to', [])
+            if transitions_to:
+                created_statuses[i].allowed_transitions = [
+                    status_name_to_id[name] for name in transitions_to if name in status_name_to_id
+                ]
+            else:
+                created_statuses[i].allowed_transitions = []  # Explicitly empty for final status
         
         db.session.flush()
         

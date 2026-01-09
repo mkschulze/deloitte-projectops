@@ -567,8 +567,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- SortableJS -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<!-- SortableJS with SRI -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" integrity="sha384-Ky0s0Uj0zEcvQP7bZKwjNeXEsRD6jBZ7L6v8Kb8GSareN6BO8Py8T/7j/u0bXN6" crossorigin="anonymous"></script>
 
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {

@@ -2,7 +2,7 @@
 Project Management Module - Routes
 """
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app, g, abort
 from flask_login import login_required, current_user
 
 from extensions import db
@@ -27,6 +27,8 @@ def project_access_required(f):
         project_id = kwargs.get('project_id')
         if project_id:
             project = Project.query.get_or_404(project_id)
+            if g.tenant and project.tenant_id != g.tenant.id:
+                abort(404)
             if not project.is_member(current_user):
                 flash('Kein Zugriff auf dieses Projekt.' if session.get('lang', 'de') == 'de' else 'No access to this project.', 'danger')
                 return redirect(url_for('projects.project_list'))

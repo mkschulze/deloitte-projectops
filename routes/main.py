@@ -377,6 +377,10 @@ def calendar_week_view():
 @login_required
 def notifications():
     """View all notifications"""
+    if not g.tenant:
+        flash('Bitte wählen Sie zuerst einen Mandanten.' if session.get('lang', 'de') == 'de' else 'Please select a tenant first.', 'warning')
+        return redirect(url_for('auth.select_tenant'))
+
     page = request.args.get('page', 1, type=int)
     per_page = 20
     

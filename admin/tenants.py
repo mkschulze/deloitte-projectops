@@ -388,9 +388,13 @@ def tenant_export_excel(tenant_id):
     """Export tenant data as Excel"""
     from io import BytesIO
     from flask import Response
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from openpyxl.utils import get_column_letter
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ModuleNotFoundError:
+        flash('Excel-Export benötigt das Python-Paket openpyxl.' if session.get('lang', 'de') == 'de' else 'Excel export requires the openpyxl package.', 'danger')
+        return redirect(url_for('admin_tenants.tenant_detail', tenant_id=tenant_id))
     
     tenant = Tenant.query.get_or_404(tenant_id)
     

@@ -41,7 +41,7 @@ def admin_client(client, admin_user, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = admin_user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -61,7 +61,7 @@ def non_admin_client(client, user, tenant, db):
     with client.session_transaction() as sess:
         sess['_user_id'] = user.id
         sess['_fresh'] = True
-        sess['tenant_id'] = tenant.id
+        sess['current_tenant_id'] = tenant.id
     
     return client
 
@@ -893,4 +893,3 @@ class TestTeamValidation:
         # Name should not have changed
         db.session.refresh(test_team)
         assert test_team.name == 'Test Team'
-

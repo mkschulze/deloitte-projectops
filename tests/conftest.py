@@ -210,6 +210,67 @@ def authenticated_client(client, user, app):
     yield client
 
 
+@pytest.fixture
+def authenticated_client_with_tenant(client, user, tenant, app, db):
+    """Client with authenticated user AND tenant context set.
+    
+    This is required for routes that use tenant-scoped queries like:
+    - get_task_scoped()
+    - get_task_or_404_scoped()
+    - Any route using g.tenant
+    """
+    from models import TenantMembership
+    
+    # Create tenant membership for user
+    membership = TenantMembership(
+        tenant_id=tenant.id,
+        user_id=user.id,
+        role='admin',
+        is_default=True
+    )
+    db.session.add(membership)
+    
+    # Set user's current tenant
+    user.current_tenant_id = tenant.id
+    db.session.commit()
+    
+    with client.session_transaction() as sess:
+        sess['_user_id'] = user.id
+        sess['_fresh'] = True
+        sess['current_tenant_id'] = tenant.id
+    
+    yield client
+
+
+@pytest.fixture
+def admin_client_with_tenant(client, admin_user, tenant, app, db):
+    """Admin client with tenant context set.
+    
+    For testing admin-only routes with proper tenant context.
+    """
+    from models import TenantMembership
+    
+    # Create tenant membership for admin
+    membership = TenantMembership(
+        tenant_id=tenant.id,
+        user_id=admin_user.id,
+        role='admin',
+        is_default=True
+    )
+    db.session.add(membership)
+    
+    # Set admin's current tenant
+    admin_user.current_tenant_id = tenant.id
+    db.session.commit()
+    
+    with client.session_transaction() as sess:
+        sess['_user_id'] = admin_user.id
+        sess['_fresh'] = True
+        sess['current_tenant_id'] = tenant.id
+    
+    yield client
+
+
 # =============================================================================
 # TENANT FIXTURES
 # =============================================================================

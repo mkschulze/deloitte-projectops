@@ -2,14 +2,173 @@
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation In Progress
 
-**Last Updated:** 2026-01-05 (Session 26)  
-**Version:** 1.21.4
+**Last Updated:** 2026-01-06 (Session 27)  
+**Version:** 1.21.6-dev
+
+---
+
+## In Progress
+
+### v1.21.6 - ZAP Penetration Test Remediation (In Progress)
+
+**Status: 🔄 In Progress**
+
+**Background:** Full ZAP penetration test run on 2026-01-06 (36% completion before stuck). Report analyzed and remediation plan created.
+
+#### ZAP Findings Summary (http://127.0.0.1:5005)
+
+| Severity | Finding | Count | Status |
+|----------|---------|-------|--------|
+| HIGH | SQL Injection | 13 | ⏳ Verify (likely false positive) |
+| MEDIUM | Session ID in URL (Socket.IO) | 3 | 📋 Accept risk |
+| MEDIUM | SRI Missing (CDN scripts) | 5 | ⏳ Pending |
+| LOW | Application Error Disclosure (500s) | 10 | ✅ Fixed |
+| LOW | CSP Empty Nonce | 5 | ⏳ Pending |
+| LOW | Server Header Leak | Multiple | ⏳ Pending |
+| LOW | Cross-Domain JS Inclusion | 5 | ⏳ Pending (SRI) |
+
+#### Remediation Task List
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T1 | Fix `/notifications` 500 | ✅ Done |
+| T2 | Fix `/tasks/archive` 500 | ✅ Done |
+| T3 | Fix `/tasks/<id>/status` + `/tasks/<id>/archive` 500 | ✅ Done |
+| T4 | Fix `/admin/tenants/<id>/export-excel` 500 | ✅ Done |
+| T5 | Fix `/projects/<id>/settings/statuses` 500 | ✅ Done |
+| T6 | Fix filtered `/tasks?...` 500 | ✅ Done |
+| T7 | CSP empty nonce (`/admin/entities/*/delete`) | ⏳ Pending |
+| T8 | Server header leak (static, Socket.IO, errors) | ⏳ Pending |
+| T9 | Add SRI to CDN scripts (Chart.js, SortableJS) | ⏳ Pending |
+| T10 | Verify SQLi false positives | ⏳ Pending |
+| T11 | Document accepted risks | ⏳ Pending |
+| T12 | Database cleanup (ZAP test data) | ⏳ Pending |
+
+#### Files Modified (T1-T6)
+
+- `routes/main.py` - Added tenant guard to `/notifications`
+- `routes/tasks.py` - Added tenant guards to task list, archive, status, archive/restore/delete
+- `modules/projects/routes.py` - Added tenant-scoped project access enforcement
+- `admin/tenants.py` - Wrapped openpyxl import in try/except for graceful fallback
+
+---
+
+### Test Fixes (Blocked - Resume After ZAP)
+
+**Status: 🔄 Partially Complete**
+
+9 test failures remain due to tenant context issues in test fixtures:
+
+| Issue | Files Affected | Fix Status |
+|-------|----------------|------------|
+| `sess['tenant_id']` → `sess['current_tenant_id']` | 6 test files (12 occurrences) | ⏳ Pending |
+| Blueprint fixtures missing tenant context | test_blueprints.py | ⏳ Pending |
+| Test expectation bug (bulk delete) | test_api_routes.py | ⏳ Pending |
+
+**Files to fix:**
+- `tests/integration/test_blueprints.py` - Add tenant + membership to fixtures
+- `tests/integration/test_presets_routes.py` - Replace `tenant_id` → `current_tenant_id`
+- `tests/integration/test_admin_routes.py` - Replace `tenant_id` → `current_tenant_id`
+- `tests/integration/test_tasks_routes.py` - Replace `tenant_id` → `current_tenant_id`
+- `tests/unit/test_app.py` - Replace `tenant_id` → `current_tenant_id`
+- `tests/integration/test_routes.py` - Replace `tenant_id` → `current_tenant_id`
+- `tests/integration/test_main_routes.py` - Replace `tenant_id` → `current_tenant_id`
+- `tests/integration/test_api_routes.py` - Fix bulk delete expectation (400 not 200)
+
+---
+
+## Future Releases
+
+### v2.0.0 - Application Package Refactoring (Planned)
+
+**Status: 📋 Planned**
+
+**Goal:** Migrate from flat structure to Flask application package pattern for better maintainability.
+
+**Current Structure (flat):**
+```
+deloitte-projectops/
+├── app.py
+├── config.py
+├── extensions.py
+├── models.py
+├── services.py
+├── translations.py
+├── routes/
+├── admin/
+├── middleware/
+└── modules/
+```
+
+**Target Structure (application package):**
+```
+deloitte-projectops/
+├── projectops/              # Application package
+│   ├── __init__.py          # create_app() factory
+│   ├── extensions.py
+│   ├── models.py
+│   ├── services.py
+│   ├── translations.py
+│   ├── config.py
+│   ├── routes/
+│   ├── admin/
+│   ├── middleware/
+│   └── modules/
+├── migrations/
+├── tests/
+├── scripts/
+├── docs/
+├── static/
+├── templates/
+├── run.py                   # Entry point
+└── requirements.txt
+```
+
+**Benefits:**
+- Clean separation of application code from project config
+- Standard import pattern: `from projectops.models import User`
+- Industry standard for larger Flask apps
+- Better for packaging/deployment
+
+**Migration Steps:**
+1. Create `projectops/` package with `__init__.py`
+2. Move core modules (extensions, models, services, translations, config)
+3. Move routes/, admin/, middleware/, modules/ into package
+4. Update ALL import statements across codebase
+5. Create `run.py` entry point
+6. Update migrations configuration
+7. Update test imports
+8. Update scripts imports
+9. Full test suite verification
+
+**Estimated Effort:** 2-3 hours (careful refactor to avoid breaks)
+
+**Prerequisites:**
+- Full test coverage to catch import breaks
+- Feature-complete state (no parallel development)
+- Dedicated release branch
 
 ---
 
 ## Recent Releases
+
+### v1.21.5 - Kanban CSRF Fix + Project Cleanup (2026-01-05)
+
+**Status: ✅ Complete**
+
+- **Kanban Board CSRF Fix**:
+  - Added `X-CSRFToken` header to all board fetch requests
+  - Fixed drag-and-drop in board.html, sprints/board.html, iterations/board.html
+  - Fixed workflow save in issue_statuses.html
+
+- **Project Structure Cleanup**:
+  - Moved `admin/PENTEST/` → `docs/pentest/`
+  - Deleted deprecated `create_demo_data.py`, `create_zap_user.py` from root
+  - Moved `.rules` to repo root for visibility
+  - Organized `scripts/memory-bank/` subfolder
+  - Cleaned generated artifacts (htmlcov, .coverage, __pycache__, etc.)
 
 ### v1.21.4 - Server Header Security (2026-01-05)
 

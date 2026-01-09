@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime
 from functools import wraps
 
-from flask import Flask, redirect, url_for, flash, request, session, g
+from flask import Flask, redirect, url_for, flash, request, session, g, current_app
 from flask_login import login_required, current_user
 from flask_socketio import emit, join_room, leave_room
 
@@ -56,6 +56,51 @@ class ServerHeaderMiddleware:
 # APP INITIALIZATION
 # ============================================================================
 
+def get_file_icon(filename):
+    """Return Bootstrap icon class based on file extension"""
+    if not filename or '.' not in filename:
+        return 'bi-file-earmark'
+    ext = filename.rsplit('.', 1)[1].lower()
+    icons = {
+        'pdf': 'bi-file-earmark-pdf text-danger',
+        'doc': 'bi-file-earmark-word text-primary',
+        'docx': 'bi-file-earmark-word text-primary',
+        'xls': 'bi-file-earmark-excel text-success',
+        'xlsx': 'bi-file-earmark-excel text-success',
+        'csv': 'bi-file-earmark-spreadsheet text-success',
+        'txt': 'bi-file-earmark-text',
+        'png': 'bi-file-earmark-image text-info',
+        'jpg': 'bi-file-earmark-image text-info',
+        'jpeg': 'bi-file-earmark-image text-info',
+        'gif': 'bi-file-earmark-image text-info',
+        'zip': 'bi-file-earmark-zip text-warning',
+    }
+    return icons.get(ext, 'bi-file-earmark')
+
+
+def inject_globals():
+    """Inject global variables into all templates"""
+    lang = session.get('lang', current_app.config.get('DEFAULT_LANGUAGE', 'de'))
+    
+    # Get user's accessible modules for navigation
+    user_modules = []
+    if current_user.is_authenticated:
+        user_modules = ModuleRegistry.get_user_modules(current_user)
+    
+    return {
+        'app_name': current_app.config.get('APP_NAME', 'MyApp'),
+        'app_version': current_app.config.get('APP_VERSION', '1.0.0'),
+        'current_year': datetime.now().year,
+        'lang': lang,
+        't': lambda key: t(key, lang),
+        'get_file_icon': get_file_icon,
+        'ApprovalService': ApprovalService,
+        'WorkflowService': WorkflowService,
+        'user_modules': user_modules,
+        'ModuleRegistry': ModuleRegistry
+    }
+
+
 def create_app(config_name='default'):
     """Application factory"""
     app = Flask(__name__)
@@ -96,6 +141,11 @@ def create_app(config_name='default'):
         """Make csp_nonce available in all templates."""
         return {'csp_nonce': getattr(g, 'csp_nonce', '')}
 
+    # Register tenant middleware and context processors
+    app.before_request(load_tenant_context)
+    app.context_processor(inject_tenant_context)
+    app.context_processor(inject_globals)
+
     @app.after_request
     def add_security_headers(response):
         """Apply baseline security headers to all responses."""
@@ -111,7 +161,11 @@ def create_app(config_name='default'):
 
         csp = app.config.get('CONTENT_SECURITY_POLICY')
         if csp is None:
-            nonce = getattr(g, 'csp_nonce', '')
+            # Fallback nonce generation for error/abort paths that skip before_request
+            nonce = getattr(g, 'csp_nonce', None)
+            if not nonce:
+                nonce = secrets.token_urlsafe(16)
+                g.csp_nonce = nonce
             csp = (
                 "default-src 'self'; "
                 "img-src 'self' data:; "
@@ -177,72 +231,6 @@ app.wsgi_app = ServerHeaderMiddleware(app.wsgi_app)
 
 # Initialize email service
 email_service.init_app(app)
-
-
-# ============================================================================
-# MULTI-TENANCY MIDDLEWARE
-# ============================================================================
-
-@app.before_request
-def before_request():
-    """Load tenant context for each request"""
-    load_tenant_context()
-
-
-# ============================================================================
-# CONTEXT PROCESSORS
-# ============================================================================
-
-@app.context_processor
-def inject_tenant():
-    """Inject tenant context into templates"""
-    return inject_tenant_context()
-
-
-@app.context_processor
-def inject_globals():
-    """Inject global variables into all templates"""
-    lang = session.get('lang', app.config.get('DEFAULT_LANGUAGE', 'de'))
-    
-    # Get user's accessible modules for navigation
-    user_modules = []
-    if current_user.is_authenticated:
-        user_modules = ModuleRegistry.get_user_modules(current_user)
-    
-    return {
-        'app_name': app.config.get('APP_NAME', 'MyApp'),
-        'app_version': app.config.get('APP_VERSION', '1.0.0'),
-        'current_year': datetime.now().year,
-        'lang': lang,
-        't': lambda key: t(key, lang),
-        'get_file_icon': get_file_icon,
-        'ApprovalService': ApprovalService,
-        'WorkflowService': WorkflowService,
-        'user_modules': user_modules,
-        'ModuleRegistry': ModuleRegistry
-    }
-
-
-def get_file_icon(filename):
-    """Return Bootstrap icon class based on file extension"""
-    if not filename or '.' not in filename:
-        return 'bi-file-earmark'
-    ext = filename.rsplit('.', 1)[1].lower()
-    icons = {
-        'pdf': 'bi-file-earmark-pdf text-danger',
-        'doc': 'bi-file-earmark-word text-primary',
-        'docx': 'bi-file-earmark-word text-primary',
-        'xls': 'bi-file-earmark-excel text-success',
-        'xlsx': 'bi-file-earmark-excel text-success',
-        'csv': 'bi-file-earmark-spreadsheet text-success',
-        'txt': 'bi-file-earmark-text',
-        'png': 'bi-file-earmark-image text-info',
-        'jpg': 'bi-file-earmark-image text-info',
-        'jpeg': 'bi-file-earmark-image text-info',
-        'gif': 'bi-file-earmark-image text-info',
-        'zip': 'bi-file-earmark-zip text-warning',
-    }
-    return icons.get(ext, 'bi-file-earmark')
 
 
 # ============================================================================
