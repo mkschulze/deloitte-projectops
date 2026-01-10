@@ -71,6 +71,10 @@ def login():
             user.last_login = datetime.utcnow()
             db.session.commit()
             
+            # Set tenant context in session for immediate availability
+            if user.current_tenant_id:
+                session['current_tenant_id'] = user.current_tenant_id
+            
             log_action('LOGIN', 'User', user.id, user.email)
             
             next_page = request.args.get('next')

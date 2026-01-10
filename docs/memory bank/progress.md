@@ -5,7 +5,7 @@
 ## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation Complete
 
 **Last Updated:** 2026-01-10 (Session 28)  
-**Version:** 1.21.7
+**Version:** 1.21.8
 
 ---
 

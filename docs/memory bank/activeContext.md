@@ -11,7 +11,7 @@
 **Date:** 2026-01-10 (Session 28)  
 **Last Action:** Security Fixes Released (T13, T14, T17, T19, T20)  
 **Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation Complete
-**Version:** 1.21.7
+**Version:** 1.21.8
 
 ---
 

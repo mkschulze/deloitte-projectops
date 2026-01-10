@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.8] - 2026-01-10
+
+### 🐛 Bug Fixes
+
+#### Fixed
+- **Dashboard Charts Not Loading** - Chart.js SRI integrity hash was incorrect, blocking script loading
+- **Dashboard Empty Data** - Session tenant ID not set on login, causing API queries to return no results
+- **Dashboard API Response Format** - Status chart and monthly chart APIs returned wrong JSON structure for frontend
+
+#### Changed
+- **Login Session** - Now sets `session['current_tenant_id']` on login for immediate tenant context availability
+- **Status Chart API** - Returns `{labels, data, colors}` format for Chart.js doughnut chart
+- **Monthly Chart API** - Returns `{labels, datasets}` format for Chart.js stacked bar chart
+
+---
+
 ## [1.21.7] - 2026-01-10
 
 ### 🔒 Security Fixes (ZAP Pentest Remediation)

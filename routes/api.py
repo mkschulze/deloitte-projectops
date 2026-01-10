@@ -379,19 +379,43 @@ def dashboard_status_chart():
                 (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
             )
     
-    # Count by status
-    status_counts = {}
-    for status in ['draft', 'submitted', 'in_review', 'approved', 'completed', 'rejected']:
-        status_counts[status] = query.filter_by(status=status).count()
+    # Status definitions with labels and colors
+    status_config = [
+        ('draft', 'Entwurf', '#6c757d'),
+        ('submitted', 'Eingereicht', '#0d6efd'),
+        ('in_review', 'In Prüfung', '#ffc107'),
+        ('approved', 'Genehmigt', '#198754'),
+        ('completed', 'Abgeschlossen', '#86BC25'),
+        ('rejected', 'Abgelehnt', '#dc3545'),
+    ]
     
-    # Count overdue
+    labels = []
+    data = []
+    colors = []
+    
+    for status, label, color in status_config:
+        count = query.filter_by(status=status).count()
+        if count > 0:  # Only include statuses with data
+            labels.append(label)
+            data.append(count)
+            colors.append(color)
+    
+    # Add overdue count
     today = date.today()
-    status_counts['overdue'] = query.filter(
+    overdue_count = query.filter(
         Task.due_date < today,
         Task.status != 'completed'
     ).count()
+    if overdue_count > 0:
+        labels.append('Überfällig')
+        data.append(overdue_count)
+        colors.append('#dc3545')
     
-    return jsonify(status_counts)
+    return jsonify({
+        'labels': labels,
+        'data': data,
+        'colors': colors
+    })
 
 
 @api_bp.route('/dashboard/monthly-chart')
@@ -421,8 +445,13 @@ def dashboard_monthly_chart():
                 (Task.owner_id == current_user.id) | (Task.reviewer_id == current_user.id)
             )
     
+    # Month labels
+    month_labels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+    
     # Count by month
-    monthly_data = []
+    total_data = []
+    completed_data = []
+    
     for month in range(1, 13):
         month_start = date(year, month, 1)
         if month == 12:
@@ -431,16 +460,26 @@ def dashboard_monthly_chart():
             month_end = date(year, month + 1, 1) - timedelta(days=1)
         
         month_query = query.filter(Task.due_date >= month_start, Task.due_date <= month_end)
+        total = month_query.count()
+        completed = month_query.filter_by(status='completed').count()
         
-        monthly_data.append({
-            'month': month,
-            'total': month_query.count(),
-            'completed': month_query.filter_by(status='completed').count()
-        })
+        total_data.append(total - completed)  # Pending tasks
+        completed_data.append(completed)
     
     return jsonify({
-        'year': year,
-        'months': monthly_data
+        'labels': month_labels,
+        'datasets': [
+            {
+                'label': 'Abgeschlossen',
+                'data': completed_data,
+                'backgroundColor': '#86BC25'
+            },
+            {
+                'label': 'Offen',
+                'data': total_data,
+                'backgroundColor': '#0d6efd'
+            }
+        ]
     })
 
 
