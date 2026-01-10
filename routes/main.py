@@ -12,6 +12,7 @@ Handles:
 
 from datetime import date, timedelta
 import calendar
+from urllib.parse import urlparse, urljoin
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, make_response, g
 from flask_login import login_required, current_user
 
@@ -22,6 +23,15 @@ from modules import ModuleRegistry
 from middleware.tenant import scope_query_to_tenant
 
 main_bp = Blueprint('main', __name__)
+
+
+def is_safe_redirect(target):
+    """Check if redirect target is relative or same-origin."""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 
 # ============================================================================
@@ -167,7 +177,10 @@ def set_language(lang):
     """Change language"""
     if lang in current_app.config.get('SUPPORTED_LANGUAGES', ['de', 'en']):
         session['lang'] = lang
-    return redirect(request.referrer or url_for('main.index'))
+    referrer = request.referrer
+    if referrer and not is_safe_redirect(referrer):
+        referrer = None
+    return redirect(referrer or url_for('main.index'))
 
 
 # ============================================================================

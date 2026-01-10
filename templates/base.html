@@ -564,10 +564,20 @@
                 })
                 .catch(err => console.error('Error loading notifications:', err));
         }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         
         // Create a notification list item
         function createNotificationItem(notification) {
             const li = document.createElement('li');
+            const safeTitle = escapeHtml(notification.title);
+            const safeMessage = escapeHtml(notification.message || '');
+            const safeActor = notification.actor ? escapeHtml(notification.actor) : '';
             li.innerHTML = `
                 <a class="dropdown-item notification-item d-flex align-items-start py-2 px-3 ${notification.is_read ? '' : 'bg-light'}" 
                    href="${notification.entity_type === 'task' ? '/tasks/' + notification.entity_id : '#'}"
@@ -576,10 +586,10 @@
                         <i class="bi ${notification.icon} ${notification.color} fs-5"></i>
                     </div>
                     <div class="notification-content flex-grow-1">
-                        <div class="notification-title fw-semibold small ${notification.is_read ? 'text-muted' : ''}">${notification.title}</div>
-                        <div class="notification-message text-muted small text-truncate" style="max-width: 250px;">${notification.message || ''}</div>
+                        <div class="notification-title fw-semibold small ${notification.is_read ? 'text-muted' : ''}">${safeTitle}</div>
+                        <div class="notification-message text-muted small text-truncate" style="max-width: 250px;">${safeMessage}</div>
                         <div class="notification-meta text-muted" style="font-size: 0.7rem;">
-                            ${notification.actor ? '<i class="bi bi-person me-1"></i>' + notification.actor + ' • ' : ''}${notification.time_ago}
+                            ${safeActor ? '<i class="bi bi-person me-1"></i>' + safeActor + ' • ' : ''}${notification.time_ago}
                         </div>
                     </div>
                 </a>
@@ -627,16 +637,18 @@
             }
             
             const toastId = 'toast-' + Date.now();
+            const safeTitle = escapeHtml(notification.title);
+            const safeMessage = escapeHtml(notification.message || '');
             const toastHtml = `
                 <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
                     <div class="toast-header">
                         <i class="bi ${notification.icon} ${notification.color} me-2"></i>
-                        <strong class="me-auto">${notification.title}</strong>
+                        <strong class="me-auto">${safeTitle}</strong>
                         <small>${notification.time_ago}</small>
                         <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
                     <div class="toast-body">
-                        ${notification.message || ''}
+                        ${safeMessage}
                     </div>
                 </div>
             `;

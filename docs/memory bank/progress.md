@@ -2,49 +2,67 @@
 
 > Development progress for Deloitte ProjectOps
 
-## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation In Progress
+## Current Status: ✅ MVP Complete + Phases A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation Complete
 
-**Last Updated:** 2026-01-06 (Session 27)  
-**Version:** 1.21.6-dev
+**Last Updated:** 2026-01-10 (Session 28)  
+**Version:** 1.21.7
 
 ---
 
 ## In Progress
 
-### v1.21.6 - ZAP Penetration Test Remediation (In Progress)
+### v1.21.7 - ZAP Penetration Test Remediation (Released)
 
-**Status: 🔄 In Progress**
+**Status: ✅ Released 2026-01-10**
 
-**Background:** Full ZAP penetration test run on 2026-01-06 (36% completion before stuck). Report analyzed and remediation plan created.
+**Background:** Full ZAP penetration test run on 2026-01-10 (on neutral brand version at port 5000). New critical Persistent XSS finding discovered. Full remediation plan at `docs/pentest/ZAP_DOM_XSS_NOTES.md`.
 
-#### ZAP Findings Summary (http://127.0.0.1:5005)
+#### ZAP Findings Summary (http://127.0.0.1:5000 - 2026-01-10)
 
 | Severity | Finding | Count | Status |
 |----------|---------|-------|--------|
-| HIGH | SQL Injection | 13 | ⏳ Verify (likely false positive) |
-| MEDIUM | Session ID in URL (Socket.IO) | 3 | 📋 Accept risk |
-| MEDIUM | SRI Missing (CDN scripts) | 5 | ⏳ Pending |
-| LOW | Application Error Disclosure (500s) | 10 | ✅ Fixed |
-| LOW | CSP Empty Nonce | 5 | ⏳ Pending |
-| LOW | Server Header Leak | Multiple | ⏳ Pending |
-| LOW | Cross-Domain JS Inclusion | 5 | ⏳ Pending (SRI) |
+| 🔴 HIGH | **Persistent XSS** | 121 | 🆕 **NEW - Critical** |
+| 🔴 HIGH | SQL Injection | 22 | ⏳ Verify (likely false positive) |
+| 🟠 MEDIUM | Session ID in URL (Socket.IO) | 5 | 📋 Accept risk |
+| 🟠 MEDIUM | CSP Header Not Set | 5 | ⏳ Pending |
+| 🟠 MEDIUM | SRI Missing (CDN scripts) | 5 | ⏳ Pending |
+| 🟡 LOW | Application Error Disclosure (500s) | 6 | ⏳ Regression check |
+| 🟡 LOW | Cross-Domain JS Inclusion | 5 | ⏳ Pending (SRI) |
+| 🟡 LOW | Server Header Leak | 1 | ⏳ Pending |
+| ℹ️ INFO | Information Disclosure (Comments) | 754 | 📋 Accept |
+
+#### 🚨 Critical: Persistent XSS Attack Vectors
+
+ZAP successfully stored `javascript:alert(1);` via:
+- Evidence link URLs (`url` parameter) 
+- Evidence link titles (`link_title` parameter)
+- Comments/notes (`text`, `note`, `reason` parameters)
+- Task/entity names (`name`, `title`, `name_de` parameters)
 
 #### Remediation Task List
 
-| Task | Description | Status |
-|------|-------------|--------|
-| T1 | Fix `/notifications` 500 | ✅ Done |
-| T2 | Fix `/tasks/archive` 500 | ✅ Done |
-| T3 | Fix `/tasks/<id>/status` + `/tasks/<id>/archive` 500 | ✅ Done |
-| T4 | Fix `/admin/tenants/<id>/export-excel` 500 | ✅ Done |
-| T5 | Fix `/projects/<id>/settings/statuses` 500 | ✅ Done |
-| T6 | Fix filtered `/tasks?...` 500 | ✅ Done |
-| T7 | CSP empty nonce (`/admin/entities/*/delete`) | ⏳ Pending |
-| T8 | Server header leak (static, Socket.IO, errors) | ⏳ Pending |
-| T9 | Add SRI to CDN scripts (Chart.js, SortableJS) | ⏳ Pending |
-| T10 | Verify SQLi false positives | ⏳ Pending |
-| T11 | Document accepted risks | ⏳ Pending |
-| T12 | Database cleanup (ZAP test data) | ⏳ Pending |
+| Task | Description | Priority | Status |
+|------|-------------|----------|--------|
+| T1 | Fix `/notifications` 500 | Low | ✅ Done |
+| T2 | Fix `/tasks/archive` 500 | Low | ✅ Done |
+| T3 | Fix `/tasks/<id>/status` + `/tasks/<id>/archive` 500 | Low | ✅ Done |
+| T4 | Fix `/admin/tenants/<id>/export-excel` 500 | Low | ✅ Done |
+| T5 | Fix `/projects/<id>/settings/statuses` 500 | Low | ✅ Done |
+| T6 | Fix filtered `/tasks?...` 500 | Low | ✅ Done |
+| T7 | CSP empty nonce (`/admin/entities/*/delete`) | 🟠 High | ⏳ Pending |
+| T8 | Server header leak (static, Socket.IO, errors) | 🟠 High | ⏳ Pending |
+| T9 | Add SRI to CDN scripts (Chart.js, SortableJS, marked.js) | 🟠 Medium | ⏳ Pending |
+| T10 | Verify SQLi false positives | 🟠 Medium | ⏳ Pending |
+| T11 | Document accepted risks | 🟡 Low | ⏳ Pending |
+| T12 | Database cleanup (ZAP test data) | 🟡 Low | ⏳ Pending |
+| **T13** | **URL scheme validation (reject `javascript:`)** | 🔴 Critical | ✅ Done |
+| **T14** | **Template href safety (defense-in-depth)** | 🔴 Critical | ✅ Done |
+| **T15** | **Audit template variable escaping** | 🔴 Critical | ✅ Audit Done |
+| **T16** | **Server-side sanitization for text fields** | 🔴 Critical | ⏳ Deferred |
+| **T17** | **Add DOMPurify for client-side rendering** | 🟠 High | ✅ Done |
+| **T19** | **Notification HTML escaping** | 🟠 High | ✅ Done |
+| **T20** | **Open Redirect validation** | 🔴 Critical | ✅ Done |
+| T18 | Fix remaining 500 errors (regression) | 🟡 Low | ⏳ Pending |
 
 #### Files Modified (T1-T6)
 

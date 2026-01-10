@@ -50,11 +50,11 @@ VERSION_FILES = {
         'pattern': r'Version-[\d.]+-blue',
         'replacement': 'Version-{version}-blue'
     },
-    'docs/progress.md': {
+    'docs/memory bank/progress.md': {
         'pattern': r'\*\*Version:\*\* [\d.]+',
         'replacement': '**Version:** {version}'
     },
-    'docs/activeContext.md': {
+    'docs/memory bank/activeContext.md': {
         'pattern': r'\*\*Version:\*\* [\d.]+',
         'replacement': '**Version:** {version}'
     }
@@ -62,13 +62,13 @@ VERSION_FILES = {
 
 # Memory Bank files that MUST be reviewed before each release
 MEMORY_BANK_FILES = [
-    ('docs/activeContext.md', 'Session info, last action, version, current state'),
-    ('docs/progress.md', 'Release history, version changelog, milestones'),
-    ('docs/projectbrief.md', 'Version number in Project Overview section'),
-    ('docs/techContext.md', 'Test counts, dependencies, project structure'),
-    ('docs/systemPatterns.md', 'Coverage stats, architecture patterns'),
-    ('docs/productContext.md', 'Product scope, features (if changed)'),
-    ('docs/technicalConcept.md', 'Technical design, architecture (if changed)'),
+    ('docs/memory bank/activeContext.md', 'Session info, last action, version, current state'),
+    ('docs/memory bank/progress.md', 'Release history, version changelog, milestones'),
+    ('docs/memory bank/projectbrief.md', 'Version number in Project Overview section'),
+    ('docs/memory bank/techContext.md', 'Test counts, dependencies, project structure'),
+    ('docs/memory bank/systemPatterns.md', 'Coverage stats, architecture patterns'),
+    ('docs/memory bank/productContext.md', 'Product scope, features (if changed)'),
+    ('docs/memory bank/technicalConcept.md', 'Technical design, architecture (if changed)'),
 ]
 
 # Colors for terminal output
@@ -129,9 +129,9 @@ def verify_memory_bank_checked(new_version: str, release_title: str, dry_run: bo
     
     # Check version in key files
     version_checks = [
-        ('docs/activeContext.md', r'\*\*Version:\*\*\s*([\d.]+)'),
-        ('docs/progress.md', r'\*\*Version:\*\*\s*([\d.]+)'),
-        ('docs/projectbrief.md', r'\*\*Version:\*\*\s*([\d.]+)'),
+        ('docs/memory bank/activeContext.md', r'\*\*Version:\*\*\s*([\d.]+)'),
+        ('docs/memory bank/progress.md', r'\*\*Version:\*\*\s*([\d.]+)'),
+        ('docs/memory bank/projectbrief.md', r'\*\*Version:\*\*\s*([\d.]+)'),
         ('VERSION', None),  # Special handling
         ('config.py', r"APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]"),
     ]
@@ -446,11 +446,11 @@ def update_memory_bank(version: str, title: str, previous_version: str, dry_run:
     
     # Update basic fields that can be done automatically
     docs_to_update = {
-        'docs/activeContext.md': [
+        'docs/memory bank/activeContext.md': [
             (r'\*\*Date:\*\* \d{4}-\d{2}-\d{2}', f'**Date:** {today}'),
             (r'\*\*Version:\*\* [\d.]+', f'**Version:** {version}'),
         ],
-        'docs/progress.md': [
+        'docs/memory bank/progress.md': [
             (r'\*\*Last Updated:\*\* \d{4}-\d{2}-\d{2}', f'**Last Updated:** {today}'),
             (r'\*\*Version:\*\* [\d.]+', f'**Version:** {version}'),
         ]
@@ -487,7 +487,7 @@ def update_memory_bank_date(dry_run: bool = False):
     today = datetime.now().strftime('%Y-%m-%d')
     
     # Update activeContext.md date
-    active_context = PROJECT_ROOT / 'docs/activeContext.md'
+    active_context = PROJECT_ROOT / 'docs/memory bank/activeContext.md'
     if active_context.exists():
         content = active_context.read_text()
         # Update the date pattern
@@ -498,7 +498,7 @@ def update_memory_bank_date(dry_run: bool = False):
         )
         if content != new_content and not dry_run:
             active_context.write_text(new_content)
-            print_success("Updated date in docs/activeContext.md")
+            print_success("Updated date in docs/memory bank/activeContext.md")
 
 
 def create_commit(version: str, title: str, dry_run: bool = False) -> bool:

@@ -308,10 +308,17 @@
                                     {% else %}
                                     <i class="bi bi-link-45deg fs-4 me-3 text-primary"></i>
                                     <div>
-                                        <a href="{{ ev.url }}" target="_blank" rel="noopener" class="text-decoration-none fw-medium">
+                                        {% set is_safe_url = ev.url and (ev.url.startswith('http://') or ev.url.startswith('https://')) %}
+                                        {% if is_safe_url %}
+                                        <a href="{{ ev.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none fw-medium">
                                             {{ ev.link_title or ev.url }}
                                             <i class="bi bi-box-arrow-up-right small ms-1"></i>
                                         </a>
+                                        {% else %}
+                                        <span class="text-danger fw-medium" title="Ungültige URL">
+                                            {{ ev.link_title or ev.url }}
+                                        </span>
+                                        {% endif %}
                                         <div class="small text-muted text-truncate" style="max-width: 400px;">
                                             {{ ev.url }}
                                         </div>

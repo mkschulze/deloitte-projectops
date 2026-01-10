@@ -12,6 +12,7 @@ Handles all task-related routes:
 
 import os
 import uuid
+from urllib.parse import urlparse
 from datetime import datetime, date, timedelta
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app, jsonify, send_file, g
 from flask_login import login_required, current_user
@@ -59,6 +60,29 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config.get('ALLOWED_EXTENSIONS', set())
+
+
+ALLOWED_URL_SCHEMES = ('http', 'https')
+
+
+def validate_external_url(raw_url):
+    """Allow external links but only with http/https schemes."""
+    if not raw_url:
+        return None
+
+    parsed = urlparse(raw_url)
+    if parsed.scheme:
+        if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES:
+            return None
+        if not parsed.netloc:
+            return None
+        return raw_url
+
+    candidate = f'https://{raw_url}'
+    parsed = urlparse(candidate)
+    if parsed.scheme.lower() not in ALLOWED_URL_SCHEMES or not parsed.netloc:
+        return None
+    return candidate
 
 
 # ============================================================================
@@ -741,9 +765,10 @@ def task_add_link(task_id):
         flash('URL ist erforderlich.', 'warning')
         return redirect(url_for('tasks.task_detail', task_id=task_id))
     
-    # Basic URL validation
-    if not url.startswith(('http://', 'https://')):
-        url = 'https://' + url
+    url = validate_external_url(url)
+    if not url:
+        flash('Ungültige URL. Nur http:// und https:// erlaubt.', 'danger')
+        return redirect(url_for('tasks.task_detail', task_id=task_id))
     
     evidence = TaskEvidence(
         task_id=task_id,

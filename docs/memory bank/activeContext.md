@@ -8,48 +8,74 @@
 
 ## Session Information
 
-**Date:** 2026-01-06 (Session 27)  
-**Last Action:** ZAP Pentest Remediation (T1-T6 Complete)  
-**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation In Progress
-**Version:** 1.21.6-dev
+**Date:** 2026-01-10 (Session 28)  
+**Last Action:** Security Fixes Released (T13, T14, T17, T19, T20)  
+**Status:** MVP Complete + Phase A-J + PM-0 bis PM-11 + Multi-Tenancy + Unit Tests + Security Hardening + ZAP Remediation Complete
+**Version:** 1.21.7
 
 ---
 
 ## Current State
 
-### 🔄 What Is In Progress (Session 27)
+### 🔄 What Is In Progress (Session 28)
 
-#### ZAP Penetration Test Remediation
+#### ZAP Penetration Test Remediation - Updated Plan
 
-A full ZAP scan was run on 2026-01-06 (reached 36% before getting stuck). The JSON report is at `docs/pentest/2026-01-06-ZAP-Report-.json`.
+A new ZAP scan was run on 2026-01-10 (on neutral brand version at port 5000). The JSON report is at `docs/pentest/2026-01-10-ZAP-Report-.json`. The full remediation plan is at `docs/pentest/ZAP_DOM_XSS_NOTES.md`.
 
-**Key Findings on http://127.0.0.1:5005:**
+**🚨 NEW CRITICAL FINDING: Persistent XSS (121 instances)**
 
-| Severity | Finding | Assessment |
-|----------|---------|------------|
-| HIGH | SQL Injection (13 instances) | Likely **false positive** - app uses SQLAlchemy ORM with parameterized queries. ZAP detected page changes from validation errors, not actual injection. Needs manual verification. |
-| MEDIUM | Session ID in URL | Socket.IO `sid` parameter - expected WebSocket behavior. **Accept risk**. |
-| MEDIUM | SRI Missing | CDN scripts lack `integrity` attribute. **Fix needed**. |
-| LOW | 500 Errors | 10 endpoints returning Internal Server Error. **Fixed in T1-T6**. |
-| LOW | CSP Empty Nonce | `'nonce-'` without value on some responses. **Fix needed**. |
-| LOW | Server Header Leak | `Werkzeug/...` visible on some responses. **Fix needed**. |
+ZAP successfully stored and reflected `javascript:alert(1);` payloads via:
+- Evidence link URLs (`url` parameter)
+- Evidence link titles (`link_title` parameter)
+- Comments/notes (`text`, `note`, `reason` parameters)
+- Task/entity names (`name`, `title`, `name_de` parameters)
+
+**Key Findings on http://127.0.0.1:5000:**
+
+| Severity | Finding | Count | Status |
+|----------|---------|-------|--------|
+| 🔴 HIGH | **Persistent XSS** | 121 | 🆕 **NEW - Critical** |
+| 🔴 HIGH | SQL Injection | 22 | Likely false positive (verify) |
+| 🟠 MEDIUM | CSP Header Not Set | 5 | ⏳ Pending (T7) |
+| 🟠 MEDIUM | Session ID in URL (Socket.IO) | 5 | 📋 Accept risk |
+| 🟠 MEDIUM | SRI Missing (CDN scripts) | 5 | ✅ Partial (T9 - DOMPurify) |
+| 🟡 LOW | Application Error Disclosure (500s) | 6 | ✅ Fixed (T1-T6) |
+| 🟡 LOW | Server Header Leak | 1 | ⏳ Pending (T8) |
 
 #### Remediation Progress
 
-**✅ Completed (T1-T6):**
-- Added tenant guards to prevent 500 errors
-- Routes now return 302/403/404 instead of crashing
+**✅ Completed (v1.21.7):**
+- T1-T6: Added tenant guards to prevent 500 errors
+- T10: SQLi verified as false positive (ORM-only usage)
+- T13: URL scheme validation (`validate_external_url()` in `routes/tasks.py`)
+- T14: Template href safety (defense-in-depth in `templates/tasks/detail.html`)
+- T15: Template audit completed (found issues → fixed via T13/T14)
+- T17: DOMPurify for markdown with SRI (`modules/projects/templates/projects/items/detail.html`)
+- T19: Notification HTML escaping (`escapeHtml()` in `templates/base.html`)
+- T20: Open Redirect validation (`is_safe_redirect()` in `routes/auth.py`, `routes/main.py`)
 
-**⏳ Pending (T7-T12):**
+**⏳ Pending (Lower Priority):**
 
 | Task | Description | Priority |
 |------|-------------|----------|
 | T7 | CSP empty nonce - check `/admin/entities/*/delete` responses | High |
 | T8 | Server header leak - verify middleware covers static/errors | High |
-| T9 | Add SRI to CDN scripts (Chart.js, SortableJS) | Medium |
-| T10 | Verify SQLi alerts are false positives | Medium |
+| T9 | Add SRI to remaining CDN scripts (Chart.js, SortableJS) | Medium |
 | T11 | Document accepted risks (Socket.IO sid, X-Content-Type-Options) | Low |
 | T12 | Database cleanup - run `reset_and_create_demo_data.py` | Low |
+| T16 | Server-side sanitization for text fields (deferred - Jinja2 auto-escapes) | Low |
+
+#### Files Modified for Security Fixes (v1.21.7)
+
+1. **routes/tasks.py** - `evidence_link()`, `add_comment()`, `update_status()`, `archive_task()`
+2. **templates/tasks/detail.html** - Evidence link rendering, comment display
+3. **templates/tasks/includes/** - Any evidence/comment includes
+4. **services.py** - `create_notification()` for any HTML in notifications
+
+---
+
+### Previous Session Context (Session 27)
 
 #### Files Modified (Session 27)
 

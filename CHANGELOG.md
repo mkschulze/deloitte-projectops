@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.21.7] - 2026-01-10
+
+### 🔒 Security Fixes (ZAP Pentest Remediation)
+
+#### Fixed
+- **T13: URL Scheme Injection** - Evidence link URLs now validated to allow only `http://` and `https://` schemes, blocking `javascript:`, `data:`, and `vbscript:` payloads (`routes/tasks.py`)
+- **T14: Template Href Safety** - Defense-in-depth rendering for evidence links; invalid URLs displayed as non-clickable text (`templates/tasks/detail.html`)
+- **T19: Notification XSS** - Added `escapeHtml()` sanitization to notification dropdown and toast rendering to prevent stored XSS via title/message/actor fields (`templates/base.html`)
+- **T20: Open Redirect** - Added `is_safe_redirect()` validation for `next` parameter and `referrer` to prevent redirect to external malicious sites (`routes/auth.py`, `routes/main.py`)
+- **T17: Markdown XSS** - Added DOMPurify sanitization for markdown rendering with SRI integrity hashes for CDN scripts (`modules/projects/templates/projects/items/detail.html`)
+
+#### Changed
+- **Pentest Documentation** - Updated fix plan and notes with implementation status
+
+---
+
 ## [1.21.6] - 2026-01-09
 
 ### 📚 Documentation & Pentest Infrastructure

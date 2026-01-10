@@ -8,6 +8,7 @@ Handles:
 """
 
 from datetime import datetime
+from urllib.parse import urlparse, urljoin
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 
@@ -32,6 +33,15 @@ def log_action(action, entity_type=None, entity_id=None, entity_name=None, old_v
     )
     db.session.add(log)
     db.session.commit()
+
+
+def is_safe_redirect(target):
+    """Check if redirect target is relative or same-origin."""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 
 # ============================================================================
@@ -64,6 +74,8 @@ def login():
             log_action('LOGIN', 'User', user.id, user.email)
             
             next_page = request.args.get('next')
+            if next_page and not is_safe_redirect(next_page):
+                next_page = None
             return redirect(next_page or url_for('main.index'))
         
         flash('Ungültige Anmeldedaten.', 'danger')
@@ -130,6 +142,8 @@ def switch_tenant(tenant_id):
     
     # Redirect to dashboard or next page
     next_page = request.args.get('next') or request.form.get('next')
+    if next_page and not is_safe_redirect(next_page):
+        next_page = None
     return redirect(next_page or url_for('main.dashboard'))
 
 

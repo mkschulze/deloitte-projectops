@@ -996,7 +996,12 @@
 </div>
 
 <!-- Marked.js for Markdown -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"
+        integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"
+        integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu"
+        crossorigin="anonymous"></script>
 <script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const sourceEl = document.getElementById('description-source');
@@ -1009,7 +1014,8 @@ document.addEventListener('DOMContentLoaded', function() {
         markdown = textarea.value;
         
         marked.setOptions({ breaks: true, gfm: true, headerIds: false, mangle: false });
-        targetEl.innerHTML = marked.parse(markdown);
+        const rendered = marked.parse(markdown);
+        targetEl.innerHTML = DOMPurify.sanitize(rendered);
     }
     
     // Initialize tooltips
